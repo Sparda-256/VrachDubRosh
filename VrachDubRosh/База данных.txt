@@ -127,3 +127,10 @@ CREATE TABLE ProcedureAppointments (
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
     FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
 );
+
+INSERT INTO ChiefDoctors(FullName, Password)
+VALUES
+('admin', 'admin'),
+('Admin', 'Admin'),
+('Админ', 'Админ'),
+('админ', 'админ');
