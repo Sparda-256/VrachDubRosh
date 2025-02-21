@@ -1,0 +1,27 @@
+﻿<Window x:Class="VrachDubRosh.AddEditProcedureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Добавить/Редактировать процедуру" Height="250" Width="400">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Label Content="Наименование:" Grid.Row="0" Grid.Column="0" Margin="5"/>
+        <TextBox x:Name="txtProcedureName" Grid.Row="0" Grid.Column="1" Margin="5"/>
+
+        <Label Content="Длительность (мин):" Grid.Row="1" Grid.Column="0" Margin="5"/>
+        <TextBox x:Name="txtDuration" Grid.Row="1" Grid.Column="1" Margin="5"/>
+
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+            <Button Content="Сохранить" Width="100" Margin="5" Click="btnSave_Click"/>
+            <Button Content="Отмена" Width="100" Margin="5" Click="btnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

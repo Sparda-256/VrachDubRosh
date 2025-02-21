@@ -1,0 +1,28 @@
+﻿<Window x:Class="VrachDubRosh.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Врач ДубРощ - Авторизация" Height="250" Width="400">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Логин -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Логин:" Margin="5" VerticalAlignment="Center"/>
+        <TextBox x:Name="txtLogin" Grid.Row="0" Grid.Column="1" Margin="5"/>
+
+        <!-- Пароль -->
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Пароль:" Margin="5" VerticalAlignment="Center"/>
+        <PasswordBox x:Name="txtPassword" Grid.Row="1" Grid.Column="1" Margin="5"/>
+
+        <!-- Кнопка входа -->
+        <Button Grid.Row="3" Grid.Column="1" Content="Войти" Margin="5" Width="100" HorizontalAlignment="Right" Click="LoginButton_Click"/>
+    </Grid>
+</Window>
