@@ -112,7 +112,7 @@ namespace VrachDubRosh
 
         #endregion
 
-        #region Новые пациенты -> Перенос в Patients
+        #region Новые пациенты -> Перенос в Patient
 
         private void btnAssignPatient_Click(object sender, RoutedEventArgs e)
         {
