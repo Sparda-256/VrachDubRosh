@@ -10,19 +10,13 @@
 namespace VrachDubRosh
 {
     using System;
-    using System.Collections.Generic;
     
-    public partial class ProcedureAppointments
+    public partial class sp_helpdiagrams_Result
     {
-        public int AppointmentID { get; set; }
-        public Nullable<int> PatientID { get; set; }
-        public Nullable<int> DoctorID { get; set; }
-        public Nullable<int> ProcedureID { get; set; }
-        public Nullable<System.DateTime> AppointmentDateTime { get; set; }
-        public string Status { get; set; }
-    
-        public virtual Doctors Doctors { get; set; }
-        public virtual Patients Patients { get; set; }
-        public virtual Procedures Procedures { get; set; }
+        public string Database { get; set; }
+        public string Name { get; set; }
+        public int ID { get; set; }
+        public string Owner { get; set; }
+        public int OwnerID { get; set; }
     }
 }

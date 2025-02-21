@@ -8,7 +8,7 @@ namespace VrachDubRosh
     public partial class ReportWindow : Window
     {
         // Строка подключения (при необходимости замените на актуальную)
-        private readonly string connectionString = "Data Source=.;Initial Catalog=PomoshnikPolicliniki2;Integrated Security=True";
+        private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
 
         public ReportWindow()
         {

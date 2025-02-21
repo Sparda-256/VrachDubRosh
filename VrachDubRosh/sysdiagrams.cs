@@ -12,17 +12,12 @@ namespace VrachDubRosh
     using System;
     using System.Collections.Generic;
     
-    public partial class ProcedureAppointments
+    public partial class sysdiagrams
     {
-        public int AppointmentID { get; set; }
-        public Nullable<int> PatientID { get; set; }
-        public Nullable<int> DoctorID { get; set; }
-        public Nullable<int> ProcedureID { get; set; }
-        public Nullable<System.DateTime> AppointmentDateTime { get; set; }
-        public string Status { get; set; }
-    
-        public virtual Doctors Doctors { get; set; }
-        public virtual Patients Patients { get; set; }
-        public virtual Procedures Procedures { get; set; }
+        public string name { get; set; }
+        public int principal_id { get; set; }
+        public int diagram_id { get; set; }
+        public Nullable<int> version { get; set; }
+        public byte[] definition { get; set; }
     }
 }

@@ -85,7 +85,21 @@ namespace VrachDubRosh
                 {
                     con.Open();
 
-                    // Обновляем статус на "Идёт", если процедура началась, но ещё не завершена
+                    // 1. Сначала помечаем завершенные процедуры (независимо от текущего статуса)
+                    string updateCompletedQuery = @"
+                UPDATE pa
+                SET pa.Status = 'Завершена'
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                WHERE DATEADD(minute, pr.Duration, pa.AppointmentDateTime) <= GETDATE() 
+                  AND pa.Status IN ('Назначена', 'Идёт')"; // Обрабатываем оба статуса
+
+                    using (SqlCommand cmd = new SqlCommand(updateCompletedQuery, con))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2. Затем помечаем процедуры, которые идут сейчас
                     string updateInProgressQuery = @"
                 UPDATE pa
                 SET pa.Status = 'Идёт'
@@ -99,20 +113,6 @@ namespace VrachDubRosh
                     {
                         cmd.ExecuteNonQuery();
                     }
-
-                    // Обновляем статус на "Завершена", если процедура уже завершена
-                    string updateCompletedQuery = @"
-                UPDATE pa
-                SET pa.Status = 'Завершена'
-                FROM ProcedureAppointments pa
-                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                WHERE DATEADD(minute, pr.Duration, pa.AppointmentDateTime) <= GETDATE() 
-                  AND pa.Status = 'Идёт'";
-
-                    using (SqlCommand cmd = new SqlCommand(updateCompletedQuery, con))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
                 }
             }
             catch (Exception ex)
@@ -120,6 +120,7 @@ namespace VrachDubRosh
                 MessageBox.Show("Ошибка при обновлении статуса: " + ex.Message);
             }
         }
+
 
         private void LoadPatientsForAssignment()
         {
@@ -343,6 +344,7 @@ namespace VrachDubRosh
                     da.Fill(dt);
                     dgAppointments.ItemsSource = dt.DefaultView;
                 }
+                UpdateAppointmentsStatus();
             }
 
             catch (Exception ex)
@@ -354,41 +356,8 @@ namespace VrachDubRosh
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-
-                    // Обновляем статус на "Идёт", если процедура началась, но ещё не завершена
-                    string updateInProgressQuery = @"
-                UPDATE pa
-                SET pa.Status = 'Идёт'
-                FROM ProcedureAppointments pa
-                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                WHERE pa.AppointmentDateTime <= GETDATE() 
-                  AND DATEADD(minute, pr.Duration, pa.AppointmentDateTime) > GETDATE() 
-                  AND pa.Status = 'Назначена'";
-
-                    using (SqlCommand cmd = new SqlCommand(updateInProgressQuery, con))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    // Обновляем статус на "Завершена", если процедура уже завершена
-                    string updateCompletedQuery = @"
-                UPDATE pa
-                SET pa.Status = 'Завершена'
-                FROM ProcedureAppointments pa
-                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                WHERE DATEADD(minute, pr.Duration, pa.AppointmentDateTime) <= GETDATE() 
-                  AND pa.Status = 'Идёт'";
-
-                    using (SqlCommand cmd = new SqlCommand(updateCompletedQuery, con))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                UpdateAppointmentsStatus();  // Дополнительное обновление статусов после выполнения
-                LoadDoctorAppointments();  // Обновляем список назначений
+                UpdateAppointmentsStatus();
+                LoadDoctorAppointments(); // Перезагружаем данные для отображения изменений
             }
             catch (Exception ex)
             {
