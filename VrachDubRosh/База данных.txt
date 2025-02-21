@@ -1,0 +1,129 @@
+CREATE DATABASE PomoshnikPolicliniki2
+
+USE PomoshnikPolicliniki2
+
+-- Создание таблицы для главврачей
+CREATE TABLE ChiefDoctors (
+    ChiefDoctorID INT IDENTITY PRIMARY KEY,
+    FullName NVARCHAR(100),
+    Password NVARCHAR(100)
+);
+
+-- Создание таблицы для новых пациентов
+CREATE TABLE NewPatients (
+    NewPatientID INT IDENTITY PRIMARY KEY,
+    FullName NVARCHAR(100),
+    DateOfBirth DATE,
+    Gender NVARCHAR(10)
+);
+
+-- Создание таблицы для пациентов (с изменениями)
+CREATE TABLE Patients (
+    PatientID INT IDENTITY PRIMARY KEY,
+    FullName NVARCHAR(100),
+    DateOfBirth DATE,
+    Gender NVARCHAR(10),
+    RecordDate DATETIME,  -- Дата записи пациента
+    DischargeDate DATETIME -- Дата выписки пациента
+);
+
+-- Создание таблицы для врачей (с изменениями)
+CREATE TABLE Doctors (
+    DoctorID INT IDENTITY PRIMARY KEY,
+    FullName NVARCHAR(100),
+    Specialty NVARCHAR(100),
+    OfficeNumber NVARCHAR(10),
+    Password NVARCHAR(100),  -- Пароль для врачей
+    WorkExperience INT  -- Стаж работы
+);
+
+-- Создание таблицы для симптомов
+CREATE TABLE Symptoms (
+    SymptomID INT IDENTITY PRIMARY KEY,
+    SymptomName NVARCHAR(100)
+);
+
+-- Создание таблицы для наводящих вопросов
+CREATE TABLE FollowUpQuestions (
+    QuestionID INT IDENTITY PRIMARY KEY,
+    SymptomID INT,
+    Question NVARCHAR(255),
+    FOREIGN KEY (SymptomID) REFERENCES Symptoms(SymptomID)
+);
+
+-- Создание таблицы для ответов на наводящие вопросы
+CREATE TABLE Answers (
+    AnswerID INT IDENTITY PRIMARY KEY,
+    QuestionID INT,
+    Answer NVARCHAR(255),
+    FOREIGN KEY (QuestionID) REFERENCES FollowUpQuestions(QuestionID)
+);
+
+-- Создание таблицы для диагнозов
+CREATE TABLE Diagnoses (
+    DiagnosisID INT IDENTITY PRIMARY KEY,
+    DiagnosisName NVARCHAR(100)
+);
+
+-- Связь между ответами и диагнозами
+CREATE TABLE AnswerDiagnoses (
+    AnswerID INT,
+    DiagnosisID INT,
+    FOREIGN KEY (AnswerID) REFERENCES Answers(AnswerID),
+    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
+);
+
+-- Связь между врачами и диагнозами
+CREATE TABLE DoctorDiagnoses (
+    DoctorID INT,
+    DiagnosisID INT,
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
+    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
+);
+
+-- Таблица для хранения симптомов пациентов
+CREATE TABLE NewPatientSymptoms (
+    NewPatientID INT,
+    SymptomID INT,
+    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
+    FOREIGN KEY (SymptomID) REFERENCES Symptoms(SymptomID)
+);
+
+-- Таблица для хранения ответов пациентов
+CREATE TABLE NewPatientAnswers (
+    NewPatientID INT,
+    AnswerID INT,
+    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
+    FOREIGN KEY (AnswerID) REFERENCES Answers(AnswerID)
+);
+
+-- Таблица для хранения диагнозов пациентов
+CREATE TABLE NewPatientDiagnoses (
+    NewPatientID INT,
+    DiagnosisID INT,
+    PercentageOfDiagnosis INT,  -- Процент вероятности диагноза
+    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
+    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
+);
+
+-- Создание таблицы для процедур
+CREATE TABLE Procedures (
+    ProcedureID INT IDENTITY PRIMARY KEY,
+    DoctorID INT,  -- Внешний ключ на таблицу врачей
+    ProcedureName NVARCHAR(100),  -- Наименование процедуры
+    Duration INT,  -- Длительность процедуры (в минутах)
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+);
+
+-- Создание таблицы для назначений процедур
+CREATE TABLE ProcedureAppointments (
+    AppointmentID INT IDENTITY PRIMARY KEY,
+    PatientID INT,  -- Внешний ключ на таблицу пациентов
+    DoctorID INT,   -- Внешний ключ на таблицу врачей
+    ProcedureID INT, -- Внешний ключ на таблицу процедур
+    AppointmentDateTime DATETIME,  -- Дата и время проведения процедуры
+    Status NVARCHAR(50); -- Статус процедуры
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
+    FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
+);
