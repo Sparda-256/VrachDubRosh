@@ -128,6 +128,15 @@ CREATE TABLE ProcedureAppointments (
     FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
 );
 
+-- Создание таблицы для связи пациентов и врачей (многие ко многим)
+CREATE TABLE PatientDoctorAssignments (
+    PatientID INT,
+    DoctorID INT,
+    PRIMARY KEY (PatientID, DoctorID),
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+);
+
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
 ('admin', 'admin'),
