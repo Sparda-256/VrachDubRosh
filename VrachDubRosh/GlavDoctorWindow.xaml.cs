@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using VrachDubRosh;
 
 namespace VrachDubRosh
@@ -11,6 +12,11 @@ namespace VrachDubRosh
     {
         // Замените строку подключения на актуальную для вашей базы данных
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
+
+        // Кэшированные таблицы для фильтрации
+        private DataTable dtNewPatients;
+        private DataTable dtPatients;
+        private DataTable dtDoctors;
 
         public GlavDoctorWindow()
         {
@@ -26,6 +32,75 @@ namespace VrachDubRosh
             LoadDoctorsForComboBox();
         }
 
+        #region Обработчики поиска
+        private void txtSearchPatients_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtPatients != null)
+            {
+                string filter = txtSearchPatients.Text.Trim().Replace("'", "''");
+                // Если поле пустое — сбрасываем фильтр
+                dtPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"FullName LIKE '%{filter}%'";
+            }
+        }
+
+        private void txtSearchNewPatients_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtNewPatients != null)
+            {
+                string filter = txtSearchNewPatients.Text.Trim().Replace("'", "''");
+                dtNewPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"FullName LIKE '%{filter}%'";
+            }
+        }
+
+        private void txtSearchDoctors_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtDoctors != null)
+            {
+                string filter = txtSearchDoctors.Text.Trim().Replace("'", "''");
+                dtDoctors.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"FullName LIKE '%{filter}%'";
+            }
+        }
+        #endregion
+
+        #region Обработчики двойного клика
+
+        // Если понадобится, можно реализовать двойной клик и для новых пациентов
+        private void dgNewPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // Пока оставляем пустым или добавляем аналогичную логику при необходимости
+        }
+
+        private void dgPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgPatients.SelectedItem is DataRowView row)
+            {
+                int patientID = Convert.ToInt32(row["PatientID"]);
+                string patientName = row["FullName"].ToString();
+                PatientProceduresWindow ppw = new PatientProceduresWindow(patientID, patientName);
+                ppw.Owner = this;
+                ppw.ShowDialog();
+            }
+        }
+
+        private void dgDoctors_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgDoctors.SelectedItem is DataRowView row)
+            {
+                int doctorID = Convert.ToInt32(row["DoctorID"]);
+                string doctorName = row["FullName"].ToString();
+                DoctorProceduresWindow dpw = new DoctorProceduresWindow(doctorID, doctorName);
+                dpw.Owner = this;
+                dpw.ShowDialog();
+            }
+        }
+        #endregion
+
         #region Загрузка данных
 
         private void LoadNewPatients()
@@ -37,9 +112,9 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender FROM NewPatients";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgNewPatients.ItemsSource = dt.DefaultView;
+                    dtNewPatients = new DataTable(); // Сохраняем в поле класса
+                    da.Fill(dtNewPatients);
+                    dgNewPatients.ItemsSource = dtNewPatients.DefaultView;
                 }
             }
             catch (Exception ex)
@@ -57,9 +132,9 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT PatientID, FullName, DateOfBirth, Gender, RecordDate, DischargeDate FROM Patients";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgPatients.ItemsSource = dt.DefaultView;
+                    dtPatients = new DataTable(); // Сохраняем в поле класса
+                    da.Fill(dtPatients);
+                    dgPatients.ItemsSource = dtPatients.DefaultView;
                 }
             }
             catch (Exception ex)
@@ -77,9 +152,9 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT DoctorID, FullName, Specialty, OfficeNumber, WorkExperience FROM Doctors";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgDoctors.ItemsSource = dt.DefaultView;
+                    dtDoctors = new DataTable(); // Сохраняем в поле класса
+                    da.Fill(dtDoctors);
+                    dgDoctors.ItemsSource = dtDoctors.DefaultView;
                 }
             }
             catch (Exception ex)
@@ -309,7 +384,12 @@ namespace VrachDubRosh
             assignmentWindow.Owner = this;
             assignmentWindow.ShowDialog();
         }
-
+        private void btnOpenReports_Click(object sender, RoutedEventArgs e)
+        {
+            ReportWindow reportWindow = new ReportWindow();
+            reportWindow.Owner = this;
+            reportWindow.ShowDialog();
+        }
         #endregion
 
         #region Управление врачами
@@ -387,11 +467,5 @@ namespace VrachDubRosh
         }
 
         #endregion
-        private void btnOpenReports_Click(object sender, RoutedEventArgs e)
-        {
-            ReportWindow reportWindow = new ReportWindow();
-            reportWindow.Owner = this;
-            reportWindow.ShowDialog();
-        }
     }
 }
