@@ -8,11 +8,21 @@
             <TabItem Header="Пациенты">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <DataGrid x:Name="dgDoctorPatients" Grid.Row="0" AutoGenerateColumns="False" 
-                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5">
+
+                    <!-- Панель поиска пациентов -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
+                        <Label Content="Поиск:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtSearchPatients" Width="200" Margin="5,0,0,0"
+                                 TextChanged="txtSearchPatients_TextChanged"/>
+                    </StackPanel>
+
+                    <!-- DataGrid для пациентов с редактированием по двойному щелчку -->
+                    <DataGrid x:Name="dgDoctorPatients" Grid.Row="1" AutoGenerateColumns="False" 
+                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5"
+                              MouseDoubleClick="dgDoctorPatients_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
                             <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
@@ -25,9 +35,6 @@
                                                 Binding="{Binding DischargeDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Редактировать" Width="120" Margin="5" Click="btnEditPatient_Click"/>
-                    </StackPanel>
                 </Grid>
             </TabItem>
 
@@ -36,12 +43,13 @@
                 <Grid Margin="5">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Форма назначения процедуры -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
                         <Label Content="Пациент:" VerticalAlignment="Center" Margin="5"/>
                         <ComboBox x:Name="cbPatients" Width="150" Margin="5"/>
                         <Label Content="Процедура:" VerticalAlignment="Center" Margin="5"/>
@@ -53,15 +61,22 @@
                         <Button Content="Назначить" Width="100" Margin="5" Click="btnAssignProcedure_Click"/>
                     </StackPanel>
 
+                    <!-- Панель поиска назначенных процедур -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="5">
+                        <Label Content="Поиск:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtSearchAppointments" Width="200" Margin="5,0,0,0"
+                                 TextChanged="txtSearchAppointments_TextChanged"/>
+                    </StackPanel>
+
                     <!-- DataGrid для назначенных процедур -->
-                    <DataGrid x:Name="dgAppointments" Grid.Row="1" AutoGenerateColumns="False" 
-                  IsReadOnly="True" SelectionMode="Single">
+                    <DataGrid x:Name="dgAppointments" Grid.Row="2" AutoGenerateColumns="False" 
+                              IsReadOnly="True" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
                             <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
                             <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="150"/>
                             <DataGridTextColumn Header="Дата и время" 
-                                    Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                                        Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
                             <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
                             <DataGridTemplateColumn Header="Действия" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -73,33 +88,44 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <!-- Кнопка для фильтрации завершённых и отменённых назначений -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <!-- Кнопки управления назначениями -->
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Скрыть завершённые и отменённые" Width="250" Margin="5" Click="btnFilterAppointments_Click"/>
                         <Button Content="Обновить статусы" Width="150" Margin="5" Click="btnUpdateAppointmentsStatus_Click"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-
             <!-- Вкладка "Процедуры" -->
             <TabItem Header="Процедуры">
                 <Grid Margin="5">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <DataGrid x:Name="dgProcedures" Grid.Row="0" AutoGenerateColumns="False" 
-                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5">
+
+                    <!-- Панель поиска процедур -->
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
+                        <Label Content="Поиск:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtSearchProcedures" Width="200" Margin="5,0,0,0"
+                                 TextChanged="txtSearchProcedures_TextChanged"/>
+                    </StackPanel>
+
+                    <!-- DataGrid для процедур с редактированием по двойному щелчку -->
+                    <DataGrid x:Name="dgProcedures" Grid.Row="1" AutoGenerateColumns="False" 
+                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5"
+                              MouseDoubleClick="dgProcedures_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding ProcedureID}" Width="50"/>
                             <DataGridTextColumn Header="Наименование" Binding="{Binding ProcedureName}" Width="*"/>
                             <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding Duration}" Width="150"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+
+                    <!-- Кнопки управления процедурами -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Добавить" Width="100" Margin="5" Click="btnAddProcedure_Click"/>
-                        <Button Content="Редактировать" Width="120" Margin="5" Click="btnEditProcedure_Click"/>
                         <Button Content="Удалить" Width="100" Margin="5" Click="btnDeleteProcedure_Click"/>
                     </StackPanel>
                 </Grid>

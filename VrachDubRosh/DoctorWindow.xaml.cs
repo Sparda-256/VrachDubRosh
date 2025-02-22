@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using VrachDubRosh;
 
 namespace VrachDubRosh
@@ -12,6 +13,11 @@ namespace VrachDubRosh
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
         private int _doctorID; // Идентификатор врача, передается после авторизации
+
+        // Добавляем поля для кэширования данных
+        private DataTable dtDoctorPatients;
+        private DataTable dtAppointments;
+        private DataTable dtProcedures;
 
         public DoctorWindow(int doctorID)
         {
@@ -30,8 +36,43 @@ namespace VrachDubRosh
             LoadProceduresForAssignment();
             UpdateAppointmentsStatus();
         }
-      
+
         #region Вкладка "Пациенты"
+        // Обработчики поиска
+        private void txtSearchPatients_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtDoctorPatients != null)
+            {
+                string filter = txtSearchPatients.Text.Trim().Replace("'", "''");
+                dtDoctorPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"FullName LIKE '%{filter}%'";
+            }
+        }
+
+        private void txtSearchAppointments_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtAppointments != null)
+            {
+                string filter = txtSearchAppointments.Text.Trim().Replace("'", "''");
+                dtAppointments.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"PatientName LIKE '%{filter}%' OR ProcedureName LIKE '%{filter}%'";
+            }
+        }
+
+        private void txtSearchProcedures_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtProcedures != null)
+            {
+                string filter = txtSearchProcedures.Text.Trim().Replace("'", "''");
+                dtProcedures.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
+                    ? ""
+                    : $"ProcedureName LIKE '%{filter}%'";
+            }
+        }
+
+        // Обновляем методы загрузки данных
         private void LoadDoctorPatients()
         {
             try
@@ -39,21 +80,68 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    // Выбираем пациентов, назначенных данному врачу
                     string query = @"SELECT p.PatientID, p.FullName, p.DateOfBirth, p.Gender, p.RecordDate, p.DischargeDate 
-                                     FROM Patients p
-                                     INNER JOIN PatientDoctorAssignments pda ON p.PatientID = pda.PatientID
-                                     WHERE pda.DoctorID = @DoctorID";
+                               FROM Patients p
+                               INNER JOIN PatientDoctorAssignments pda ON p.PatientID = pda.PatientID
+                               WHERE pda.DoctorID = @DoctorID";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgDoctorPatients.ItemsSource = dt.DefaultView;
+                    dtDoctorPatients = new DataTable(); // Используем поле класса
+                    da.Fill(dtDoctorPatients);
+                    dgDoctorPatients.ItemsSource = dtDoctorPatients.DefaultView;
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка загрузки пациентов: " + ex.Message);
+            }
+        }
+
+        private void LoadDoctorAppointments()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = @"SELECT pa.AppointmentID, p.FullName AS PatientName, 
+                                        pr.ProcedureName, pa.AppointmentDateTime, 
+                                        pr.Duration, pa.Status
+                                 FROM ProcedureAppointments pa
+                                 INNER JOIN Patients p ON pa.PatientID = p.PatientID
+                                 INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                                 WHERE pa.DoctorID = @DoctorID";
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
+                    dtAppointments = new DataTable(); // Используем поле класса
+                    da.Fill(dtAppointments);
+                    dgAppointments.ItemsSource = dtAppointments.DefaultView;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка загрузки назначенных процедур: " + ex.Message);
+            }
+        }
+
+        private void LoadDoctorProcedures()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT ProcedureID, ProcedureName, Duration FROM Procedures WHERE DoctorID = @DoctorID";
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
+                    dtProcedures = new DataTable(); // Используем поле класса
+                    da.Fill(dtProcedures);
+                    dgProcedures.ItemsSource = dtProcedures.DefaultView;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка загрузки процедур: " + ex.Message);
             }
         }
 
@@ -72,6 +160,20 @@ namespace VrachDubRosh
             if (editPatientWindow.ShowDialog() == true)
             {
                 LoadDoctorPatients();
+            }
+        }
+        // Открытие окна редактирования пациента по двойному щелчку
+        private void dgDoctorPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgDoctorPatients.SelectedItem is DataRowView row)
+            {
+                int patientID = Convert.ToInt32(row["PatientID"]);
+                AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(patientID);
+                editPatientWindow.Owner = this;
+                if (editPatientWindow.ShowDialog() == true)
+                {
+                    LoadDoctorPatients();
+                }
             }
         }
         #endregion
@@ -265,33 +367,6 @@ namespace VrachDubRosh
             }
         }
 
-
-        private void LoadDoctorAppointments()
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = @"
-                        SELECT pa.AppointmentID, p.FullName AS PatientName, pr.ProcedureName, pa.AppointmentDateTime, pr.Duration, pa.Status
-                        FROM ProcedureAppointments pa
-                        INNER JOIN Patients p ON pa.PatientID = p.PatientID
-                        INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                        WHERE pa.DoctorID = @DoctorID";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgAppointments.ItemsSource = dt.DefaultView;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки назначенных процедур: " + ex.Message);
-            }
-        }
-
         private void btnCancelAppointment_Click(object sender, RoutedEventArgs e)
         {
             if (dgAppointments.SelectedItem == null)
@@ -368,26 +443,6 @@ namespace VrachDubRosh
 
         #region Вкладка "Процедуры"
 
-        private void LoadDoctorProcedures()
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = "SELECT ProcedureID, ProcedureName, Duration FROM Procedures WHERE DoctorID = @DoctorID";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgProcedures.ItemsSource = dt.DefaultView;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки процедур: " + ex.Message);
-            }
-        }
 
         private void btnAddProcedure_Click(object sender, RoutedEventArgs e)
         {
@@ -448,6 +503,21 @@ namespace VrachDubRosh
                 catch (Exception ex)
                 {
                     MessageBox.Show("Ошибка при удалении процедуры: " + ex.Message);
+                }
+            }
+        }
+        // Открытие окна редактирования процедуры по двойному щелчку
+        private void dgProcedures_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgProcedures.SelectedItem is DataRowView row)
+            {
+                int procedureID = Convert.ToInt32(row["ProcedureID"]);
+                AddEditProcedureWindow editProcedureWindow = new AddEditProcedureWindow(_doctorID, procedureID);
+                editProcedureWindow.Owner = this;
+                if (editProcedureWindow.ShowDialog() == true)
+                {
+                    LoadDoctorProcedures();
+                    LoadProceduresForAssignment();
                 }
             }
         }
