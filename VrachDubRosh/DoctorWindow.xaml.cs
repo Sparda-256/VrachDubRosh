@@ -273,12 +273,13 @@ namespace VrachDubRosh
             }
         }
 
+        // Метод для добавления процедуры
         private void btnAssignProcedure_Click(object sender, RoutedEventArgs e)
         {
-            // Проверяем, что все необходимые поля заполнены
+            // Проверяем, что все необходимые данные были введены
             if (cbPatients.SelectedValue == null || cbProcedures.SelectedValue == null || dpApptDate.SelectedDate == null || string.IsNullOrWhiteSpace(tbApptTime.Text))
             {
-                MessageBox.Show("Пожалуйста, выберите пациента, процедуру, дату и введите время (ЧЧ:ММ).");
+                MessageBox.Show("Пожалуйста, выберите пациента, процедуру, дату и время.");
                 return;
             }
 
@@ -292,78 +293,183 @@ namespace VrachDubRosh
                 MessageBox.Show("Неверный формат времени. Используйте формат ЧЧ:ММ.");
                 return;
             }
+
             DateTime appointmentDateTime = selectedDate.Date + timeOfDay;
 
-            // Проверка на назначение в прошлом
-            if (appointmentDateTime < DateTime.Now)
+            // 1. Проверка на выписку пациента
+            if (IsPatientDischarged(patientID, appointmentDateTime))
             {
-                MessageBox.Show("Нельзя назначить процедуру на прошедшую дату и время.");
+                MessageBox.Show("Пациент не может быть записан на эту процедуру, так как он уже будет выписан к указанной дате.");
                 return;
             }
 
-            // Получаем длительность процедуры (в минутах)
-            int procedureDuration = 0;
-            try
+            // 2. Проверка занятости врача
+            if (IsDoctorOccupied(appointmentDateTime, procedureID))
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = "SELECT Duration FROM Procedures WHERE ProcedureID = @ProcedureID";
-                    using (SqlCommand cmd = new SqlCommand(query, con))
-                    {
-                        cmd.Parameters.AddWithValue("@ProcedureID", procedureID);
-                        object result = cmd.ExecuteScalar();
-                        if (result != null)
-                        {
-                            procedureDuration = Convert.ToInt32(result);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Не найдена процедура с таким идентификатором.");
-                            return;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка получения длительности процедуры: " + ex.Message);
+                MessageBox.Show("Пересечение с другим назначением.");
                 return;
             }
 
-            // Проверка, чтобы время назначения плюс длительность не превышали текущий момент
-            DateTime procedureEndTime = appointmentDateTime.AddMinutes(procedureDuration);
-            if (procedureEndTime < DateTime.Now)
+            // 3. Проверка занятости пациента
+            if (IsPatientOccupied(patientID, appointmentDateTime, procedureID))
             {
-                MessageBox.Show("Процедура не может быть назначена, так как её длительность выходит за пределы текущего времени.");
+                MessageBox.Show("Пациент уже записан на другую процедуру в это время.");
                 return;
             }
 
-            // Если все проверки пройдены, вставляем новое назначение
+            if (appointmentDateTime <= DateTime.Now)
+            {
+                MessageBox.Show("Нельзя назначать процедуры на прошедшие дату и время.");
+                return;
+            }
+
+            // Если все проверки прошли, записываем пациента на процедуру
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     string insertQuery = @"INSERT INTO ProcedureAppointments (PatientID, DoctorID, ProcedureID, AppointmentDateTime, Status)
-                                   VALUES (@PatientID, @DoctorID, @ProcedureID, @ApptDateTime, 'Назначена')";
+                                   VALUES (@PatientID, @DoctorID, @ProcedureID, @AppointmentDateTime, 'Назначена')";
                     using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                     {
                         cmd.Parameters.AddWithValue("@PatientID", patientID);
                         cmd.Parameters.AddWithValue("@DoctorID", _doctorID);
                         cmd.Parameters.AddWithValue("@ProcedureID", procedureID);
-                        cmd.Parameters.AddWithValue("@ApptDateTime", appointmentDateTime);
+                        cmd.Parameters.AddWithValue("@AppointmentDateTime", appointmentDateTime);
                         cmd.ExecuteNonQuery();
                     }
                 }
-                MessageBox.Show("Процедура успешно назначена.");
-                UpdateAppointmentsStatus();
-                LoadDoctorAppointments();
-            }
 
+                MessageBox.Show("Процедура успешно назначена.");
+                LoadDoctorProcedures();
+            }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка при назначении процедуры: " + ex.Message);
+            }
+        }
+
+        private bool IsPatientDischarged(int patientID, DateTime appointmentDateTime)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT DischargeDate FROM Patients WHERE PatientID = @PatientID";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientID);
+                        object result = cmd.ExecuteScalar();
+
+                        // Если дата выписки не установлена - пациент не выписан
+                        if (result == DBNull.Value || result == null) return false;
+
+                        DateTime dischargeDate = Convert.ToDateTime(result);
+                        return dischargeDate <= appointmentDateTime.Date;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при проверке выписки пациента: " + ex.Message);
+                return true;
+            }
+        }
+
+        private bool IsDoctorOccupied(DateTime appointmentDateTime, int procedureID)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+
+                    // Получаем длительность процедуры
+                    int duration = 0;
+                    string durationQuery = "SELECT Duration FROM Procedures WHERE ProcedureID = @ProcedureID";
+                    using (SqlCommand cmd = new SqlCommand(durationQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@ProcedureID", procedureID);
+                        duration = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    DateTime endTime = appointmentDateTime.AddMinutes(duration);
+
+                    string query = @"
+                SELECT COUNT(*) 
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                WHERE 
+                    pa.DoctorID = @DoctorID AND
+                    pa.Status != 'Отменена' AND
+                    (
+                        (pa.AppointmentDateTime < @EndTime AND 
+                        DATEADD(MINUTE, pr.Duration, pa.AppointmentDateTime) > @StartTime)
+                    )";
+
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DoctorID", _doctorID);
+                        cmd.Parameters.AddWithValue("@StartTime", appointmentDateTime);
+                        cmd.Parameters.AddWithValue("@EndTime", endTime);
+                        int count = Convert.ToInt32(cmd.ExecuteScalar());
+                        return count > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при проверке занятости врача: " + ex.Message);
+                return true;
+            }
+        }
+
+        private bool IsPatientOccupied(int patientID, DateTime appointmentDateTime, int procedureID)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+
+                    int duration = 0;
+                    string durationQuery = "SELECT Duration FROM Procedures WHERE ProcedureID = @ProcedureID";
+                    using (SqlCommand cmd = new SqlCommand(durationQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@ProcedureID", procedureID);
+                        duration = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    DateTime endTime = appointmentDateTime.AddMinutes(duration);
+
+                    string query = @"
+                SELECT COUNT(*) 
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                WHERE 
+                    pa.PatientID = @PatientID AND
+                    pa.Status != 'Отменена' AND
+                    (
+                        (pa.AppointmentDateTime < @EndTime AND 
+                        DATEADD(MINUTE, pr.Duration, pa.AppointmentDateTime) > @StartTime)
+                    )";
+
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientID);
+                        cmd.Parameters.AddWithValue("@StartTime", appointmentDateTime);
+                        cmd.Parameters.AddWithValue("@EndTime", endTime);
+                        int count = Convert.ToInt32(cmd.ExecuteScalar());
+                        return count > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при проверке занятости пациента: " + ex.Message);
+                return true;
             }
         }
 

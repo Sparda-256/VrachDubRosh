@@ -12,7 +12,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Button Content="Обновить" HorizontalAlignment="Right" Margin="5" Click="btnRefreshProcedures_Click"/>
-                    <DataGrid x:Name="dgProceduresReport" Grid.Row="1" AutoGenerateColumns="True" IsReadOnly="True"/>
+                    <DataGrid x:Name="dgProceduresReport" Grid.Row="1" AutoGenerateColumns="True" IsReadOnly="True" MouseDoubleClick="dgProceduresReport_MouseDoubleClick"/>
                 </Grid>
             </TabItem>
             <!-- Отчет по врачам -->

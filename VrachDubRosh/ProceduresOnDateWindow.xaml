@@ -1,0 +1,22 @@
+﻿<Window x:Class="VrachDubRosh.ProceduresOnDateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Процедуры на выбранную дату" Height="500" Width="700">
+    <Grid Margin="10">
+        <StackPanel>
+            <!-- DataGrid для процедур -->
+            <DataGrid x:Name="dgProceduresOnDate" AutoGenerateColumns="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
+                    <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*"/>
+                    <DataGridTextColumn Header="Дата и время" Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                    <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                    <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Кнопка для формирования отчета -->
+            <Button Content="Сформировать отчет" Width="150" Margin="10,10,0,0" HorizontalAlignment="Right" Click="btnGenerateReport_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

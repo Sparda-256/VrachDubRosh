@@ -7,7 +7,6 @@ namespace VrachDubRosh
 {
     public partial class ReportWindow : Window
     {
-        // Строка подключения (при необходимости замените на актуальную)
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
 
         public ReportWindow()
@@ -85,6 +84,24 @@ namespace VrachDubRosh
         private void btnRefreshDoctors_Click(object sender, RoutedEventArgs e)
         {
             LoadDoctorsReport();
+        }
+
+        // Обработчик клика по дате в DataGrid отчетов по процедурам
+        private void dgProceduresReport_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Получаем выделенную строку в DataGrid
+            if (dgProceduresReport.SelectedItem is DataRowView row)
+            {
+                string selectedDate = row["Дата"].ToString();
+
+                // Открываем окно с процедурами на выбранную дату
+                ProceduresOnDateWindow proceduresWindow = new ProceduresOnDateWindow(selectedDate);
+                proceduresWindow.ShowDialog();
+            }
+            else
+            {
+                MessageBox.Show("Пожалуйста, выберите строку с датой.");
+            }
         }
     }
 }
