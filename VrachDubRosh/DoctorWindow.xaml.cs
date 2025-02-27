@@ -105,15 +105,15 @@ namespace VrachDubRosh
                 {
                     con.Open();
                     string query = @"SELECT pa.AppointmentID, p.FullName AS PatientName, 
-                                        pr.ProcedureName, pa.AppointmentDateTime, 
-                                        pr.Duration, pa.Status
-                                 FROM ProcedureAppointments pa
-                                 INNER JOIN Patients p ON pa.PatientID = p.PatientID
-                                 INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                                 WHERE pa.DoctorID = @DoctorID";
+                                    pr.ProcedureName, pa.AppointmentDateTime, 
+                                    pr.Duration, pa.Status
+                             FROM ProcedureAppointments pa
+                             INNER JOIN Patients p ON pa.PatientID = p.PatientID
+                             INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                             WHERE pa.DoctorID = @DoctorID";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
-                    dtAppointments = new DataTable(); // Используем поле класса
+                    dtAppointments = new DataTable();
                     da.Fill(dtAppointments);
                     dgAppointments.ItemsSource = dtAppointments.DefaultView;
                 }
@@ -122,6 +122,30 @@ namespace VrachDubRosh
             {
                 MessageBox.Show("Ошибка загрузки назначенных процедур: " + ex.Message);
             }
+            // Применяем фильтр, если галочка установлена
+            ApplyAppointmentsFilter();
+        }
+        /// <summary>
+        /// Применяет фильтр к таблице назначений, скрывая записи с статусом "Завершена" и "Отменена", если галочка активна.
+        /// </summary>
+        private void ApplyAppointmentsFilter()
+        {
+            if (dtAppointments == null)
+                return;
+
+            if (chkHideCompleted.IsChecked == true)
+            {
+                dtAppointments.DefaultView.RowFilter = "Status NOT IN ('Завершена', 'Отменена')";
+            }
+            else
+            {
+                dtAppointments.DefaultView.RowFilter = string.Empty;
+            }
+        }
+        // Обработчик изменения состояния CheckBox
+        private void chkHideCompleted_Checked(object sender, RoutedEventArgs e)
+        {
+            ApplyAppointmentsFilter();
         }
 
         private void LoadDoctorProcedures()
@@ -342,7 +366,8 @@ namespace VrachDubRosh
                 }
 
                 MessageBox.Show("Процедура успешно назначена.");
-                LoadDoctorProcedures();
+                UpdateAppointmentsStatus();
+                LoadDoctorAppointments();
             }
             catch (Exception ex)
             {
@@ -538,7 +563,7 @@ namespace VrachDubRosh
             try
             {
                 UpdateAppointmentsStatus();
-                LoadDoctorAppointments(); // Перезагружаем данные для отображения изменений
+                LoadDoctorAppointments(); // перезагружаем данные, внутри которого фильтр применяется
             }
             catch (Exception ex)
             {
