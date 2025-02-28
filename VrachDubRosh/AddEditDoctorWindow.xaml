@@ -1,39 +1,74 @@
 ﻿<Window x:Class="VrachDubRosh.AddEditDoctorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Добавить/Редактировать врача" Height="350" Width="400">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="140"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        Title="Добавить/Редактировать врача" Height="350" Width="400"
+        Background="#F9F9F9"
+        WindowStartupLocation="CenterScreen">
+    <Viewbox Stretch="Uniform">
+        <Grid Width="400" Height="350" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Заголовок -->
+                <RowDefinition Height="Auto"/>
+                <!-- ФИО -->
+                <RowDefinition Height="Auto"/>
+                <!-- Специальность -->
+                <RowDefinition Height="Auto"/>
+                <!-- Номер кабинета -->
+                <RowDefinition Height="Auto"/>
+                <!-- Пароль -->
+                <RowDefinition Height="Auto"/>
+                <!-- Стаж -->
+                <RowDefinition Height="*"/>
+                <!-- Кнопки -->
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="140"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <Label Content="ФИО:" Grid.Row="0" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtFullName" Grid.Row="0" Grid.Column="1" Margin="5"/>
+            <!-- Заголовок окна -->
+            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                       Text="Добавить/Редактировать врача"
+                       FontSize="20" FontWeight="Bold" Foreground="#333333"
+                       HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
-        <Label Content="Специальность:" Grid.Row="1" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtSpecialty" Grid.Row="1" Grid.Column="1" Margin="5"/>
+            <!-- Поля ввода -->
+            <Label Content="ФИО:" Grid.Row="1" Grid.Column="0" Margin="5"
+                   Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtFullName" Grid.Row="1" Grid.Column="1" Margin="5" Padding="4"
+                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
 
-        <Label Content="Номер кабинета:" Grid.Row="2" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtOfficeNumber" Grid.Row="2" Grid.Column="1" Margin="5"/>
+            <Label Content="Специальность:" Grid.Row="2" Grid.Column="0" Margin="5"
+                   Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtSpecialty" Grid.Row="2" Grid.Column="1" Margin="5" Padding="4"
+                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
 
-        <Label Content="Пароль:" Grid.Row="3" Grid.Column="0" Margin="5"/>
-        <PasswordBox x:Name="txtPassword" Grid.Row="3" Grid.Column="1" Margin="5"/>
+            <Label Content="Номер кабинета:" Grid.Row="3" Grid.Column="0" Margin="5"
+                   Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtOfficeNumber" Grid.Row="3" Grid.Column="1" Margin="5" Padding="4"
+                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
 
-        <Label Content="Стаж:" Grid.Row="4" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="txtWorkExperience" Grid.Row="4" Grid.Column="1" Margin="5"/>
+            <Label Content="Пароль:" Grid.Row="4" Grid.Column="0" Margin="5"
+                   Foreground="#555555" FontSize="14"/>
+            <PasswordBox x:Name="txtPassword" Grid.Row="4" Grid.Column="1" Margin="5" Padding="4"
+                         Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
 
-        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-            <Button Content="Сохранить" Width="100" Margin="5" Click="btnSave_Click"/>
-            <Button Content="Отмена" Width="100" Margin="5" Click="btnCancel_Click"/>
-        </StackPanel>
-    </Grid>
+            <Label Content="Стаж:" Grid.Row="5" Grid.Column="0" Margin="5"
+                   Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtWorkExperience" Grid.Row="5" Grid.Column="1" Margin="5" Padding="4"
+                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
+
+            <!-- Кнопки управления -->
+            <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                        HorizontalAlignment="Right" Margin="5">
+                <Button Content="Сохранить" Width="100" Margin="5" Padding="6"
+                        Background="#4CAF50" Foreground="White" FontWeight="Bold"
+                        Click="btnSave_Click" Height="40"/>
+                <Button Content="Отмена" Width="100" Margin="5" Padding="6"
+                        Background="#F44336" Foreground="White" FontWeight="Bold"
+                        Click="btnCancel_Click" Height="40"/>
+            </StackPanel>
+        </Grid>
+    </Viewbox>
 </Window>

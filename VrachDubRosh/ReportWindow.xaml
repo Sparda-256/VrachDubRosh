@@ -1,150 +1,159 @@
 ﻿<Window x:Class="VrachDubRosh.ReportWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Отчеты и аналитика" Height="650" Width="900">
-    <Grid Margin="10">
-        <TabControl>
-            <!-- Вкладка 1: Все процедуры -->
-            <TabItem Header="Все процедуры">
-                <StackPanel Margin="10">
-                    <!-- Параметры фильтра -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <Label Content="Начало:" VerticalAlignment="Center"/>
-                        <DatePicker x:Name="dpStart_All" Width="120" Margin="5,0"/>
-                        <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"/>
-                        <Button Content="Показать" Click="btnShowAll_Click" Margin="10,0,0,0"/>
-                        <Button Content="Экспорт в Excel" Click="btnExportAll_Click" Margin="10,0,0,0"/>
+        Title="Отчеты и аналитика" Height="650" Width="900"
+        Background="#F9F9F9"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize">
+    <Viewbox Stretch="Uniform">
+        <Grid Width="900" Height="650" Margin="20">
+            <TabControl>
+                <!-- Вкладка 1: Все процедуры -->
+                <TabItem Header="Все процедуры">
+                    <StackPanel Margin="10">
+                        <!-- Параметры фильтра -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpStart_All" Width="120" Margin="5,0"/>
+                            <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"/>
+                            <Button Content="Показать" Click="btnShowAll_Click" Margin="10,0,0,0" Padding="6"
+                      Background="#2196F3" Foreground="White" FontWeight="Bold"/>
+                            <Button Content="Экспорт в Excel" Click="btnExportAll_Click" Margin="10,0,0,0" Padding="6"
+                      Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                        </StackPanel>
+                        <!-- DataGrid с данными -->
+                        <DataGrid x:Name="dgReportAll" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
+                      BorderBrush="#B0B0B0" BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
+                                <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
+                                <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
+                                <DataGridTextColumn Header="Дата и время" 
+                                    Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" 
+                                    Width="150"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
+                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <!-- Итоговые показатели -->
+                        <TextBlock x:Name="txtAllSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
                     </StackPanel>
+                </TabItem>
 
-                    <!-- Таблица с данными -->
-                    <DataGrid x:Name="dgReportAll" AutoGenerateColumns="False" IsReadOnly="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
-                            <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
-                            <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
-                            <DataGridTextColumn Header="Дата и время" 
-                                Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" 
-                                Width="150"/>
-                            <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
-                            <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Итоги по выборке -->
-                    <TextBlock x:Name="txtAllSummary" Margin="0,10,0,0" FontWeight="Bold"/>
-                </StackPanel>
-            </TabItem>
-
-            <!-- Вкладка 2: Процедуры конкретного врача -->
-            <TabItem Header="Процедуры врача">
-                <StackPanel Margin="10">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <!-- Поиск врача -->
-                        <StackPanel Orientation="Vertical">
-                            <TextBlock Text="Поиск врача:"/>
-                            <TextBox x:Name="txtSearchDoctor" Width="180" TextChanged="txtSearchDoctor_TextChanged"/>
-                            <ComboBox x:Name="cbDoctor" Width="180" Margin="0,5,0,0"
-                                      DisplayMemberPath="FullName" SelectedValuePath="DoctorID"/>
+                <!-- Вкладка 2: Процедуры врача -->
+                <TabItem Header="Процедуры врача">
+                    <StackPanel Margin="10">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="Поиск врача:" Foreground="#555555" FontSize="14"/>
+                                <TextBox x:Name="txtSearchDoctor" Width="180" TextChanged="txtSearchDoctor_TextChanged"
+                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                                <ComboBox x:Name="cbDoctor" Width="180" Margin="0,5,0,0"
+                          DisplayMemberPath="FullName" SelectedValuePath="DoctorID"
+                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
+                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Doctor" Width="120" Margin="5,0"/>
+                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"/>
+                                <Button Content="Показать" Click="btnShowDoctor_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportDoctor_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            </StackPanel>
                         </StackPanel>
-
-                        <!-- Выбор дат -->
-                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                            <Label Content="Начало:" VerticalAlignment="Center"/>
-                            <DatePicker x:Name="dpStart_Doctor" Width="120" Margin="5,0"/>
-                            <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"/>
-                            <Button Content="Показать" Click="btnShowDoctor_Click" Margin="10,0,0,0"/>
-                            <Button Content="Экспорт в Excel" Click="btnExportDoctor_Click" Margin="10,0,0,0"/>
-                        </StackPanel>
+                        <DataGrid x:Name="dgReportDoctor" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
+                      BorderBrush="#B0B0B0" BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
+                                <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
+                                <DataGridTextColumn Header="Дата и время" 
+                                    Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
+                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="txtDoctorSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
                     </StackPanel>
+                </TabItem>
 
-                    <DataGrid x:Name="dgReportDoctor" AutoGenerateColumns="False" IsReadOnly="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
-                            <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
-                            <DataGridTextColumn Header="Дата и время" Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
-                            <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
-                            <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <TextBlock x:Name="txtDoctorSummary" Margin="0,10,0,0" FontWeight="Bold"/>
-                </StackPanel>
-            </TabItem>
-
-            <!-- Вкладка 3: Процедуры конкретного пациента -->
-            <TabItem Header="Процедуры пациента">
-                <StackPanel Margin="10">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <!-- Поиск пациента -->
-                        <StackPanel Orientation="Vertical">
-                            <TextBlock Text="Поиск пациента:"/>
-                            <TextBox x:Name="txtSearchPatient" Width="180" TextChanged="txtSearchPatient_TextChanged"/>
-                            <ComboBox x:Name="cbPatient" Width="180" Margin="0,5,0,0"
-                                      DisplayMemberPath="FullName" SelectedValuePath="PatientID"/>
+                <!-- Вкладка 3: Процедуры пациента -->
+                <TabItem Header="Процедуры пациента">
+                    <StackPanel Margin="10">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="Поиск пациента:" Foreground="#555555" FontSize="14"/>
+                                <TextBox x:Name="txtSearchPatient" Width="180" TextChanged="txtSearchPatient_TextChanged"
+                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                                <ComboBox x:Name="cbPatient" Width="180" Margin="0,5,0,0"
+                          DisplayMemberPath="FullName" SelectedValuePath="PatientID"
+                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
+                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Patient" Width="120" Margin="5,0"/>
+                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"/>
+                                <Button Content="Показать" Click="btnShowPatient_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportPatient_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            </StackPanel>
                         </StackPanel>
-
-                        <!-- Выбор дат -->
-                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                            <Label Content="Начало:" VerticalAlignment="Center"/>
-                            <DatePicker x:Name="dpStart_Patient" Width="120" Margin="5,0"/>
-                            <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"/>
-                            <Button Content="Показать" Click="btnShowPatient_Click" Margin="10,0,0,0"/>
-                            <Button Content="Экспорт в Excel" Click="btnExportPatient_Click" Margin="10,0,0,0"/>
-                        </StackPanel>
+                        <DataGrid x:Name="dgReportPatient" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
+                      BorderBrush="#B0B0B0" BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
+                                <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
+                                <DataGridTextColumn Header="Дата и время" 
+                                    Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
+                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="txtPatientSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
                     </StackPanel>
+                </TabItem>
 
-                    <DataGrid x:Name="dgReportPatient" AutoGenerateColumns="False" IsReadOnly="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
-                            <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
-                            <DataGridTextColumn Header="Дата и время" Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
-                            <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
-                            <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <TextBlock x:Name="txtPatientSummary" Margin="0,10,0,0" FontWeight="Bold"/>
-                </StackPanel>
-            </TabItem>
-
-            <!-- Вкладка 4: Назначения конкретной процедуры -->
-            <TabItem Header="Назначения процедуры">
-                <StackPanel Margin="10">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <!-- Поиск процедуры -->
-                        <StackPanel Orientation="Vertical">
-                            <TextBlock Text="Поиск процедуры:"/>
-                            <TextBox x:Name="txtSearchProcedure" Width="180" TextChanged="txtSearchProcedure_TextChanged"/>
-                            <ComboBox x:Name="cbProcedure" Width="180" Margin="0,5,0,0"
-                                      DisplayMemberPath="ProcedureName" SelectedValuePath="ProcedureID"/>
+                <!-- Вкладка 4: Назначения процедуры -->
+                <TabItem Header="Назначения процедуры">
+                    <StackPanel Margin="10">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="Поиск процедуры:" Foreground="#555555" FontSize="14"/>
+                                <TextBox x:Name="txtSearchProcedure" Width="180" TextChanged="txtSearchProcedure_TextChanged"
+                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                                <ComboBox x:Name="cbProcedure" Width="180" Margin="0,5,0,0"
+                          DisplayMemberPath="ProcedureName" SelectedValuePath="ProcedureID"
+                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
+                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Procedure" Width="120" Margin="5,0"/>
+                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"/>
+                                <Button Content="Показать" Click="btnShowProcedure_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportProcedure_Click" Margin="10,0,0,0" Padding="6"
+                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            </StackPanel>
                         </StackPanel>
-
-                        <!-- Выбор дат -->
-                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                            <Label Content="Начало:" VerticalAlignment="Center"/>
-                            <DatePicker x:Name="dpStart_Procedure" Width="120" Margin="5,0"/>
-                            <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"/>
-                            <Button Content="Показать" Click="btnShowProcedure_Click" Margin="10,0,0,0"/>
-                            <Button Content="Экспорт в Excel" Click="btnExportProcedure_Click" Margin="10,0,0,0"/>
-                        </StackPanel>
+                        <DataGrid x:Name="dgReportProcedure" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
+                      BorderBrush="#B0B0B0" BorderThickness="1">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
+                                <DataGridTextColumn Header="Дата и время" 
+                                    Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
+                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="txtProcedureSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
                     </StackPanel>
-
-                    <DataGrid x:Name="dgReportProcedure" AutoGenerateColumns="False" IsReadOnly="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
-                            <DataGridTextColumn Header="Дата и время" Binding="{Binding [Дата/время], StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
-                            <DataGridTextColumn Header="Статус" Binding="{Binding Статус}" Width="120"/>
-                            <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <TextBlock x:Name="txtProcedureSummary" Margin="0,10,0,0" FontWeight="Bold"/>
-                </StackPanel>
-            </TabItem>
-        </TabControl>
-    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Viewbox>
 </Window>

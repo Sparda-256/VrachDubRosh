@@ -1,137 +1,162 @@
 ﻿<Window x:Class="VrachDubRosh.GlavDoctorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Главврач" Height="600" Width="900">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+        Title="Главврач" Height="600" Width="900"
+        Background="#F9F9F9"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize">
+    <Viewbox Stretch="Uniform">
+        <Grid Width="900" Height="600" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- Панель с кнопками -->
-        <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right">
-            <Button Content="Отчеты и аналитика" Margin="5" Click="btnOpenReports_Click"/>
-        </StackPanel>
+            <!-- Верхняя панель с кнопками -->
+            <StackPanel Orientation="Horizontal" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,0,10">
+                <Button Content="Отчеты и аналитика" 
+                        Margin="5" Padding="8,4"
+                        Background="#2196F3" Foreground="White" FontWeight="Bold"
+                        Click="btnOpenReports_Click"/>
+            </StackPanel>
 
-        <!-- Основной контент: TabControl -->
-        <TabControl Grid.Row="1">
-            <!-- Вкладка "Новые пациенты" -->
-            <TabItem Header="Новые пациенты">
-                <Grid Margin="5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+            <!-- Основной контент: TabControl -->
+            <TabControl Grid.Row="1" Background="White" BorderBrush="#B0B0B0" BorderThickness="1">
+                <!-- Вкладка "Новые пациенты" -->
+                <TabItem Header="Новые пациенты">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <!-- Панель поиска -->
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <!-- Панель поиска -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
-                        <Label Content="Поиск:" VerticalAlignment="Center"/>
-                        <TextBox x:Name="txtSearchNewPatients" Width="200" Margin="5,0,0,0" 
-                                 TextChanged="txtSearchNewPatients_TextChanged"/>
-                    </StackPanel>
-                    <!-- DataGrid для новых пациентов -->
-                    <DataGrid x:Name="dgNewPatients" Grid.Row="1" AutoGenerateColumns="False" 
-                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5"
-                              MouseDoubleClick="dgNewPatients_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding NewPatientID}" Width="50"/>
-                            <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Дата рождения" 
-                                                Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
-                                                Width="120"/>
-                            <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <!-- Форма заполнения недостающих данных -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Label Content="Врач:" VerticalAlignment="Center" Margin="5"/>
-                        <ComboBox x:Name="cbDoctors" Width="150" Margin="5"/>
-                        <Label Content="Дата записи:" VerticalAlignment="Center" Margin="5"/>
-                        <DatePicker x:Name="dpRecordDate" Width="120" Margin="5"/>
-                        <Label Content="Дата выписки:" VerticalAlignment="Center" Margin="5"/>
-                        <DatePicker x:Name="dpDischargeDate" Width="120" Margin="5"/>
-                        <Button Content="Назначить" Width="100" Margin="5" Click="btnAssignPatient_Click"/>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
+                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                            <TextBox x:Name="txtSearchNewPatients" Width="200" Margin="5,0,0,0" 
+                                     TextChanged="txtSearchNewPatients_TextChanged"
+                                     Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        </StackPanel>
+                        <!-- DataGrid для новых пациентов -->
+                        <DataGrid x:Name="dgNewPatients" Grid.Row="1" AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Single" Margin="0,5,0,5"
+                                  MouseDoubleClick="dgNewPatients_MouseDoubleClick" FontSize="14">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding NewPatientID}" Width="50"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Дата рождения" 
+                                                    Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
+                                                    Width="120"/>
+                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <!-- Форма заполнения недостающих данных -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="5">
+                            <Label Content="Врач:" VerticalAlignment="Center" Margin="5" Foreground="#555555" FontSize="14"/>
+                            <ComboBox x:Name="cbDoctors" Width="150" Margin="5" Padding="4" 
+                                      BorderBrush="#B0B0B0" BorderThickness="1"/>
+                            <Label Content="Дата записи:" VerticalAlignment="Center" Margin="5" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpRecordDate" Width="120" Margin="5"/>
+                            <Label Content="Дата выписки:" VerticalAlignment="Center" Margin="5" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpDischargeDate" Width="120" Margin="5"/>
+                            <Button Content="Назначить" Width="100" Margin="5" Padding="6"
+                                    Background="#4CAF50" Foreground="White" FontWeight="Bold"
+                                    Click="btnAssignPatient_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
 
-            <!-- Вкладка "Пациенты" -->
-            <TabItem Header="Пациенты">
-                <Grid Margin="5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+                <!-- Вкладка "Пациенты" -->
+                <TabItem Header="Пациенты">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <!-- Панель поиска -->
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <!-- Панель поиска -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
-                        <Label Content="Поиск:" VerticalAlignment="Center"/>
-                        <TextBox x:Name="txtSearchPatients" Width="200" Margin="5,0,0,0"
-                                 TextChanged="txtSearchPatients_TextChanged"/>
-                    </StackPanel>
-                    <!-- DataGrid для пациентов -->
-                    <DataGrid x:Name="dgPatients" Grid.Row="1" AutoGenerateColumns="False" 
-                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5"
-                              MouseDoubleClick="dgPatients_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
-                            <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Дата рождения" 
-                                                Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
-                            <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
-                            <DataGridTextColumn Header="Дата записи" 
-                                                Binding="{Binding RecordDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
-                            <DataGridTextColumn Header="Дата выписки" 
-                                                Binding="{Binding DischargeDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <!-- Кнопки управления пациентами -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Добавить" Width="100" Margin="5" Click="btnAddPatient_Click"/>
-                        <Button Content="Редактировать" Width="120" Margin="5" Click="btnEditPatient_Click"/>
-                        <Button Content="Удалить" Width="100" Margin="5" Click="btnDeletePatient_Click"/>
-                        <Button Content="Назначить врачу" Width="120" Margin="5" Click="btnAssignDoctors_Click"/>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
+                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                            <TextBox x:Name="txtSearchPatients" Width="200" Margin="5,0,0,0"
+                                     TextChanged="txtSearchPatients_TextChanged"
+                                     Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        </StackPanel>
+                        <!-- DataGrid для пациентов -->
+                        <DataGrid x:Name="dgPatients" Grid.Row="1" AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Single" Margin="0,5,0,5"
+                                  MouseDoubleClick="dgPatients_MouseDoubleClick" FontSize="14">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Дата рождения" 
+                                                    Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
+                                <DataGridTextColumn Header="Дата записи" 
+                                                    Binding="{Binding RecordDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                                <DataGridTextColumn Header="Дата выписки" 
+                                                    Binding="{Binding DischargeDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <!-- Кнопки управления пациентами -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+                            <Button Content="Добавить" Width="100" Margin="5" Padding="6"
+                                    Background="#4CAF50" Foreground="White" FontWeight="Bold"
+                                    Click="btnAddPatient_Click"/>
+                            <Button Content="Редактировать" Width="120" Margin="5" Padding="6"
+                                    Background="#FF9800" Foreground="White" FontWeight="Bold"
+                                    Click="btnEditPatient_Click"/>
+                            <Button Content="Удалить" Width="100" Margin="5" Padding="6"
+                                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                                    Click="btnDeletePatient_Click"/>
+                            <Button Content="Назначить врачу" Width="120" Margin="5" Padding="6"
+                                    Background="#2196F3" Foreground="White" FontWeight="Bold"
+                                    Click="btnAssignDoctors_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
 
-            <!-- Вкладка "Врачи" -->
-            <TabItem Header="Врачи">
-                <Grid Margin="5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+                <!-- Вкладка "Врачи" -->
+                <TabItem Header="Врачи">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <!-- Панель поиска -->
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <!-- Панель поиска -->
-                    <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
-                        <Label Content="Поиск:" VerticalAlignment="Center"/>
-                        <TextBox x:Name="txtSearchDoctors" Width="200" Margin="5,0,0,0"
-                                 TextChanged="txtSearchDoctors_TextChanged"/>
-                    </StackPanel>
-                    <!-- DataGrid для врачей -->
-                    <DataGrid x:Name="dgDoctors" Grid.Row="1" AutoGenerateColumns="False" 
-                              IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,5"
-                              MouseDoubleClick="dgDoctors_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding DoctorID}" Width="50"/>
-                            <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
-                            <DataGridTextColumn Header="Специальность" Binding="{Binding Specialty}" Width="150"/>
-                            <DataGridTextColumn Header="Номер кабинета" Binding="{Binding OfficeNumber}" Width="100"/>
-                            <DataGridTextColumn Header="Стаж" Binding="{Binding WorkExperience}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    <!-- Кнопки управления врачами -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Добавить" Width="100" Margin="5" Click="btnAddDoctor_Click"/>
-                        <Button Content="Редактировать" Width="120" Margin="5" Click="btnEditDoctor_Click"/>
-                        <Button Content="Удалить" Width="100" Margin="5" Click="btnDeleteDoctor_Click"/>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
-        </TabControl>
-    </Grid>
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="5">
+                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
+                            <TextBox x:Name="txtSearchDoctors" Width="200" Margin="5,0,0,0"
+                                     TextChanged="txtSearchDoctors_TextChanged"
+                                     Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        </StackPanel>
+                        <!-- DataGrid для врачей -->
+                        <DataGrid x:Name="dgDoctors" Grid.Row="1" AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Single" Margin="0,5,0,5"
+                                  MouseDoubleClick="dgDoctors_MouseDoubleClick" FontSize="14">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding DoctorID}" Width="50"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Специальность" Binding="{Binding Specialty}" Width="150"/>
+                                <DataGridTextColumn Header="Номер кабинета" Binding="{Binding OfficeNumber}" Width="100"/>
+                                <DataGridTextColumn Header="Стаж" Binding="{Binding WorkExperience}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <!-- Кнопки управления врачами -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+                            <Button Content="Добавить" Width="100" Margin="5" Padding="6"
+                                    Background="#4CAF50" Foreground="White" FontWeight="Bold"
+                                    Click="btnAddDoctor_Click"/>
+                            <Button Content="Редактировать" Width="120" Margin="5" Padding="6"
+                                    Background="#FF9800" Foreground="White" FontWeight="Bold"
+                                    Click="btnEditDoctor_Click"/>
+                            <Button Content="Удалить" Width="100" Margin="5" Padding="6"
+                                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                                    Click="btnDeleteDoctor_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Viewbox>
 </Window>
