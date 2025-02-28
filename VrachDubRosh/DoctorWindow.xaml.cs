@@ -530,34 +530,6 @@ namespace VrachDubRosh
             }
         }
 
-        private void btnFilterAppointments_Click(object sender, RoutedEventArgs e)
-        {
-            // Фильтрация назначений по статусу
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = @"
-                        SELECT pa.AppointmentID, p.FullName AS PatientName, pr.ProcedureName, pa.AppointmentDateTime, pr.Duration, pa.Status
-                        FROM ProcedureAppointments pa
-                        INNER JOIN Patients p ON pa.PatientID = p.PatientID
-                        INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                        WHERE pa.DoctorID = @DoctorID AND pa.Status NOT IN ('Завершена', 'Отменена')";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    dgAppointments.ItemsSource = dt.DefaultView;
-                }
-                UpdateAppointmentsStatus();
-            }
-
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка фильтрации назначений: " + ex.Message);
-            }
-        }
         private void btnUpdateAppointmentsStatus_Click(object sender, RoutedEventArgs e)
         {
             try
