@@ -111,7 +111,7 @@
 
                         <!-- Кнопки управления назначениями -->
                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                            <CheckBox x:Name="chkHideCompleted" Content="Скрыть завершённые и отменённые" Width="250" Margin="5"
+                            <CheckBox x:Name="chkHideCompleted" Content="Скрыть завершённые и отменённые" Width="260" Margin="5"
                                       FontSize="14" Foreground="#555555"
                                       Checked="chkHideCompleted_Checked" Unchecked="chkHideCompleted_Checked"/>
                             <Button Content="Обновить статусы" Width="150" Margin="5" Padding="6"

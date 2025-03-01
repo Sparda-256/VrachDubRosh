@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VrachDubRosh", "VrachDubRosh\VrachDubRosh.csproj", "{7AA38930-F82C-482E-BC92-A49851D7D4A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +17,15 @@ Global
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {69A94F05-4F07-4151-BC32-CE37E4B2A142}
 	EndGlobalSection
 EndGlobal
