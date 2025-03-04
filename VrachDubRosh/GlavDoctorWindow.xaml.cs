@@ -285,7 +285,7 @@ namespace VrachDubRosh
                     }
                 }
 
-                MessageBox.Show("Пациент успешно назначен и перенесён в основную таблицу.");
+                MessageBox.Show("Пациент успешно назначен.");
                 LoadNewPatients();
                 LoadPatients();
             }
