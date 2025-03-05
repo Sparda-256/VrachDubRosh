@@ -13,6 +13,7 @@ namespace VrachDubRosh
         public MainWindow()
         {
             InitializeComponent();
+            WindowState = WindowState.Maximized;
         }
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)

@@ -22,6 +22,7 @@ namespace VrachDubRosh
         public DoctorWindow(int doctorID)
         {
             InitializeComponent();
+            WindowState = WindowState.Maximized;
             _doctorID = doctorID;
             Loaded += DoctorWindow_Loaded;
         }

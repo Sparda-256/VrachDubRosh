@@ -108,7 +108,7 @@
                                     Background="#4CAF50" Foreground="White" FontWeight="Bold"
                                     Click="btnAddPatient_Click"/>
                             <Button Content="Редактировать" Width="120" Margin="5" Padding="6"
-                                    Background="#FF9800" Foreground="White" FontWeight="Bold"
+                                    Background="#E0E0E0" Foreground="Black" FontWeight="Bold"
                                     Click="btnEditPatient_Click"/>
                             <Button Content="Удалить" Width="100" Margin="5" Padding="6"
                                     Background="#F44336" Foreground="White" FontWeight="Bold"
@@ -158,7 +158,7 @@
                                     Background="#4CAF50" Foreground="White" FontWeight="Bold"
                                     Click="btnAddDoctor_Click"/>
                             <Button Content="Редактировать" Width="100" Margin="5" Padding="6"
-                                    Background="#FF9800" Foreground="White" FontWeight="Bold"
+                                    Background="#E0E0E0" Foreground="Black" FontWeight="Bold"
                                     Click="btnEditDoctor_Click"/>
                             <Button Content="Удалить" Width="100" Margin="5" Padding="6"
                                     Background="#F44336" Foreground="White" FontWeight="Bold"

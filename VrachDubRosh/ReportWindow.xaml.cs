@@ -30,6 +30,7 @@ namespace VrachDubRosh
             // Разрешаем использование EPPlus в некоммерческом режиме
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             InitializeComponent();
+            WindowState = WindowState.Maximized;
             Loaded += ReportWindow_Loaded;
         }
 
@@ -622,5 +623,10 @@ namespace VrachDubRosh
         }
 
         #endregion
+
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
     }
 }

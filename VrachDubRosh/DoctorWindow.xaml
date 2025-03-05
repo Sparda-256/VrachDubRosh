@@ -118,8 +118,8 @@
                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
                             <CheckBox x:Name="chkHideCompleted" Content="Скрыть завершённые и отменённые" Width="260" Margin="5"
                                       FontSize="14" Foreground="#555555"
-                                      Checked="chkHideCompleted_Checked" Unchecked="chkHideCompleted_Checked"/>
-                            <Button Content="Обновить статусы" Width="150" Margin="5" Padding="6"
+                                      Checked="chkHideCompleted_Checked" Unchecked="chkHideCompleted_Checked" Height="18"/>
+                            <Button Content="Обновить" Width="100" Margin="5" Padding="6"
                                     Background="#2196F3" Foreground="White" FontWeight="Bold"
                                     Click="btnUpdateAppointmentsStatus_Click"/>
                         </StackPanel>

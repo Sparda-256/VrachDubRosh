@@ -154,6 +154,10 @@
                     </StackPanel>
                 </TabItem>
             </TabControl>
+            <Button Content="Выход" Width="100" Margin="790,35,0,0" Padding="6"
+Background="#F44336" Foreground="White" FontWeight="Bold"
+HorizontalAlignment="Left" VerticalAlignment="Top"
+Click="ExitButton_Click"/>
         </Grid>
     </Viewbox>
 </Window>

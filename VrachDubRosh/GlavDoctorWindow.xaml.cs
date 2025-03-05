@@ -21,6 +21,7 @@ namespace VrachDubRosh
         public GlavDoctorWindow()
         {
             InitializeComponent();
+            WindowState = WindowState.Maximized;
             Loaded += GlavDoctorWindow_Loaded;
         }
 
