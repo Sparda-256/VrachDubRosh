@@ -63,6 +63,11 @@
                                     Background="#4CAF50" Foreground="White" FontWeight="Bold"
                                     Click="btnAssignPatient_Click"/>
                         </StackPanel>
+                        <!-- Кнопка Выход -->
+                        <Button Content="Выход" Width="100" Margin="764,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
 
@@ -112,6 +117,11 @@
                                     Background="#2196F3" Foreground="White" FontWeight="Bold"
                                     Click="btnAssignDoctors_Click"/>
                         </StackPanel>
+                        <!-- Кнопка Выход -->
+                        <Button Grid.Row="2" Content="Выход" Width="100" Margin="10,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
 
@@ -147,13 +157,18 @@
                             <Button Content="Добавить" Width="100" Margin="5" Padding="6"
                                     Background="#4CAF50" Foreground="White" FontWeight="Bold"
                                     Click="btnAddDoctor_Click"/>
-                            <Button Content="Редактировать" Width="120" Margin="5" Padding="6"
+                            <Button Content="Редактировать" Width="100" Margin="5" Padding="6"
                                     Background="#FF9800" Foreground="White" FontWeight="Bold"
                                     Click="btnEditDoctor_Click"/>
                             <Button Content="Удалить" Width="100" Margin="5" Padding="6"
                                     Background="#F44336" Foreground="White" FontWeight="Bold"
                                     Click="btnDeleteDoctor_Click"/>
                         </StackPanel>
+                        <!-- Кнопка Выход -->
+                        <Button Grid.Row="2" Content="Выход" Width="100" Margin="10,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
             </TabControl>

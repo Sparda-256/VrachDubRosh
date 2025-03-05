@@ -42,6 +42,11 @@
                                                     Width="120"/>
                             </DataGrid.Columns>
                         </DataGrid>
+                        <!-- Кнопка Выход -->
+                        <Button Content="Выход" Width="100" Margin="919,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
 
@@ -118,6 +123,11 @@
                                     Background="#2196F3" Foreground="White" FontWeight="Bold"
                                     Click="btnUpdateAppointmentsStatus_Click"/>
                         </StackPanel>
+                        <!-- Кнопка Выход -->
+                        <Button Grid.Row="3" Content="Выход" Width="100" Margin="10,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
 
@@ -159,6 +169,11 @@
                                     Background="#F44336" Foreground="White" FontWeight="Bold"
                                     Click="btnDeleteProcedure_Click"/>
                         </StackPanel>
+                        <!-- Кнопка Выход -->
+                        <Button Grid.Row="2" Content="Выход" Width="100" Margin="10,0,0,0" Padding="6"
+                    Background="#F44336" Foreground="White" FontWeight="Bold"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="ExitButton_Click"/>
                     </Grid>
                 </TabItem>
             </TabControl>

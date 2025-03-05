@@ -467,5 +467,12 @@ namespace VrachDubRosh
         }
 
         #endregion
+
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow loginWindow = new MainWindow();
+            loginWindow.Show();
+            this.Close();
+        }
     }
 }

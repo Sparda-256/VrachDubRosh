@@ -625,5 +625,14 @@ namespace VrachDubRosh
             }
         }
         #endregion
+
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Открываем окно авторизации
+            MainWindow loginWindow = new MainWindow();
+            loginWindow.Show();
+            // Закрываем текущее окно
+            this.Close();
+        }
     }
 }

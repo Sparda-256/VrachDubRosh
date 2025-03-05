@@ -43,10 +43,10 @@
                         HorizontalAlignment="Right" Margin="5">
                 <Button Content="Сохранить" Width="100" Margin="5" Padding="6"
                         Background="#4CAF50" Foreground="White" FontWeight="Bold"
-                        Click="btnSave_Click"/>
+                        Click="btnSave_Click" Height="40"/>
                 <Button Content="Отмена" Width="100" Margin="5" Padding="6"
                         Background="#F44336" Foreground="White" FontWeight="Bold"
-                        Click="btnCancel_Click"/>
+                        Click="btnCancel_Click" Height="40"/>
             </StackPanel>
         </Grid>
     </Viewbox>
