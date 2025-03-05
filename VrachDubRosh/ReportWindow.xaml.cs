@@ -3,6 +3,7 @@ using OfficeOpenXml.Style;
 using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -245,7 +246,11 @@ namespace VrachDubRosh
                 MessageBox.Show("Нет данных для экспорта.");
                 return;
             }
-            ExportToExcel(dtReportAll, "ВсеПроцедуры", txtAllSummary.Text);
+
+            DateTime start = dpStart_All.SelectedDate ?? DateTime.Today;
+            DateTime end = dpEnd_All.SelectedDate ?? DateTime.Today;
+            string header = $"Все процедуры за период {start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+            ExportToExcel(dtReportAll, "ВсеПроцедуры", txtAllSummary.Text, header);
         }
 
         #endregion
@@ -344,7 +349,13 @@ namespace VrachDubRosh
                 MessageBox.Show("Нет данных для экспорта.");
                 return;
             }
-            ExportToExcel(dtReportDoctor, "ПроцедурыВрача", txtDoctorSummary.Text);
+
+            DataRowView doctor = cbDoctor.SelectedItem as DataRowView;
+            string doctorName = doctor?["FullName"]?.ToString() ?? "Неизвестный врач";
+            DateTime start = dpStart_Doctor.SelectedDate ?? DateTime.Today;
+            DateTime end = dpEnd_Doctor.SelectedDate ?? DateTime.Today;
+            string header = $"Процедуры врача {doctorName} за период {start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+            ExportToExcel(dtReportDoctor, "ПроцедурыВрача", txtDoctorSummary.Text, header);
         }
 
         #endregion
@@ -443,7 +454,13 @@ namespace VrachDubRosh
                 MessageBox.Show("Нет данных для экспорта.");
                 return;
             }
-            ExportToExcel(dtReportPatient, "ПроцедурыПациента", txtPatientSummary.Text);
+
+            DataRowView patient = cbPatient.SelectedItem as DataRowView;
+            string patientName = patient?["FullName"]?.ToString() ?? "Неизвестный пациент";
+            DateTime start = dpStart_Patient.SelectedDate ?? DateTime.Today;
+            DateTime end = dpEnd_Patient.SelectedDate ?? DateTime.Today;
+            string header = $"Процедуры пациента {patientName} за период {start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+            ExportToExcel(dtReportPatient, "ПроцедурыПациента", txtPatientSummary.Text, header);
         }
 
         #endregion
@@ -539,7 +556,13 @@ namespace VrachDubRosh
                 MessageBox.Show("Нет данных для экспорта.");
                 return;
             }
-            ExportToExcel(dtReportProcedure, "НазначенияПроцедуры", txtProcedureSummary.Text);
+
+            DataRowView procedure = cbProcedure.SelectedItem as DataRowView;
+            string procedureName = procedure?["ProcedureName"]?.ToString() ?? "Неизвестная процедура";
+            DateTime start = dpStart_Procedure.SelectedDate ?? DateTime.Today;
+            DateTime end = dpEnd_Procedure.SelectedDate ?? DateTime.Today;
+            string header = $"Назначения процедуры {procedureName} за период {start:dd.MM.yyyy} - {end:dd.MM.yyyy}";
+            ExportToExcel(dtReportProcedure, "НазначенияПроцедуры", txtProcedureSummary.Text, header);
         }
 
         #endregion
@@ -551,7 +574,7 @@ namespace VrachDubRosh
         /// Даты/время форматируются в "dd.MM.yyyy HH:mm".
         /// Внизу добавляется текст итоговых показателей (summaryText).
         /// </summary>
-        private void ExportToExcel(DataTable dt, string reportName, string summaryText)
+        private void ExportToExcel(DataTable dt, string reportName, string summaryText, string reportHeader)
         {
             try
             {
@@ -559,47 +582,56 @@ namespace VrachDubRosh
                 {
                     var worksheet = package.Workbook.Worksheets.Add(reportName);
 
-                    // Заголовки столбцов (первая строка)
-                    for (int col = 0; col < dt.Columns.Count; col++)
+                    // Добавляем заголовок отчёта
+                    if (!string.IsNullOrEmpty(reportHeader))
                     {
-                        worksheet.Cells[1, col + 1].Value = dt.Columns[col].ColumnName;
-                        worksheet.Cells[1, col + 1].Style.Font.Bold = true;
+                        var headerRange = worksheet.Cells[1, 1, 1, dt.Columns.Count];
+                        headerRange.Merge = true;
+                        headerRange.Value = reportHeader;
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Font.Size = 14;
+                        headerRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     }
 
-                    // Заполнение данными
+                    // Заголовки столбцов (строка 3)
+                    for (int col = 0; col < dt.Columns.Count; col++)
+                    {
+                        worksheet.Cells[3, col + 1].Value = dt.Columns[col].ColumnName;
+                        worksheet.Cells[3, col + 1].Style.Font.Bold = true;
+                    }
+
+                    // Данные (начиная со строки 4)
                     for (int row = 0; row < dt.Rows.Count; row++)
                     {
                         for (int col = 0; col < dt.Columns.Count; col++)
                         {
                             object value = dt.Rows[row][col];
-
-                            // Если это столбец с датой/временем
                             if (dt.Columns[col].ColumnName == "Дата/время" && value != DBNull.Value)
                             {
-                                // Преобразуем к DateTime
                                 DateTime dtValue = Convert.ToDateTime(value);
-                                var cell = worksheet.Cells[row + 2, col + 1];
+                                var cell = worksheet.Cells[row + 4, col + 1];
                                 cell.Value = dtValue;
-                                // Устанавливаем формат ячейки
                                 cell.Style.Numberformat.Format = "dd.MM.yyyy HH:mm";
                             }
                             else
                             {
-                                worksheet.Cells[row + 2, col + 1].Value = value;
+                                worksheet.Cells[row + 4, col + 1].Value = value;
                             }
                         }
                     }
 
                     // Автоширина столбцов
-                    worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+                    worksheet.Cells[1, 1, dt.Rows.Count + 4, dt.Columns.Count].AutoFitColumns();
 
-                    // Добавляем итоговые показатели после данных
-                    int summaryStartRow = dt.Rows.Count + 3; // Пустая строка + 1
-                    var lines = summaryText.Split('\n');
-                    for (int i = 0; i < lines.Length; i++)
+                    // Итоговые показатели
+                    if (!string.IsNullOrEmpty(summaryText))
                     {
-                        // Пишем каждую строку summary в первую колонку
-                        worksheet.Cells[summaryStartRow + i, 1].Value = lines[i];
+                        int summaryStartRow = dt.Rows.Count + 5;
+                        var lines = summaryText.Split('\n');
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            worksheet.Cells[summaryStartRow + i, 1].Value = lines[i];
+                        }
                     }
 
                     // Сохранение
@@ -611,7 +643,7 @@ namespace VrachDubRosh
 
                     if (saveFileDialog.ShowDialog() == true)
                     {
-                        System.IO.File.WriteAllBytes(saveFileDialog.FileName, package.GetAsByteArray());
+                        File.WriteAllBytes(saveFileDialog.FileName, package.GetAsByteArray());
                         MessageBox.Show("Отчет успешно сохранен!");
                     }
                 }
