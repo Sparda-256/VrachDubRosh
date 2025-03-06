@@ -28,6 +28,7 @@ namespace VrachDubRosh
 
         public ReportWindow()
         {
+            UpdateAppointmentsStatus();
             // Разрешаем использование EPPlus в некоммерческом режиме
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             InitializeComponent();
@@ -56,7 +57,49 @@ namespace VrachDubRosh
             LoadPatients();
             LoadProcedures();
         }
+        private void UpdateAppointmentsStatus()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
 
+                    // 1. Сначала помечаем завершенные процедуры (независимо от текущего статуса)
+                    string updateCompletedQuery = @"
+                UPDATE pa
+                SET pa.Status = 'Завершена'
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                WHERE DATEADD(minute, pr.Duration, pa.AppointmentDateTime) <= GETDATE() 
+                  AND pa.Status IN ('Назначена', 'Идёт')"; // Обрабатываем оба статуса
+
+                    using (SqlCommand cmd = new SqlCommand(updateCompletedQuery, con))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2. Затем помечаем процедуры, которые идут сейчас
+                    string updateInProgressQuery = @"
+                UPDATE pa
+                SET pa.Status = 'Идёт'
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                WHERE pa.AppointmentDateTime <= GETDATE() 
+                  AND DATEADD(minute, pr.Duration, pa.AppointmentDateTime) > GETDATE() 
+                  AND pa.Status = 'Назначена'";
+
+                    using (SqlCommand cmd = new SqlCommand(updateInProgressQuery, con))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при обновлении статуса: " + ex.Message);
+            }
+        }
         #region Загрузка списков для ComboBox + поиск
 
         private void LoadDoctors()
@@ -155,6 +198,7 @@ namespace VrachDubRosh
 
         private void btnShowAll_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
             DateTime start = dpStart_All.SelectedDate ?? DateTime.Today;
             DateTime end = dpEnd_All.SelectedDate ?? DateTime.Today;
             // Захватываем весь последний день
@@ -259,6 +303,7 @@ namespace VrachDubRosh
 
         private void btnShowDoctor_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
             if (cbDoctor.SelectedValue == null)
             {
                 MessageBox.Show("Выберите врача.");
@@ -364,6 +409,8 @@ namespace VrachDubRosh
 
         private void btnShowPatient_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
+
             if (cbPatient.SelectedValue == null)
             {
                 MessageBox.Show("Выберите пациента.");
@@ -469,6 +516,7 @@ namespace VrachDubRosh
 
         private void btnShowProcedure_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
             if (cbProcedure.SelectedValue == null)
             {
                 MessageBox.Show("Выберите процедуру.");
@@ -551,6 +599,7 @@ namespace VrachDubRosh
 
         private void btnExportProcedure_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
             if (dtReportProcedure == null || dtReportProcedure.Rows.Count == 0)
             {
                 MessageBox.Show("Нет данных для экспорта.");
@@ -576,6 +625,7 @@ namespace VrachDubRosh
         /// </summary>
         private void ExportToExcel(DataTable dt, string reportName, string summaryText, string reportHeader)
         {
+            UpdateAppointmentsStatus();
             try
             {
                 using (ExcelPackage package = new ExcelPackage())
@@ -658,6 +708,7 @@ namespace VrachDubRosh
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
+            UpdateAppointmentsStatus();
             this.Close();
         }
     }
