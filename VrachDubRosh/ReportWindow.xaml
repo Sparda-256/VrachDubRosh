@@ -127,8 +127,8 @@
                                 <TextBox x:Name="txtSearchProcedure" Width="180" TextChanged="txtSearchProcedure_TextChanged"
                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
                                 <ComboBox x:Name="cbProcedure" Width="180" Margin="0,5,0,0"
-                          DisplayMemberPath="ProcedureName" SelectedValuePath="ProcedureID"
-                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+          DisplayMemberPath="ProcedureDisplay" SelectedValuePath="ProcedureID"
+          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
                                 <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>

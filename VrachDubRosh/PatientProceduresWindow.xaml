@@ -12,11 +12,13 @@
             <TextBlock Text="Процедуры пациента" FontSize="20" FontWeight="Bold" Foreground="#333333" 
                  HorizontalAlignment="Center" Margin="0,0,0,10"/>
             <!-- DataGrid с назначениями -->
+            <!-- DataGrid с назначениями -->
             <DataGrid x:Name="dgPatientProcedures" AutoGenerateColumns="False" IsReadOnly="True" 
-                FontSize="14" BorderBrush="#B0B0B0" BorderThickness="1">
+          FontSize="14" BorderBrush="#B0B0B0" BorderThickness="1">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
                     <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*"/>
+                    <DataGridTextColumn Header="Врач" Binding="{Binding Doctor}" Width="150"/>
                     <DataGridTextColumn Header="Дата и время" 
                               Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}"
                               Width="150"/>

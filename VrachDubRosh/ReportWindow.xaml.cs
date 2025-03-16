@@ -169,11 +169,18 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT ProcedureID, ProcedureName FROM Procedures";
+                    // Объединяем название процедуры и ФИО врача через INNER JOIN с таблицей Doctors
+                    string query = @"
+                SELECT 
+                    pr.ProcedureID, 
+                    (pr.ProcedureName + ' - ' + d.FullName) AS ProcedureDisplay
+                FROM Procedures pr
+                INNER JOIN Doctors d ON pr.DoctorID = d.DoctorID";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     dtProcedures = new DataTable();
                     da.Fill(dtProcedures);
 
+                    // Привязываем DataTable к ComboBox
                     cbProcedure.ItemsSource = dtProcedures.DefaultView;
                 }
             }

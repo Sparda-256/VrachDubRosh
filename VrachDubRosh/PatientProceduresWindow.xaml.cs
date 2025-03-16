@@ -28,11 +28,12 @@ namespace VrachDubRosh
                 {
                     con.Open();
                     string query = @"
-                        SELECT pa.AppointmentID, pr.ProcedureName, pa.AppointmentDateTime, pa.Status
-                        FROM ProcedureAppointments pa
-                        INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
-                        WHERE pa.PatientID = @PatientID
-                        ORDER BY pa.AppointmentDateTime DESC";
+                SELECT pa.AppointmentID, pr.ProcedureName, pa.AppointmentDateTime, pa.Status, d.FullName AS Doctor
+                FROM ProcedureAppointments pa
+                INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
+                INNER JOIN Doctors d ON pa.DoctorID = d.DoctorID
+                WHERE pa.PatientID = @PatientID
+                ORDER BY pa.AppointmentDateTime DESC";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     DataTable dt = new DataTable();
                     da.SelectCommand.Parameters.AddWithValue("@PatientID", patientID);
