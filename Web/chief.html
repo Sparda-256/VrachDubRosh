@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Главврач - Помощник Поликлиники</title>
+  <link rel="stylesheet" href="chief.css">
+</head>
+<body>
+  <header>
+    <h1>Главврач</h1>
+    <button id="reportsBtn">Отчеты и аналитика</button>
+  </header>
+  
+  <nav class="tabs">
+    <button class="tablinks active" data-tab="newPatients">Новые пациенты</button>
+    <button class="tablinks" data-tab="patients">Пациенты</button>
+    <button class="tablinks" data-tab="doctors">Врачи</button>
+  </nav>
+  
+  <!-- Вкладка "Новые пациенты" -->
+  <div class="tabcontent" id="newPatients">
+    <div class="search-panel">
+      <label for="searchNewPatients">Поиск:</label>
+      <input type="text" id="searchNewPatients" placeholder="Введите ФИО">
+    </div>
+    <table id="newPatientsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ФИО</th>
+          <th>Дата рождения</th>
+          <th>Пол</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут заполнены через JavaScript -->
+      </tbody>
+    </table>
+    <div class="assign-form">
+      <label for="doctorSelect">Врач:</label>
+      <select id="doctorSelect"></select>
+      
+      <label for="recordDate">Дата записи:</label>
+      <input type="date" id="recordDate">
+      
+      <label for="dischargeDate">Дата выписки:</label>
+      <input type="date" id="dischargeDate">
+      
+      <button id="assignPatientBtn">Назначить</button>
+    </div>
+    <button class="exitBtn" id="exitNewPatients">Выход</button>
+  </div>
+  
+  <!-- Вкладка "Пациенты" -->
+  <div class="tabcontent" id="patients" style="display:none;">
+    <div class="search-panel">
+      <label for="searchPatients">Поиск:</label>
+      <input type="text" id="searchPatients" placeholder="Введите ФИО">
+    </div>
+    <table id="patientsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ФИО</th>
+          <th>Дата рождения</th>
+          <th>Пол</th>
+          <th>Дата записи</th>
+          <th>Дата выписки</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут заполнены через JavaScript -->
+      </tbody>
+    </table>
+    <div class="button-panel">
+      <button id="addPatientBtn">Добавить</button>
+      <button id="editPatientBtn">Редактировать</button>
+      <button id="deletePatientBtn">Удалить</button>
+      <button id="assignDoctorsBtn">Назначить врачу</button>
+      <button class="exitBtn" id="exitPatients">Выход</button>
+    </div>
+  </div>
+  
+  <!-- Вкладка "Врачи" -->
+  <div class="tabcontent" id="doctors" style="display:none;">
+    <div class="search-panel">
+      <label for="searchDoctors">Поиск:</label>
+      <input type="text" id="searchDoctors" placeholder="Введите ФИО">
+    </div>
+    <table id="doctorsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ФИО</th>
+          <th>Специальность</th>
+          <th>Номер кабинета</th>
+          <th>Стаж</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут заполнены через JavaScript -->
+      </tbody>
+    </table>
+    <div class="button-panel">
+      <button id="addDoctorBtn">Добавить</button>
+      <button id="editDoctorBtn">Редактировать</button>
+      <button id="deleteDoctorBtn">Удалить</button>
+      <button class="exitBtn" id="exitDoctors">Выход</button>
+    </div>
+  </div>
+  
+  <script src="chief.js"></script>
+</body>
+</html>

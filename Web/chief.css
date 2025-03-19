@@ -1,0 +1,158 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #F9F9F9;
+  }
+  
+  header {
+    background: #4CAF50;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  header h1 {
+    margin: 0;
+  }
+  
+  header button {
+    background: #2196F3;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  nav.tabs {
+    background: #ddd;
+    display: flex;
+  }
+  
+  nav.tabs button {
+    background: #ddd;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  nav.tabs button.active {
+    background: white;
+    border-bottom: 2px solid #4CAF50;
+  }
+  
+  .tabcontent {
+    padding: 20px;
+    background: white;
+    margin: 10px;
+    border: 1px solid #ccc;
+  }
+  
+  .search-panel {
+    margin-bottom: 10px;
+  }
+  
+  .search-panel label {
+    margin-right: 5px;
+    font-weight: bold;
+  }
+  
+  .search-panel input[type="text"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  
+  table th, table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  /* Стиль для выбранной строки */
+  tr.selected {
+    background-color: #d0eaff;
+  }
+  
+  .assign-form {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .assign-form label {
+    font-weight: bold;
+  }
+  
+  .assign-form input[type="date"],
+  .assign-form select {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .assign-form button {
+    padding: 8px 12px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .button-panel {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  
+  .button-panel button, .exitBtn {
+    padding: 8px 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  #addPatientBtn, #addDoctorBtn {
+    background: #4CAF50;
+    color: white;
+  }
+  
+  #editPatientBtn, #editDoctorBtn {
+    background: #E0E0E0;
+    color: black;
+  }
+  
+  #deletePatientBtn, #deleteDoctorBtn {
+    background: #F44336;
+    color: white;
+  }
+  
+  #assignDoctorsBtn {
+    background: #2196F3;
+    color: white;
+  }
+  
+  .exitBtn {
+    background: #F44336;
+    color: white;
+  }
+  
+  @media screen and (max-width: 600px) {
+    .assign-form, .button-panel {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  
