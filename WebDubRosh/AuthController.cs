@@ -2,16 +2,15 @@
 using System;
 using System.Data.SqlClient;
 
-
 namespace PomoshnikPolicliniki.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        // Строка подключения к базе данных
+        // Изменённая строка подключения с TrustServerCertificate=True для работы через localtunnel
         private readonly string _connectionString =
-            "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
+            "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework;TrustServerCertificate=True";
 
         // POST: /api/auth/login
         // Ожидает JSON: { "username": "значение", "password": "значение" }

@@ -9,7 +9,8 @@ namespace PomoshnikPolicliniki.Controllers
     [Route("api/[controller]")]
     public class ChiefController : ControllerBase
     {
-        private readonly string _connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
+        // Обновлённая строка подключения с TrustServerCertificate=True для работы через localtunnel
+        private readonly string _connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework;TrustServerCertificate=True";
 
         // GET: api/chief/newpatients
         [HttpGet("newpatients")]
