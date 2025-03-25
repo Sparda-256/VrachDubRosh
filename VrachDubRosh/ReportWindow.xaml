@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Отчеты и аналитика" Height="650" Width="900"
         Background="#F9F9F9"
-        Icon="/28-280979_medical-logo-medical-cross-symbol-png (1).png"
+        Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
     <Viewbox Stretch="Uniform">

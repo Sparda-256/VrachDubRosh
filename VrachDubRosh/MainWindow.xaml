@@ -4,7 +4,7 @@
         Title="Врач ДубРощ - Авторизация" 
         Height="250" Width="400"
         Background="#F9F9F9"
-        Icon="/28-280979_medical-logo-medical-cross-symbol-png (1).png"
+        Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
     <Viewbox Stretch="Uniform">
@@ -62,7 +62,7 @@
 
             <!-- Нижняя надпись -->
             <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" 
-                       Text="© 2025 Клиника" 
+                       Text="© 2025 Санаторий Дубовая Роща" 
                        FontSize="12" Foreground="#888888" 
                        HorizontalAlignment="Center" Margin="0,10,0,0"/>
         </Grid>
