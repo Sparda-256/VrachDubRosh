@@ -83,9 +83,9 @@ namespace VrachDubRosh
             {
                 int patientID = Convert.ToInt32(row["PatientID"]);
                 string patientName = row["FullName"].ToString();
-                PatientProceduresWindow ppw = new PatientProceduresWindow(patientID, patientName);
-                ppw.Owner = this;
-                ppw.ShowDialog();
+                MedCardWindow medCardWindow = new MedCardWindow(patientID, patientName);
+                medCardWindow.Owner = this;
+                medCardWindow.ShowDialog();
             }
         }
 
