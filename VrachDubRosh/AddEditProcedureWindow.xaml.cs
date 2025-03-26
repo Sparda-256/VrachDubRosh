@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Text.RegularExpressions;
 using System.Windows;
 
 namespace VrachDubRosh
@@ -62,6 +63,14 @@ namespace VrachDubRosh
                 return;
             }
 
+            // Проверка: наименование должно содержать только буквы (и пробелы)
+            string procedureName = txtProcedureName.Text.Trim();
+            if (!Regex.IsMatch(procedureName, @"^[A-Za-zА-Яа-яЁё\s]+$"))
+            {
+                MessageBox.Show("Наименование процедуры должно содержать только буквы.");
+                return;
+            }
+
             if (!int.TryParse(txtDuration.Text.Trim(), out int duration))
             {
                 MessageBox.Show("Длительность должна быть числом (в минутах).");
@@ -74,7 +83,7 @@ namespace VrachDubRosh
                 {
                     con.Open();
 
-                    // Добавляем проверку наличия процедуры с таким же наименованием
+                    // Проверка наличия процедуры с таким же наименованием
                     string checkQuery = "SELECT TOP 1 Duration FROM Procedures WHERE ProcedureName = @ProcedureName";
                     if (_procedureID != null)
                     {
@@ -82,7 +91,7 @@ namespace VrachDubRosh
                     }
                     using (SqlCommand checkCmd = new SqlCommand(checkQuery, con))
                     {
-                        checkCmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
+                        checkCmd.Parameters.AddWithValue("@ProcedureName", procedureName);
                         if (_procedureID != null)
                         {
                             checkCmd.Parameters.AddWithValue("@ProcedureID", _procedureID.Value);
@@ -98,7 +107,7 @@ namespace VrachDubRosh
                             }
                             else
                             {
-                                MessageBox.Show("Процедура с данным наименованием уже имеется, пожалуйста переименуйте процедуру.");
+                                MessageBox.Show("Процедура с данным названием уже имеется, пожалуйста переименуйте процедуру.");
                                 return;
                             }
                         }
@@ -112,7 +121,7 @@ namespace VrachDubRosh
                                        VALUES (@ProcedureName, @Duration, @DoctorID)";
                         using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                         {
-                            cmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
+                            cmd.Parameters.AddWithValue("@ProcedureName", procedureName);
                             cmd.Parameters.AddWithValue("@Duration", duration);
                             cmd.Parameters.AddWithValue("@DoctorID", _doctorID);
                             cmd.ExecuteNonQuery();
@@ -126,7 +135,7 @@ namespace VrachDubRosh
                                        WHERE ProcedureID = @ProcedureID";
                         using (SqlCommand cmd = new SqlCommand(updateQuery, con))
                         {
-                            cmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
+                            cmd.Parameters.AddWithValue("@ProcedureName", procedureName);
                             cmd.Parameters.AddWithValue("@Duration", duration);
                             cmd.Parameters.AddWithValue("@ProcedureID", _procedureID.Value);
                             cmd.ExecuteNonQuery();
