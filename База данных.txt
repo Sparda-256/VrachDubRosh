@@ -123,6 +123,7 @@ CREATE TABLE ProcedureAppointments (
     ProcedureID INT, -- Внешний ключ на таблицу процедур
     AppointmentDateTime DATETIME,  -- Дата и время проведения процедуры
     Status NVARCHAR(50), -- Статус процедуры
+    Description NVARCHAR(1000) NULL, -- Описание проведённой процедуры
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
     FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
@@ -136,6 +137,16 @@ CREATE TABLE PatientDoctorAssignments (
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
 );
+
+CREATE TABLE PatientDescriptions (
+    PatientDescriptionID INT IDENTITY PRIMARY KEY,
+    PatientID INT,
+    DoctorID INT,
+    Description NVARCHAR(1000),
+    DescriptionDate DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (PatientID, DoctorID) REFERENCES PatientDoctorAssignments(PatientID, DoctorID)
+);
+
 
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
