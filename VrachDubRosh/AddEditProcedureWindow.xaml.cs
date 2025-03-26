@@ -73,11 +73,43 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
+
+                    // Добавляем проверку наличия процедуры с таким же наименованием
+                    string checkQuery = "SELECT TOP 1 Duration FROM Procedures WHERE ProcedureName = @ProcedureName";
+                    if (_procedureID != null)
+                    {
+                        checkQuery += " AND ProcedureID <> @ProcedureID";
+                    }
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, con))
+                    {
+                        checkCmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
+                        if (_procedureID != null)
+                        {
+                            checkCmd.Parameters.AddWithValue("@ProcedureID", _procedureID.Value);
+                        }
+                        object result = checkCmd.ExecuteScalar();
+                        if (result != null)
+                        {
+                            int existingDuration = Convert.ToInt32(result);
+                            if (existingDuration == duration)
+                            {
+                                MessageBox.Show("Идентичная процедура уже имеется");
+                                return;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Процедура с данным наименованием уже имеется, пожалуйста переименуйте процедуру.");
+                                return;
+                            }
+                        }
+                    }
+
+                    // Если проверки пройдены, производим вставку или обновление процедуры
                     if (_procedureID == null)
                     {
                         // Добавление процедуры
                         string insertQuery = @"INSERT INTO Procedures (ProcedureName, Duration, DoctorID)
-                                               VALUES (@ProcedureName, @Duration, @DoctorID)";
+                                       VALUES (@ProcedureName, @Duration, @DoctorID)";
                         using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                         {
                             cmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
@@ -90,8 +122,8 @@ namespace VrachDubRosh
                     {
                         // Редактирование процедуры
                         string updateQuery = @"UPDATE Procedures 
-                                               SET ProcedureName = @ProcedureName, Duration = @Duration
-                                               WHERE ProcedureID = @ProcedureID";
+                                       SET ProcedureName = @ProcedureName, Duration = @Duration
+                                       WHERE ProcedureID = @ProcedureID";
                         using (SqlCommand cmd = new SqlCommand(updateQuery, con))
                         {
                             cmd.Parameters.AddWithValue("@ProcedureName", txtProcedureName.Text.Trim());
