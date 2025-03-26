@@ -118,6 +118,12 @@
     <Compile Include="AddEditProcedureWindow.xaml.cs">
       <DependentUpon>AddEditProcedureWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="AddPatientDescriptionWindow.xaml.cs">
+      <DependentUpon>AddPatientDescriptionWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="AddProcedureDescriptionWindow.xaml.cs">
+      <DependentUpon>AddProcedureDescriptionWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Answers.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
@@ -193,6 +199,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="AddEditProcedureWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="AddPatientDescriptionWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="AddProcedureDescriptionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -94,7 +94,8 @@
 
                         <!-- DataGrid для назначенных процедур -->
                         <DataGrid x:Name="dgAppointments" Grid.Row="2" AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" FontSize="14">
+                                  IsReadOnly="True" SelectionMode="Single" FontSize="14"
+                                  MouseDoubleClick="dgAppointments_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
                                 <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>

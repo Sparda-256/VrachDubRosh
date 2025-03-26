@@ -39,37 +39,25 @@ namespace VrachDubRosh
         }
 
         #region Вкладка "Пациенты"
-        // Обработчики поиска
         private void txtSearchPatients_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (dtDoctorPatients != null)
             {
                 string filter = txtSearchPatients.Text.Trim().Replace("'", "''");
-                dtDoctorPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
-                    ? ""
-                    : $"FullName LIKE '%{filter}%'";
-            }
-        }
-
-        private void txtSearchAppointments_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (dtAppointments != null)
-            {
-                string filter = txtSearchAppointments.Text.Trim().Replace("'", "''");
-                dtAppointments.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
-                    ? ""
-                    : $"PatientName LIKE '%{filter}%' OR ProcedureName LIKE '%{filter}%'";
-            }
-        }
-
-        private void txtSearchProcedures_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (dtProcedures != null)
-            {
-                string filter = txtSearchProcedures.Text.Trim().Replace("'", "''");
-                dtProcedures.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
-                    ? ""
-                    : $"ProcedureName LIKE '%{filter}%'";
+                if (string.IsNullOrEmpty(filter))
+                {
+                    dtDoctorPatients.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dtDoctorPatients.DefaultView.RowFilter =
+                        "Convert(PatientID, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "FullName LIKE '%" + filter + "%' OR " +
+                        "Convert(DateOfBirth, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "Gender LIKE '%" + filter + "%' OR " +
+                        "Convert(RecordDate, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "Convert(DischargeDate, 'System.String') LIKE '%" + filter + "%'";
+                }
             }
         }
 
@@ -187,16 +175,18 @@ namespace VrachDubRosh
                 LoadDoctorPatients();
             }
         }
-        // Открытие окна редактирования пациента по двойному щелчку
+        // Изменённый обработчик двойного щелчка по пациенту
         private void dgDoctorPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (dgDoctorPatients.SelectedItem is DataRowView row)
             {
                 int patientID = Convert.ToInt32(row["PatientID"]);
-                AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(patientID);
-                editPatientWindow.Owner = this;
-                if (editPatientWindow.ShowDialog() == true)
+                // Открываем окно добавления описания для пациента
+                AddPatientDescriptionWindow addDescWindow = new AddPatientDescriptionWindow(patientID, _doctorID);
+                addDescWindow.Owner = this;
+                if (addDescWindow.ShowDialog() == true)
                 {
+                    // При необходимости обновить данные (например, перечень описаний или информацию о пациенте)
                     LoadDoctorPatients();
                 }
             }
@@ -543,6 +533,48 @@ namespace VrachDubRosh
                 MessageBox.Show("Ошибка при обновлении статусов: " + ex.Message);
             }
         }
+        // Обработчик двойного щелчка по строке назначенных процедур
+        private void dgAppointments_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgAppointments.SelectedItem is DataRowView row)
+            {
+                string status = row["Status"].ToString();
+                if (status == "Завершена")
+                {
+                    int appointmentID = Convert.ToInt32(row["AppointmentID"]);
+                    AddProcedureDescriptionWindow addProcDescWindow = new AddProcedureDescriptionWindow(appointmentID, _doctorID);
+                    addProcDescWindow.Owner = this;
+                    if (addProcDescWindow.ShowDialog() == true)
+                    {
+                        LoadDoctorAppointments();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Добавить описание можно только для процедуры со статусом 'Завершена'.", "Неверный статус", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+        private void txtSearchAppointments_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtAppointments != null)
+            {
+                string filter = txtSearchAppointments.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrEmpty(filter))
+                {
+                    dtAppointments.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dtAppointments.DefaultView.RowFilter =
+                        "Convert(AppointmentID, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "PatientName LIKE '%" + filter + "%' OR " +
+                        "ProcedureName LIKE '%" + filter + "%' OR " +
+                        "Convert(AppointmentDateTime, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "Status LIKE '%" + filter + "%'";
+                }
+            }
+        }
         #endregion
 
         #region Вкладка "Процедуры"
@@ -622,6 +654,25 @@ namespace VrachDubRosh
                 {
                     LoadDoctorProcedures();
                     LoadProceduresForAssignment();
+                }
+            }
+        }
+
+        private void txtSearchProcedures_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dtProcedures != null)
+            {
+                string filter = txtSearchProcedures.Text.Trim().Replace("'", "''");
+                if (string.IsNullOrEmpty(filter))
+                {
+                    dtProcedures.DefaultView.RowFilter = "";
+                }
+                else
+                {
+                    dtProcedures.DefaultView.RowFilter =
+                        "Convert(ProcedureID, 'System.String') LIKE '%" + filter + "%' OR " +
+                        "ProcedureName LIKE '%" + filter + "%' OR " +
+                        "Convert(Duration, 'System.String') LIKE '%" + filter + "%'";
                 }
             }
         }
