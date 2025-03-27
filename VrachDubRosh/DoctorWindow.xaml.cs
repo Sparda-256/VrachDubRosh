@@ -299,13 +299,19 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT ProcedureID, ProcedureName FROM Procedures WHERE DoctorID = @DoctorID";
+                    string query = @"
+                SELECT ProcedureID, 
+                       CONCAT(ProcedureName, ' - ', Duration, ' мин.') AS DisplayText
+                FROM Procedures 
+                WHERE DoctorID = @DoctorID";
+
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
+
                     cbProcedures.ItemsSource = dt.DefaultView;
-                    cbProcedures.DisplayMemberPath = "ProcedureName";
+                    cbProcedures.DisplayMemberPath = "DisplayText";
                     cbProcedures.SelectedValuePath = "ProcedureID";
                 }
             }
