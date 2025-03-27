@@ -329,43 +329,87 @@ namespace VrachDubRosh
 
         private void btnDeletePatient_Click(object sender, RoutedEventArgs e)
         {
-            if (dgPatients.SelectedItem == null)
+            if (dgPatients.SelectedItems == null || dgPatients.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите пациента для удаления.");
+                MessageBox.Show("Выберите хотя бы одного пациента для удаления.");
                 return;
             }
-            DataRowView row = dgPatients.SelectedItem as DataRowView;
-            int patientID = Convert.ToInt32(row["PatientID"]);
 
-            if (MessageBox.Show("Вы уверены, что хотите удалить этого пациента?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Вы уверены, что хотите удалить выбранных пациентов?",
+                                "Подтверждение", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             {
-                try
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
                 {
-                    using (SqlConnection con = new SqlConnection(connectionString))
+                    con.Open();
+                    // Открываем транзакцию для группового удаления
+                    using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        con.Open();
-                        // Удаляем связи пациента с врачами
-                        string deleteAssignmentsQuery = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                        using (SqlCommand cmd = new SqlCommand(deleteAssignmentsQuery, con))
+                        foreach (var selectedItem in dgPatients.SelectedItems)
                         {
-                            cmd.Parameters.AddWithValue("@PatientID", patientID);
-                            cmd.ExecuteNonQuery();
+                            if (selectedItem is DataRowView row)
+                            {
+                                int patientID = Convert.ToInt32(row["PatientID"]);
+
+                                // 1. Удаляем связанные записи из ProcedureAppointments
+                                string deleteAppointments = @"
+                            DELETE FROM ProcedureAppointments
+                            WHERE PatientID = @PatientID
+                        ";
+                                using (SqlCommand cmdApp = new SqlCommand(deleteAppointments, con, tran))
+                                {
+                                    cmdApp.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmdApp.ExecuteNonQuery();
+                                }
+
+                                // 2. Удаляем связанные записи из PatientDescriptions
+                                string deleteDescriptions = @"
+                            DELETE FROM PatientDescriptions
+                            WHERE PatientID = @PatientID
+                        ";
+                                using (SqlCommand cmdDesc = new SqlCommand(deleteDescriptions, con, tran))
+                                {
+                                    cmdDesc.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmdDesc.ExecuteNonQuery();
+                                }
+
+                                // 3. Удаляем связи в PatientDoctorAssignments
+                                string deleteAssignments = @"
+                            DELETE FROM PatientDoctorAssignments
+                            WHERE PatientID = @PatientID
+                        ";
+                                using (SqlCommand cmdAssign = new SqlCommand(deleteAssignments, con, tran))
+                                {
+                                    cmdAssign.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmdAssign.ExecuteNonQuery();
+                                }
+
+                                // 4. Удаляем самого пациента из Patients
+                                string deletePatient = @"
+                            DELETE FROM Patients
+                            WHERE PatientID = @PatientID
+                        ";
+                                using (SqlCommand cmdPat = new SqlCommand(deletePatient, con, tran))
+                                {
+                                    cmdPat.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmdPat.ExecuteNonQuery();
+                                }
+                            }
                         }
-                        // Удаляем пациента
-                        string deleteQuery = "DELETE FROM Patients WHERE PatientID = @PatientID";
-                        using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", patientID);
-                            cmd.ExecuteNonQuery();
-                        }
+                        tran.Commit();
                     }
-                    MessageBox.Show("Пациент удалён.");
-                    LoadPatients();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении пациента: " + ex.Message);
-                }
+
+                MessageBox.Show("Выбранные пациенты удалены.");
+                LoadPatients(); // Обновляем список пациентов
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при удалении пациентов: " + ex.Message);
             }
         }
 
@@ -426,44 +470,111 @@ namespace VrachDubRosh
 
         private void btnDeleteDoctor_Click(object sender, RoutedEventArgs e)
         {
-            if (dgDoctors.SelectedItem == null)
+            if (dgDoctors.SelectedItems == null || dgDoctors.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите врача для удаления.");
+                MessageBox.Show("Выберите хотя бы одного врача для удаления.");
                 return;
             }
-            DataRowView row = dgDoctors.SelectedItem as DataRowView;
-            int doctorID = Convert.ToInt32(row["DoctorID"]);
 
-            if (MessageBox.Show("Вы уверены, что хотите удалить этого врача?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Вы уверены, что хотите удалить выбранных врачей?",
+                                "Подтверждение", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             {
-                try
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
                 {
-                    using (SqlConnection con = new SqlConnection(connectionString))
+                    con.Open();
+                    // Открываем транзакцию для группового удаления
+                    using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        con.Open();
-                        // Удаляем связи врача с пациентами
-                        string deleteAssignmentsQuery = "DELETE FROM PatientDoctorAssignments WHERE DoctorID = @DoctorID";
-                        using (SqlCommand cmd = new SqlCommand(deleteAssignmentsQuery, con))
+                        foreach (var selectedItem in dgDoctors.SelectedItems)
                         {
-                            cmd.Parameters.AddWithValue("@DoctorID", doctorID);
-                            cmd.ExecuteNonQuery();
+                            if (selectedItem is DataRowView row)
+                            {
+                                int doctorID = Convert.ToInt32(row["DoctorID"]);
+
+                                // 1. Удаляем связанные записи из ProcedureAppointments
+                                string deleteAppointments = @"
+                            DELETE FROM ProcedureAppointments
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdApp = new SqlCommand(deleteAppointments, con, tran))
+                                {
+                                    cmdApp.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdApp.ExecuteNonQuery();
+                                }
+
+                                // 2. Удаляем связанные записи из PatientDescriptions
+                                string deleteDescriptions = @"
+                            DELETE FROM PatientDescriptions
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdDesc = new SqlCommand(deleteDescriptions, con, tran))
+                                {
+                                    cmdDesc.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdDesc.ExecuteNonQuery();
+                                }
+
+                                // 3. Удаляем связи в PatientDoctorAssignments
+                                string deleteAssignments = @"
+                            DELETE FROM PatientDoctorAssignments
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdAssign = new SqlCommand(deleteAssignments, con, tran))
+                                {
+                                    cmdAssign.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdAssign.ExecuteNonQuery();
+                                }
+
+                                // 4. Удаляем записи из DoctorDiagnoses (если используется)
+                                string deleteDoctorDiagnoses = @"
+                            DELETE FROM DoctorDiagnoses
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdDocDiag = new SqlCommand(deleteDoctorDiagnoses, con, tran))
+                                {
+                                    cmdDocDiag.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdDocDiag.ExecuteNonQuery();
+                                }
+
+                                // 5. Удаляем связанные процедуры из Procedures
+                                //    (если нужно полностью убрать все процедуры этого врача)
+                                string deleteProcedures = @"
+                            DELETE FROM Procedures
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdProcs = new SqlCommand(deleteProcedures, con, tran))
+                                {
+                                    cmdProcs.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdProcs.ExecuteNonQuery();
+                                }
+
+                                // 6. Удаляем врача из Doctors
+                                string deleteDoctor = @"
+                            DELETE FROM Doctors
+                            WHERE DoctorID = @DoctorID
+                        ";
+                                using (SqlCommand cmdDoc = new SqlCommand(deleteDoctor, con, tran))
+                                {
+                                    cmdDoc.Parameters.AddWithValue("@DoctorID", doctorID);
+                                    cmdDoc.ExecuteNonQuery();
+                                }
+                            }
                         }
-                        // Удаляем врача
-                        string deleteQuery = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
-                        using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
-                        {
-                            cmd.Parameters.AddWithValue("@DoctorID", doctorID);
-                            cmd.ExecuteNonQuery();
-                        }
+                        tran.Commit();
                     }
-                    MessageBox.Show("Врач удалён.");
-                    LoadDoctors();
-                    LoadDoctorsForComboBox();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении врача: " + ex.Message);
-                }
+
+                MessageBox.Show("Выбранные врачи удалены.");
+                LoadDoctors(); // Обновляем список врачей
+                LoadDoctorsForComboBox(); // Если нужно обновить ComboBox
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при удалении врачей: " + ex.Message);
             }
         }
 

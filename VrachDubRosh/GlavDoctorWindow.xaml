@@ -89,7 +89,7 @@
                         </StackPanel>
                         <!-- DataGrid для пациентов -->
                         <DataGrid x:Name="dgPatients" Grid.Row="1" AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,5,0,5"
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,5,0,5"
                                   MouseDoubleClick="dgPatients_MouseDoubleClick" FontSize="14">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
@@ -143,7 +143,7 @@
                         </StackPanel>
                         <!-- DataGrid для врачей -->
                         <DataGrid x:Name="dgDoctors" Grid.Row="1" AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,5,0,5"
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,5,0,5"
                                   MouseDoubleClick="dgDoctors_MouseDoubleClick" FontSize="14">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="ID" Binding="{Binding DoctorID}" Width="50"/>

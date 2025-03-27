@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using VrachDubRosh;
 
 namespace VrachDubRosh
@@ -13,6 +14,8 @@ namespace VrachDubRosh
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
         private int _doctorID; // Идентификатор врача, передается после авторизации
+
+        private DispatcherTimer _refreshTimer;
 
         // Добавляем поля для кэширования данных
         private DataTable dtDoctorPatients;
@@ -36,6 +39,30 @@ namespace VrachDubRosh
             LoadPatientsForAssignment();
             LoadProceduresForAssignment();
             UpdateAppointmentsStatus();
+
+            // Настраиваем и запускаем таймер
+            _refreshTimer = new DispatcherTimer();
+            _refreshTimer.Interval = TimeSpan.FromSeconds(3); // например, каждые 30 секунд
+            _refreshTimer.Tick += RefreshTimer_Tick;
+            _refreshTimer.Start();
+        }
+
+        private void RefreshTimer_Tick(object sender, EventArgs e)
+        {
+            // 1. Обновляем статусы процедур (Завершена, Идёт)
+            UpdateAppointmentsStatus();
+            // 2. Перезагружаем список назначенных процедур
+            LoadDoctorAppointments();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            if (_refreshTimer != null)
+            {
+                _refreshTimer.Stop();
+                _refreshTimer.Tick -= RefreshTimer_Tick;
+            }
         }
 
         #region Вкладка "Пациенты"
@@ -539,7 +566,7 @@ namespace VrachDubRosh
             if (dgAppointments.SelectedItem is DataRowView row)
             {
                 string status = row["Status"].ToString();
-                if (status == "Завершена")
+                if (status != "Назначена")
                 {
                     int appointmentID = Convert.ToInt32(row["AppointmentID"]);
                     AddProcedureDescriptionWindow addProcDescWindow = new AddProcedureDescriptionWindow(appointmentID, _doctorID);
@@ -551,7 +578,7 @@ namespace VrachDubRosh
                 }
                 else
                 {
-                    MessageBox.Show("Добавить описание можно только для процедуры со статусом 'Завершена'.", "Неверный статус", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Нельзя добавить описание для процедуры со статусом 'Назначена'.", "Неверный статус", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
         }
@@ -611,35 +638,63 @@ namespace VrachDubRosh
 
         private void btnDeleteProcedure_Click(object sender, RoutedEventArgs e)
         {
-            if (dgProcedures.SelectedItem == null)
+            if (dgProcedures.SelectedItems == null || dgProcedures.SelectedItems.Count == 0)
             {
                 MessageBox.Show("Выберите процедуру для удаления.");
                 return;
             }
-            DataRowView row = dgProcedures.SelectedItem as DataRowView;
-            int procedureID = Convert.ToInt32(row["ProcedureID"]);
-            if (MessageBox.Show("Вы уверены, что хотите удалить эту процедуру?", "Подтверждение", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+
+            if (MessageBox.Show("Вы уверены, что хотите удалить выбранные процедуры?",
+                                "Подтверждение", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
             {
-                try
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
                 {
-                    using (SqlConnection con = new SqlConnection(connectionString))
+                    con.Open();
+
+                    // Открываем транзакцию для группового удаления
+                    using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        con.Open();
-                        string deleteQuery = "DELETE FROM Procedures WHERE ProcedureID = @ProcedureID";
-                        using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
+                        foreach (var selectedItem in dgProcedures.SelectedItems)
                         {
-                            cmd.Parameters.AddWithValue("@ProcedureID", procedureID);
-                            cmd.ExecuteNonQuery();
+                            if (selectedItem is DataRowView row)
+                            {
+                                int procedureID = Convert.ToInt32(row["ProcedureID"]);
+
+                                // 1. Удаляем все записи из ProcedureAppointments, где ProcedureID = procedureID
+                                string deleteAppointmentsQuery = @"DELETE FROM ProcedureAppointments 
+                                                           WHERE ProcedureID = @ProcedureID";
+                                using (SqlCommand cmdAppointments = new SqlCommand(deleteAppointmentsQuery, con, tran))
+                                {
+                                    cmdAppointments.Parameters.AddWithValue("@ProcedureID", procedureID);
+                                    cmdAppointments.ExecuteNonQuery();
+                                }
+
+                                // 2. Удаляем саму процедуру из Procedures
+                                string deleteProcedureQuery = @"DELETE FROM Procedures 
+                                                        WHERE ProcedureID = @ProcedureID";
+                                using (SqlCommand cmdProcedure = new SqlCommand(deleteProcedureQuery, con, tran))
+                                {
+                                    cmdProcedure.Parameters.AddWithValue("@ProcedureID", procedureID);
+                                    cmdProcedure.ExecuteNonQuery();
+                                }
+                            }
                         }
+                        tran.Commit();
                     }
-                    MessageBox.Show("Процедура удалена.");
-                    LoadDoctorProcedures();
-                    LoadProceduresForAssignment();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении процедуры: " + ex.Message);
-                }
+
+                MessageBox.Show("Выбранные процедуры удалены.");
+                LoadDoctorProcedures();
+                LoadProceduresForAssignment();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при удалении процедуры: " + ex.Message);
             }
         }
         // Открытие окна редактирования процедуры по двойному щелчку
