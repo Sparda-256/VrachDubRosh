@@ -1,7 +1,7 @@
 ﻿<Window x:Class="VrachDubRosh.AddEditProcedureWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Добавить/Редактировать процедуру" Height="250" Width="400"
+        Title="Добавить/Редактировать процедуру" Height="330" Width="480"
         Background="#F9F9F9"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen">
