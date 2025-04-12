@@ -31,6 +31,7 @@ namespace VrachDubRosh
             LoadPatients();
             LoadDoctors();
             LoadDoctorsForComboBox();
+            dpRecordDate.SelectedDate = DateTime.Today;
         }
 
         #region Обработчики поиска
@@ -69,12 +70,30 @@ namespace VrachDubRosh
         }
         #endregion
 
-        #region Обработчики двойного клика
+        #region Обработчики кликов
 
         // Если понадобится, можно реализовать двойной клик и для новых пациентов
         private void dgNewPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             // Пока оставляем пустым или добавляем аналогичную логику при необходимости
+        }
+
+        private void dgNewPatients_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dgNewPatients.SelectedItem is DataRowView row)
+            {
+                // Если в записи есть значение PredictedDoctorID, выставляем его в ComboBox
+                if (row["PredictedDoctorID"] != DBNull.Value)
+                {
+                    int predictedDoctorId = Convert.ToInt32(row["PredictedDoctorID"]);
+                    cbDoctors.SelectedValue = predictedDoctorId;
+                }
+                else
+                {
+                    // Если для данного пациента не определён предполагаемый врач – можно сбросить выбор
+                    cbDoctors.SelectedIndex = -1;
+                }
+            }
         }
 
         private void dgPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -111,7 +130,7 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender FROM NewPatients";
+                    string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender, PredictedDoctorID FROM NewPatients";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     dtNewPatients = new DataTable(); // Сохраняем в поле класса
                     da.Fill(dtNewPatients);

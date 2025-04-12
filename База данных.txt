@@ -147,6 +147,13 @@ CREATE TABLE PatientDescriptions (
     FOREIGN KEY (PatientID, DoctorID) REFERENCES PatientDoctorAssignments(PatientID, DoctorID)
 );
 
+ALTER TABLE NewPatients
+ADD PredictedDoctorID INT NULL;
+
+ALTER TABLE NewPatients
+ADD CONSTRAINT FK_NewPatients_Doctors
+FOREIGN KEY (PredictedDoctorID) REFERENCES Doctors(DoctorID);
+
 
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
