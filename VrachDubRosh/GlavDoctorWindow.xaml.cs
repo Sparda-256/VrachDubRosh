@@ -229,6 +229,13 @@ namespace VrachDubRosh
                 return;
             }
 
+            // Добавляем проверку: дата выписки не может быть раньше даты записи
+            if (dpDischargeDate.SelectedDate.Value < dpRecordDate.SelectedDate.Value)
+            {
+                MessageBox.Show("Дата выписки не может быть раньше даты записи.");
+                return;
+            }
+
             DataRowView row = dgNewPatients.SelectedItem as DataRowView;
             int newPatientID = Convert.ToInt32(row["NewPatientID"]);
             string fullName = row["FullName"].ToString();
@@ -248,9 +255,9 @@ namespace VrachDubRosh
                     {
                         // 1. Перенос пациента в таблицу Patients
                         string insertQuery = @"
-                            INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
-                            VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
-                            SELECT SCOPE_IDENTITY();";
+                    INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
+                    VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
+                    SELECT SCOPE_IDENTITY();";
                         int newPatientInsertedID;
                         using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
                         {
