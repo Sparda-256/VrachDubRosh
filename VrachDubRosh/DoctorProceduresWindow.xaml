@@ -71,7 +71,7 @@
 
             <!-- Заголовок -->
             <TextBlock Grid.Row="0"
-                       Text="Процедуры назначенные врачу"
+                       Text="Процедуры врача"
                        FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
