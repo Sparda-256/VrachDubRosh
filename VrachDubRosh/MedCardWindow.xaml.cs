@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace VrachDubRosh
 {
@@ -15,7 +18,9 @@ namespace VrachDubRosh
         private string _patientName;
         private DataRowView _selectedProcedure;
         private DataTable _patientDescriptions;
+        private DataTable _proceduresData;
         private bool _isInitialLoad = true;
+        private ObservableCollection<MedicalNote> _medicalNotes = new ObservableCollection<MedicalNote>();
 
         public MedCardWindow(int patientID, string patientName)
         {
@@ -23,6 +28,9 @@ namespace VrachDubRosh
             _patientID = patientID;
             _patientName = patientName;
             tbPatientName.Text = $"Медицинская карточка пациента: {patientName}";
+            
+            // Установка источника данных для ItemsControl заметок
+            icMedicalNotes.ItemsSource = _medicalNotes;
             
             LoadPatientInfo();
             LoadAllMedicalNotes();
@@ -88,7 +96,7 @@ namespace VrachDubRosh
                 {
                     con.Open();
                     string query = @"SELECT pd.PatientDescriptionID, pd.Description, pd.DescriptionDate, 
-                                    d.DoctorID, d.FullName as DoctorName
+                                    pd.DoctorID, d.FullName as DoctorName
                                     FROM PatientDescriptions pd
                                     LEFT JOIN Doctors d ON pd.DoctorID = d.DoctorID
                                     WHERE pd.PatientID = @PatientID
@@ -112,7 +120,7 @@ namespace VrachDubRosh
                     }
                     else
                     {
-                        txtMedicalNotes.Text = "";
+                        _medicalNotes.Clear();
                         cbDoctors.ItemsSource = null;
                         cbDates.ItemsSource = null;
                     }
@@ -134,7 +142,7 @@ namespace VrachDubRosh
             
             foreach (DataRow row in _patientDescriptions.Rows)
             {
-                int? doctorID = row["DoctorID"] as int?;
+                int? doctorID = row["DoctorID"] != DBNull.Value ? Convert.ToInt32(row["DoctorID"]) : (int?)null;
                 if (!doctorsSet.Contains(doctorID))
                 {
                     string doctorName = row["DoctorName"] != DBNull.Value 
@@ -217,12 +225,12 @@ namespace VrachDubRosh
             
             if (selectedDoctor == null || selectedDate == null)
             {
-                txtMedicalNotes.Text = "";
+                _medicalNotes.Clear();
                 return;
             }
             
-            // Формируем текст для отображения
-            var noteText = new System.Text.StringBuilder();
+            // Очищаем предыдущие заметки
+            _medicalNotes.Clear();
             
             foreach (DataRow row in _patientDescriptions.Rows)
             {
@@ -242,22 +250,15 @@ namespace VrachDubRosh
                     DateTime date = Convert.ToDateTime(row["DescriptionDate"]);
                     string description = row["Description"].ToString();
                     
-                    // Если выбраны все врачи или все даты, добавляем информацию о враче и дате
-                    if (!selectedDoctor.DoctorID.HasValue || selectedDate.Date == DateTime.MinValue)
+                    // Добавляем заметку в коллекцию
+                    _medicalNotes.Add(new MedicalNote
                     {
-                        noteText.AppendLine($"[Врач: {doctorName}, Дата: {date:dd.MM.yyyy HH:mm}]");
-                        noteText.AppendLine(description);
-                        noteText.AppendLine(new string('-', 40));
-                    }
-                    else
-                    {
-                        // Для конкретного врача и даты показываем только текст заметки
-                        noteText.AppendLine(description);
-                    }
+                        Date = date.ToString("dd.MM.yyyy HH:mm"),
+                        Doctor = doctorName,
+                        Description = description
+                    });
                 }
             }
-            
-            txtMedicalNotes.Text = noteText.ToString().TrimEnd('-');
         }
 
         /// <summary>
@@ -472,5 +473,15 @@ namespace VrachDubRosh
     {
         public DateTime Date { get; set; }
         public string DisplayText { get; set; }
+    }
+    
+    /// <summary>
+    /// Класс для хранения информации о медицинской заметке
+    /// </summary>
+    public class MedicalNote
+    {
+        public string Date { get; set; }
+        public string Doctor { get; set; }
+        public string Description { get; set; }
     }
 }

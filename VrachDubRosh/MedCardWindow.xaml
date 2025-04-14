@@ -76,6 +76,43 @@
             <Setter Property="RowHeight" Value="36"/>
             <Setter Property="FontSize" Value="14"/>
         </Style>
+
+        <!-- Стиль для GroupBox -->
+        <Style x:Key="ModernGroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Grid.RowSpan="2" 
+                                    Background="White" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="5"/>
+                            <Border Grid.Row="0" 
+                                    Background="#F2F2F2" 
+                                    BorderThickness="0" 
+                                    Padding="10,5,10,5"
+                                    CornerRadius="5,5,0,0">
+                                <ContentPresenter ContentSource="Header" 
+                                                  RecognizesAccessKey="True" 
+                                                  TextElement.FontWeight="Bold"/>
+                            </Border>
+                            <ContentPresenter Grid.Row="1" 
+                                              Margin="{TemplateBinding Padding}" 
+                                              Content="{TemplateBinding Content}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     
     <Viewbox Stretch="Uniform">
@@ -137,39 +174,60 @@
             </Grid>
 
             <!-- Группа с медицинскими заметками -->
-            <GroupBox Header="Медицинские заметки" Grid.Row="2" Margin="0,0,0,10">
+            <GroupBox Header="Медицинские заметки" Grid.Row="2" Margin="0,0,0,15"
+                      Style="{StaticResource ModernGroupBoxStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <Grid Grid.Row="0" Margin="0,5,0,5">
+                    <Grid Grid.Row="0" Margin="0,5,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
                         <TextBlock Grid.Column="0" Text="Врач:" Margin="0,0,5,0" 
                                    VerticalAlignment="Center" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="cbDoctors" Grid.Column="1" Margin="0,0,10,0"
+                        <ComboBox x:Name="cbDoctors" Grid.Column="1" Margin="0,0,15,0"
                                   SelectionChanged="cbDoctors_SelectionChanged"/>
                         
                         <TextBlock Grid.Column="2" Text="Дата:" Margin="0,0,5,0" 
                                    VerticalAlignment="Center" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="cbDates" Grid.Column="3" Margin="0,0,0,0"
+                        <ComboBox x:Name="cbDates" Grid.Column="3" Margin="0,0,15,0"
                                   SelectionChanged="cbDates_SelectionChanged"/>
                     </Grid>
                     
-                    <TextBox x:Name="txtMedicalNotes" Grid.Row="1" 
-                             Background="White" 
-                             BorderBrush="#B0B0B0" 
-                             BorderThickness="1" 
-                             AcceptsReturn="True" 
-                             TextWrapping="Wrap" 
-                             Height="100"/>
+                    <Border Grid.Row="1" BorderBrush="#E0E0E0" BorderThickness="1" 
+                            CornerRadius="4" Background="White">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+                            <ItemsControl x:Name="icMedicalNotes">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8" BorderBrush="#EEEEEE" 
+                                                BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                                            <StackPanel>
+                                                <DockPanel Margin="0,0,0,5">
+                                                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Date}" FontWeight="SemiBold" 
+                                                                   Foreground="#2E7D32"/>
+                                                        <TextBlock Text=" | " Foreground="#757575"/>
+                                                        <TextBlock Text="{Binding Doctor}" FontWeight="SemiBold" 
+                                                                   Foreground="#1976D2"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
                 </Grid>
             </GroupBox>
 
