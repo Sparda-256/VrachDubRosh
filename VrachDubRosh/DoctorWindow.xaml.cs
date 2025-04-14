@@ -274,15 +274,14 @@ namespace VrachDubRosh
                 {
                     con.Open();
                     string query = @"SELECT p.PatientID, p.FullName 
-                                     FROM Patients p
-                                     INNER JOIN PatientDoctorAssignments pda ON p.PatientID = pda.PatientID
-                                     WHERE pda.DoctorID = @DoctorID";
+                               FROM Patients p
+                               INNER JOIN PatientDoctorAssignments pda ON p.PatientID = pda.PatientID
+                               WHERE pda.DoctorID = @DoctorID";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@DoctorID", _doctorID);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
                     cbPatients.ItemsSource = dt.DefaultView;
-                    cbPatients.DisplayMemberPath = "FullName";
                     cbPatients.SelectedValuePath = "PatientID";
                 }
             }
@@ -311,7 +310,6 @@ namespace VrachDubRosh
                     da.Fill(dt);
 
                     cbProcedures.ItemsSource = dt.DefaultView;
-                    cbProcedures.DisplayMemberPath = "DisplayText";
                     cbProcedures.SelectedValuePath = "ProcedureID";
                 }
             }

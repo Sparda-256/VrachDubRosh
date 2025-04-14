@@ -1,31 +1,391 @@
 ﻿<Window x:Class="VrachDubRosh.ReportWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Отчеты и аналитика" Height="650" Width="900"
-        Background="#F9F9F9"
+        Title="Врач ДубРощ - Отчеты и аналитика" 
+        Height="650" Width="900"
+        Background="#F0F4F8"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResize">
+        ResizeMode="CanResizeWithGrip"
+        BorderThickness="0"
+        WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <!-- Кнопка стандартная -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3E8E41"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#2E7D32"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Красная кнопка -->
+        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#F44336"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D32F2F"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Синяя кнопка -->
+        <Style x:Key="BlueButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#2196F3"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1976D2"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#0D47A1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Текстовое поле -->
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="false"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          Background="Transparent" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DatePicker стиль -->
+        <Style x:Key="RoundedDatePickerStyle" TargetType="DatePicker">
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Border CornerRadius="6" Background="{TemplateBinding Background}" 
+                        BorderBrush="{TemplateBinding BorderBrush}" 
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox" 
+                                         Grid.Column="0" 
+                                         Focusable="True"
+                                         HorizontalContentAlignment="Left"
+                                         VerticalContentAlignment="Center"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
+                                         Margin="8,0"
+                                         Background="Transparent"
+                                         BorderThickness="0"/>
+                                <Button x:Name="PART_Button" 
+                              Grid.Column="1"
+                              Focusable="False"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Margin="0,0,8,0"
+                              Width="20"
+                              Height="20"
+                              Background="Transparent"
+                              BorderThickness="0">
+                                    <Button.Content>
+                                        <Path Fill="#555555" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Popup x:Name="PART_Popup" 
+                             StaysOpen="False"
+                             AllowsTransparency="True"
+                             PopupAnimation="Slide"
+                             PlacementTarget="{Binding ElementName=PART_Button}"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox стиль -->
+        <Style x:Key="RoundedComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" 
+                              ClickMode="Press" 
+                              Focusable="false"
+                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                              IsHitTestVisible="True">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="templateRoot" CornerRadius="6" 
+                                        Background="White" 
+                                        BorderBrush="#D0D0D0" 
+                                        BorderThickness="1"
+                                        SnapsToDevicePixels="true">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Leave empty for content presenter -->
+                                                <Path Grid.Column="1" 
+                                            Width="10" Height="6" 
+                                            Margin="0,0,8,0"
+                                            Fill="#555555"
+                                            Data="M 0 0 L 4 4 L 8 0 Z"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="true">
+                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="#BBBBBB"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!-- Content presenter for selected item -->
+                            <ContentPresenter x:Name="ContentSite" 
+                                  Content="{TemplateBinding SelectionBoxItem}" 
+                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                  IsHitTestVisible="False"
+                                  Margin="8,0,30,0"
+                                  VerticalAlignment="Center"/>
+                            <Popup Name="Popup" 
+                         Placement="Bottom"
+                         IsOpen="{TemplateBinding IsDropDownOpen}"
+                         Focusable="False" 
+                         AllowsTransparency="True"
+                         PopupAnimation="Slide">
+                                <Grid Name="DropDown" 
+                          SnapsToDevicePixels="True"
+                          MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                          MinWidth="{TemplateBinding ActualWidth}">
+                                    <Border CornerRadius="0,0,6,6" 
+                                 Background="White" 
+                                 BorderBrush="#D0D0D0" 
+                                 BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid стиль -->
+        <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#F5F5F5"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#E0E0E0"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#E0E0E0"/>
+            <Setter Property="RowHeight" Value="36"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Заголовок DataGrid ячейки -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F0F4F8"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Стиль для ячеек DataGrid -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E3F2FD"/>
+                    <Setter Property="Foreground" Value="#000000"/>
+                    <Setter Property="BorderBrush" Value="#90CAF9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Стиль для вкладок TabControl -->
+        <Style TargetType="TabItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Border" Margin="0,0,4,0" CornerRadius="6,6,0,0"
+                                BorderThickness="1,1,1,0" BorderBrush="#D0D0D0"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter x:Name="ContentSite" ContentSource="Header"
+                                            Margin="10,6" HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="White" TargetName="Border"/>
+                                <Setter Property="TextElement.FontWeight" Value="Bold"/>
+                                <Setter Property="TextElement.Foreground" Value="#2E7D32"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="False">
+                                <Setter Property="Background" Value="#EEEEEE" TargetName="Border"/>
+                                <Setter Property="TextElement.Foreground" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Стиль для TabControl -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TabPanel x:Name="HeaderPanel"
+                                   Grid.Row="0"
+                                   Panel.ZIndex="1"
+                                   Margin="4,4,4,0"
+                                   IsItemsHost="True"
+                                   KeyboardNavigation.TabIndex="1"
+                                   Background="Transparent"/>
+                            <Border x:Name="ContentBorder"
+                                  Grid.Row="1"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="0,6,6,6"
+                                  KeyboardNavigation.TabNavigation="Local"
+                                  KeyboardNavigation.DirectionalNavigation="Contained"
+                                  KeyboardNavigation.TabIndex="2">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                               ContentSource="SelectedContent"
+                                               Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Viewbox Stretch="Uniform">
         <Grid Width="900" Height="650" Margin="20">
-            <TabControl>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Кнопка выхода -->
+            <Button Grid.Row="0" Content="Выход" 
+                    Style="{StaticResource RedButtonStyle}"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Width="100" Height="40" Margin="0,0,0,15"
+                    Click="ExitButton_Click"/>
+
+            <!-- Основное содержимое -->
+            <TabControl Grid.Row="1" Margin="0,10,0,0">
                 <!-- Вкладка 1: Все процедуры -->
                 <TabItem Header="Все процедуры">
                     <StackPanel Margin="10">
                         <!-- Параметры фильтра -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
-                            <DatePicker x:Name="dpStart_All" Width="120" Margin="5,0"/>
-                            <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
-                            <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"/>
-                            <Button Content="Показать" Click="btnShowAll_Click" Margin="10,0,0,0" Padding="6"
-                      Background="#2196F3" Foreground="White" FontWeight="Bold"/>
-                            <Button Content="Экспорт в Excel" Click="btnExportAll_Click" Margin="10,0,0,0" Padding="6"
-                      Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpStart_All" Width="120" Margin="5,0"
+                                        Style="{StaticResource RoundedDatePickerStyle}"/>
+                            <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                            <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"
+                                        Style="{StaticResource RoundedDatePickerStyle}"/>
+                            <Button Content="Показать" Click="btnShowAll_Click" Margin="15,0,5,0" 
+                                    Style="{StaticResource BlueButtonStyle}" Width="100"/>
+                            <Button Content="Экспорт в Excel" Click="btnExportAll_Click" Margin="5,0,0,0" 
+                                    Style="{StaticResource RoundedButtonStyle}" Width="120"/>
                         </StackPanel>
                         <!-- DataGrid с данными -->
-                        <DataGrid x:Name="dgReportAll" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
-                      BorderBrush="#B0B0B0" BorderThickness="1">
+                        <DataGrid x:Name="dgReportAll" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" 
+                                  Margin="0,0,0,15">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
                                 <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
@@ -38,35 +398,55 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <!-- Итоговые показатели -->
-                        <TextBlock x:Name="txtAllSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
+                        <TextBlock x:Name="txtAllSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- Вкладка 2: Процедуры врача -->
                 <TabItem Header="Процедуры врача">
                     <StackPanel Margin="10">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="Поиск врача:" Foreground="#555555" FontSize="14"/>
-                                <TextBox x:Name="txtSearchDoctor" Width="180" TextChanged="txtSearchDoctor_TextChanged"
-                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
-                                <ComboBox x:Name="cbDoctor" Width="180" Margin="0,5,0,0"
-                          DisplayMemberPath="FullName" SelectedValuePath="DoctorID"
-                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Выбор врача -->
+                            <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
+                                <TextBlock Text="Поиск врача:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtSearchDoctor" 
+                                         Style="{StaticResource RoundedTextBoxStyle}"
+                                         TextChanged="txtSearchDoctor_TextChanged" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="cbDoctor" 
+                                          Style="{StaticResource RoundedComboBoxStyle}"
+                                          SelectedValuePath="DoctorID">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding FullName}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpStart_Doctor" Width="120" Margin="5,0"/>
-                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"/>
-                                <Button Content="Показать" Click="btnShowDoctor_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportDoctor_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            
+                            <!-- Фильтры по дате и кнопки -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Doctor" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <Button Content="Показать" Click="btnShowDoctor_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportDoctor_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
                             </StackPanel>
-                        </StackPanel>
-                        <DataGrid x:Name="dgReportDoctor" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
-                      BorderBrush="#B0B0B0" BorderThickness="1">
+                        </Grid>
+                        <!-- DataGrid с данными -->
+                        <DataGrid x:Name="dgReportDoctor" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" 
+                                  Margin="0,0,0,15">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
                                 <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
@@ -76,35 +456,56 @@
                                 <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <TextBlock x:Name="txtDoctorSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
+                        <!-- Итоговые показатели -->
+                        <TextBlock x:Name="txtDoctorSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- Вкладка 3: Процедуры пациента -->
                 <TabItem Header="Процедуры пациента">
                     <StackPanel Margin="10">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="Поиск пациента:" Foreground="#555555" FontSize="14"/>
-                                <TextBox x:Name="txtSearchPatient" Width="180" TextChanged="txtSearchPatient_TextChanged"
-                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
-                                <ComboBox x:Name="cbPatient" Width="180" Margin="0,5,0,0"
-                          DisplayMemberPath="FullName" SelectedValuePath="PatientID"
-                          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Выбор пациента -->
+                            <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
+                                <TextBlock Text="Поиск пациента:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtSearchPatient" 
+                                         Style="{StaticResource RoundedTextBoxStyle}"
+                                         TextChanged="txtSearchPatient_TextChanged" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="cbPatient" 
+                                          Style="{StaticResource RoundedComboBoxStyle}"
+                                          SelectedValuePath="PatientID">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding FullName}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpStart_Patient" Width="120" Margin="5,0"/>
-                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"/>
-                                <Button Content="Показать" Click="btnShowPatient_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportPatient_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            
+                            <!-- Фильтры по дате и кнопки -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Patient" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <Button Content="Показать" Click="btnShowPatient_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportPatient_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
                             </StackPanel>
-                        </StackPanel>
-                        <DataGrid x:Name="dgReportPatient" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
-                      BorderBrush="#B0B0B0" BorderThickness="1">
+                        </Grid>
+                        <!-- DataGrid с данными -->
+                        <DataGrid x:Name="dgReportPatient" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" 
+                                  Margin="0,0,0,15">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Врач" Binding="{Binding Врач}" Width="*"/>
                                 <DataGridTextColumn Header="Процедура" Binding="{Binding Процедура}" Width="*"/>
@@ -114,35 +515,56 @@
                                 <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <TextBlock x:Name="txtPatientSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
+                        <!-- Итоговые показатели -->
+                        <TextBlock x:Name="txtPatientSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
                     </StackPanel>
                 </TabItem>
 
                 <!-- Вкладка 4: Назначения процедуры -->
                 <TabItem Header="Назначения процедуры">
                     <StackPanel Margin="10">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="Поиск процедуры:" Foreground="#555555" FontSize="14"/>
-                                <TextBox x:Name="txtSearchProcedure" Width="180" TextChanged="txtSearchProcedure_TextChanged"
-                         Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
-                                <ComboBox x:Name="cbProcedure" Width="180" Margin="0,5,0,0"
-          DisplayMemberPath="ProcedureDisplay" SelectedValuePath="ProcedureID"
-          Padding="4" BorderBrush="#B0B0B0" BorderThickness="1"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Выбор процедуры -->
+                            <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
+                                <TextBlock Text="Поиск процедуры:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtSearchProcedure" 
+                                         Style="{StaticResource RoundedTextBoxStyle}"
+                                         TextChanged="txtSearchProcedure_TextChanged" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="cbProcedure" 
+                                          Style="{StaticResource RoundedComboBoxStyle}"
+                                          SelectedValuePath="ProcedureID">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ProcedureDisplay}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Bottom">
-                                <Label Content="Начало:" VerticalAlignment="Center" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpStart_Procedure" Width="120" Margin="5,0"/>
-                                <Label Content="Конец:" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555555" FontSize="14"/>
-                                <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"/>
-                                <Button Content="Показать" Click="btnShowProcedure_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#2196F3" Foreground="White" FontWeight="Bold"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportProcedure_Click" Margin="10,0,0,0" Padding="6"
-                        Background="#4CAF50" Foreground="White" FontWeight="Bold"/>
+                            
+                            <!-- Фильтры по дате и кнопки -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpStart_Procedure" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"
+                                            Style="{StaticResource RoundedDatePickerStyle}"/>
+                                <Button Content="Показать" Click="btnShowProcedure_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
+                                <Button Content="Экспорт в Excel" Click="btnExportProcedure_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
                             </StackPanel>
-                        </StackPanel>
-                        <DataGrid x:Name="dgReportProcedure" AutoGenerateColumns="False" IsReadOnly="True" FontSize="14"
-                      BorderBrush="#B0B0B0" BorderThickness="1">
+                        </Grid>
+                        <!-- DataGrid с данными -->
+                        <DataGrid x:Name="dgReportProcedure" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" 
+                                  Margin="0,0,0,15">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Пациент" Binding="{Binding Пациент}" Width="*"/>
                                 <DataGridTextColumn Header="Дата и время" 
@@ -151,14 +573,11 @@
                                 <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding [Длительность (мин)]}" Width="120"/>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <TextBlock x:Name="txtProcedureSummary" Margin="0,10,0,0" FontWeight="Bold" FontSize="14" Foreground="#333333"/>
+                        <!-- Итоговые показатели -->
+                        <TextBlock x:Name="txtProcedureSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
                     </StackPanel>
                 </TabItem>
             </TabControl>
-            <Button Content="Выход" Width="100" Margin="790,35,0,0" Padding="6"
-Background="#F44336" Foreground="White" FontWeight="Bold"
-HorizontalAlignment="Left" VerticalAlignment="Top"
-Click="ExitButton_Click"/>
         </Grid>
     </Viewbox>
 </Window>

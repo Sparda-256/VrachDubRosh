@@ -1,21 +1,96 @@
 ﻿<Window x:Class="VrachDubRosh.AddEditProcedureWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Добавить/Редактировать процедуру" Height="330" Width="480"
-        Background="#F9F9F9"
+        Title="Врач ДубРощ - Добавление/редактирование процедуры" 
+        Height="330" Width="480"
+        Background="#F0F4F8"
         Icon="/icodubrosh.png"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip"
+        BorderThickness="0"
+        WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <!-- Кнопка стандартная -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3E8E41"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#2E7D32"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Красная кнопка -->
+        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#F44336"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D32F2F"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Текстовое поле -->
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="false"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          Background="Transparent" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Viewbox Stretch="Uniform">
-        <Grid Width="400" Height="250" Margin="20">
+        <Grid Width="430" Height="250" Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <!-- Заголовок -->
                 <RowDefinition Height="Auto"/>
-                <!-- Наименование -->
                 <RowDefinition Height="Auto"/>
-                <!-- Длительность -->
                 <RowDefinition Height="*"/>
-                <!-- Кнопки -->
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="150"/>
@@ -24,30 +99,32 @@
 
             <!-- Заголовок окна -->
             <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                       Text="Добавить/Редактировать процедуру"
-                       FontSize="20" FontWeight="Bold" Foreground="#333333"
+                       Text="Добавление/редактирование процедуры"
+                       FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
             <!-- Поля ввода -->
-            <Label Content="Наименование:" Grid.Row="1" Grid.Column="0" Margin="5"
-                   Foreground="#555555" FontSize="14"/>
-            <TextBox x:Name="txtProcedureName" Grid.Row="1" Grid.Column="1" Margin="5" Padding="4"
-                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Margin="5,12,5,5"
+                       Text="Наименование:" 
+                       Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtProcedureName" Grid.Row="1" Grid.Column="1" Margin="5"
+                     Style="{StaticResource RoundedTextBoxStyle}"/>
 
-            <Label Content="Длительность (мин):" Grid.Row="2" Grid.Column="0" Margin="5"
-                   Foreground="#555555" FontSize="14"/>
-            <TextBox x:Name="txtDuration" Grid.Row="2" Grid.Column="1" Margin="5" Padding="4"
-                     Background="White" BorderBrush="#B0B0B0" BorderThickness="1"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Margin="5,12,5,5"
+                       Text="Длительность (мин):" 
+                       Foreground="#555555" FontSize="14"/>
+            <TextBox x:Name="txtDuration" Grid.Row="2" Grid.Column="1" Margin="5"
+                     Style="{StaticResource RoundedTextBoxStyle}"/>
 
             <!-- Кнопки управления -->
             <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
-                        HorizontalAlignment="Right" Margin="5">
-                <Button Content="Сохранить" Width="100" Margin="5" Padding="6"
-                        Background="#4CAF50" Foreground="White" FontWeight="Bold"
-                        Click="btnSave_Click" Height="40"/>
-                <Button Content="Отмена" Width="100" Margin="5" Padding="6"
-                        Background="#F44336" Foreground="White" FontWeight="Bold"
-                        Click="btnCancel_Click" Height="40"/>
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,20,0,0">
+                <Button Content="Сохранить" Width="120" Height="35" Margin="5,0"
+                        Style="{StaticResource RoundedButtonStyle}"
+                        Click="btnSave_Click"/>
+                <Button Content="Отмена" Width="120" Height="35" Margin="5,0"
+                        Style="{StaticResource RedButtonStyle}"
+                        Click="btnCancel_Click"/>
             </StackPanel>
         </Grid>
     </Viewbox>

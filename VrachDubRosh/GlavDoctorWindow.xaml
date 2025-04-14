@@ -432,7 +432,14 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Label Grid.Column="0" Content="Врач:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#555555" FontSize="14"/>
-                            <ComboBox Grid.Column="1" x:Name="cbDoctors" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" x:Name="cbDoctors" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"
+                                     SelectedValuePath="DoctorID">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FullName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
                             <Label Grid.Column="2" Content="Дата записи:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#555555" FontSize="14"/>
                             <DatePicker Grid.Column="3" x:Name="dpRecordDate" Style="{StaticResource RoundedDatePickerStyle}" Margin="0,0,10,0"/>

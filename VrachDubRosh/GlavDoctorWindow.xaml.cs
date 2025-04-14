@@ -201,7 +201,6 @@ namespace VrachDubRosh
                     DataTable dt = new DataTable();
                     da.Fill(dt);
                     cbDoctors.ItemsSource = dt.DefaultView;
-                    cbDoctors.DisplayMemberPath = "FullName";
                     cbDoctors.SelectedValuePath = "DoctorID";
                 }
             }

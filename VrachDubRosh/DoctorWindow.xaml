@@ -450,10 +450,24 @@
                             </Grid.ColumnDefinitions>
                             
                             <Label Grid.Column="0" Content="Пациент:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#555555" FontSize="14"/>
-                            <ComboBox Grid.Column="1" x:Name="cbPatients" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" x:Name="cbPatients" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"
+                                     SelectedValuePath="PatientID">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FullName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             
                             <Label Grid.Column="2" Content="Процедура:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#555555" FontSize="14"/>
-                            <ComboBox Grid.Column="3" x:Name="cbProcedures" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="3" x:Name="cbProcedures" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"
+                                     SelectedValuePath="ProcedureID">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayText}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             
                             <Label Grid.Column="4" Content="Дата:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#555555" FontSize="14"/>
                             <DatePicker Grid.Column="5" x:Name="dpApptDate" Style="{StaticResource RoundedDatePickerStyle}" Margin="0,0,10,0"/>
