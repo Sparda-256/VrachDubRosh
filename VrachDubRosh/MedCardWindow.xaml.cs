@@ -424,6 +424,23 @@ namespace VrachDubRosh
         }
 
         /// <summary>
+        /// Открывает окно с диагнозами пациента
+        /// </summary>
+        private void btnDiagnoses_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                DiagnosesWindow diagnosesWindow = new DiagnosesWindow(_patientID, _patientName);
+                diagnosesWindow.Owner = this;
+                diagnosesWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при открытии диагнозов пациента: " + ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Открывает окно с историей медицинских записей пациента
         /// </summary>
         private void ShowPatientHistoryWindow()

@@ -1,0 +1,149 @@
+<Window x:Class="VrachDubRosh.AddEditDiagnosisWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Добавление диагноза" Height="350" Width="750"
+        Background="#F9F9F9"
+        Icon="/icodubrosh.png"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <!-- Стиль для кнопок -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3E8E41"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#2E7D32"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Красная кнопка -->
+        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#F44336"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D32F2F"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Стиль для TextBox -->
+        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Стиль для ComboBox -->
+        <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Стиль для DatePicker -->
+        <Style x:Key="ModernDatePickerStyle" TargetType="DatePicker">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+    
+    <Viewbox Stretch="Uniform">
+        <Grid Width="710" Height="310" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Заголовок с информацией о пациенте -->
+            <Border Grid.Row="0" MaxHeight="80" Margin="0,0,0,20">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="tbPatientInfo"
+                           Text="Добавление диагноза для пациента" 
+                           FontSize="20" FontWeight="Bold" 
+                           Foreground="#333333" HorizontalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center"/>
+                </ScrollViewer>
+            </Border>
+            
+            <!-- Форма диагноза -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Поиск диагноза -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Поиск:" 
+                           FontWeight="SemiBold" Margin="0,0,15,15" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="txtSearchDiagnosis" 
+                         Style="{StaticResource ModernTextBoxStyle}" 
+                         Margin="0,0,0,15" TextChanged="txtSearchDiagnosis_TextChanged"/>
+                
+                <!-- Диагноз -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Диагноз:" 
+                           FontWeight="SemiBold" Margin="0,0,15,15" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cbDiagnoses" 
+                          Style="{StaticResource ModernComboBoxStyle}" 
+                          DisplayMemberPath="DiagnosisName" 
+                          SelectedValuePath="DiagnosisID" 
+                          Margin="0,0,0,15"/>
+                
+                <!-- Вероятность диагноза -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Вероятность (%):" 
+                           FontWeight="SemiBold" Margin="0,0,15,15" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="2" Grid.Column="1" x:Name="txtPercentage" 
+                         Style="{StaticResource ModernTextBoxStyle}" 
+                         Margin="0,0,0,15"
+                         PreviewTextInput="txtPercentage_PreviewTextInput"/>
+            </Grid>
+            
+            <!-- Кнопки управления -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="Сохранить" Width="120" Margin="5" 
+                        Style="{StaticResource RoundedButtonStyle}"
+                        Click="btnSave_Click"/>
+                <Button Content="Отмена" Width="120" Margin="5" 
+                        Style="{StaticResource RedButtonStyle}"
+                        Click="btnCancel_Click"/>
+            </StackPanel>
+        </Grid>
+    </Viewbox>
+</Window> 

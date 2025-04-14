@@ -269,6 +269,9 @@
 
             <!-- Кнопки управления -->
             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Диагнозы" Width="120" Margin="5" Padding="6" 
+                        Style="{StaticResource BlueButtonStyle}"
+                        Click="btnDiagnoses_Click"/>
                 <Button Content="История" Width="120" Margin="5" Padding="6" 
                         Style="{StaticResource BlueButtonStyle}"
                         Click="btnHistory_Click"/>

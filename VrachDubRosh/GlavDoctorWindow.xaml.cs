@@ -302,6 +302,19 @@ namespace VrachDubRosh
                             cmdAssign.ExecuteNonQuery();
                         }
 
+                        // Переносим диагнозы из NewPatientDiagnoses в PatientDiagnoses
+                        string copyDiagnosesQuery = @"
+                            INSERT INTO PatientDiagnoses (PatientID, DiagnosisID, PercentageOfDiagnosis)
+                            SELECT @PatientID, DiagnosisID, PercentageOfDiagnosis
+                            FROM NewPatientDiagnoses
+                            WHERE NewPatientID = @NewPatientID";
+                        using (SqlCommand cmdCopyDiagnoses = new SqlCommand(copyDiagnosesQuery, con, tran))
+                        {
+                            cmdCopyDiagnoses.Parameters.AddWithValue("@PatientID", newPatientInsertedID);
+                            cmdCopyDiagnoses.Parameters.AddWithValue("@NewPatientID", newPatientID);
+                            cmdCopyDiagnoses.ExecuteNonQuery();
+                        }
+
                         // Удаляем связанные записи из вспомогательных таблиц
                         string deleteSymptomsQuery = "DELETE FROM NewPatientSymptoms WHERE NewPatientID = @NewPatientID";
                         using (SqlCommand cmdDelSymptoms = new SqlCommand(deleteSymptomsQuery, con, tran))
