@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using VrachDubRosh;
 
 namespace VrachDubRosh
@@ -17,6 +18,9 @@ namespace VrachDubRosh
         private DataTable dtPatients;
         private DataTable dtDoctors;
 
+        // Таймер для обновления списка новых пациентов
+        private DispatcherTimer newPatientsTimer;
+
         public GlavDoctorWindow()
         {
             InitializeComponent();
@@ -26,11 +30,18 @@ namespace VrachDubRosh
 
         private void GlavDoctorWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Первоначальная загрузка данных
             LoadNewPatients();
             LoadPatients();
             LoadDoctors();
             LoadDoctorsForComboBox();
             dpRecordDate.SelectedDate = DateTime.Today;
+
+            // Настраиваем таймер для обновления списка новых пациентов каждые 3 секунды
+            newPatientsTimer = new DispatcherTimer();
+            newPatientsTimer.Interval = TimeSpan.FromSeconds(10);
+            newPatientsTimer.Tick += (s, args) => LoadNewPatients();
+            newPatientsTimer.Start();
         }
 
         #region Обработчики поиска
@@ -39,7 +50,6 @@ namespace VrachDubRosh
             if (dtPatients != null)
             {
                 string filter = txtSearchPatients.Text.Trim().Replace("'", "''");
-                // Если поле пустое — сбрасываем фильтр
                 dtPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
                     ? ""
                     : $"FullName LIKE '%{filter}%'";
@@ -71,17 +81,15 @@ namespace VrachDubRosh
 
         #region Обработчики кликов
 
-        // Если понадобится, можно реализовать двойной клик и для новых пациентов
         private void dgNewPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Пока оставляем пустым или добавляем аналогичную логику при необходимости
+            // Можно добавить логику двойного клика для новых пациентов при необходимости
         }
 
         private void dgNewPatients_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (dgNewPatients.SelectedItem is DataRowView row)
             {
-                // Если в записи есть значение PredictedDoctorID, выставляем его в ComboBox
                 if (row["PredictedDoctorID"] != DBNull.Value)
                 {
                     int predictedDoctorId = Convert.ToInt32(row["PredictedDoctorID"]);
@@ -89,7 +97,6 @@ namespace VrachDubRosh
                 }
                 else
                 {
-                    // Если для данного пациента не определён предполагаемый врач – можно сбросить выбор
                     cbDoctors.SelectedIndex = -1;
                 }
             }
@@ -131,7 +138,7 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender, PredictedDoctorID FROM NewPatients";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    dtNewPatients = new DataTable(); // Сохраняем в поле класса
+                    dtNewPatients = new DataTable();
                     da.Fill(dtNewPatients);
                     dgNewPatients.ItemsSource = dtNewPatients.DefaultView;
                 }
@@ -151,7 +158,7 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT PatientID, FullName, DateOfBirth, Gender, RecordDate, DischargeDate FROM Patients";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    dtPatients = new DataTable(); // Сохраняем в поле класса
+                    dtPatients = new DataTable();
                     da.Fill(dtPatients);
                     dgPatients.ItemsSource = dtPatients.DefaultView;
                 }
@@ -171,7 +178,7 @@ namespace VrachDubRosh
                     con.Open();
                     string query = "SELECT DoctorID, FullName, Specialty, OfficeNumber, WorkExperience FROM Doctors";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    dtDoctors = new DataTable(); // Сохраняем в поле класса
+                    dtDoctors = new DataTable();
                     da.Fill(dtDoctors);
                     dgDoctors.ItemsSource = dtDoctors.DefaultView;
                 }
@@ -222,14 +229,18 @@ namespace VrachDubRosh
                 return;
             }
 
-            if (dpRecordDate.SelectedDate == null || dpDischargeDate.SelectedDate == null)
+            // Проверяем обязательную дату записи
+            if (dpRecordDate.SelectedDate == null)
             {
-                MessageBox.Show("Выберите дату записи и дату выписки.");
+                MessageBox.Show("Выберите дату записи.");
                 return;
             }
 
-            // Добавляем проверку: дата выписки не может быть раньше даты записи
-            if (dpDischargeDate.SelectedDate.Value < dpRecordDate.SelectedDate.Value)
+            DateTime recordDate = dpRecordDate.SelectedDate.Value;
+            DateTime? dischargeDate = dpDischargeDate.SelectedDate; // Может быть null
+
+            // Если дата выписки задана, проверяем, что она не раньше даты записи
+            if (dischargeDate.HasValue && dischargeDate.Value < recordDate)
             {
                 MessageBox.Show("Дата выписки не может быть раньше даты записи.");
                 return;
@@ -240,10 +251,7 @@ namespace VrachDubRosh
             string fullName = row["FullName"].ToString();
             DateTime dateOfBirth = Convert.ToDateTime(row["DateOfBirth"]);
             string gender = row["Gender"].ToString();
-
             int doctorID = Convert.ToInt32(cbDoctors.SelectedValue);
-            DateTime recordDate = dpRecordDate.SelectedDate.Value;
-            DateTime dischargeDate = dpDischargeDate.SelectedDate.Value;
 
             try
             {
@@ -252,23 +260,41 @@ namespace VrachDubRosh
                     con.Open();
                     using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        // 1. Перенос пациента в таблицу Patients
-                        string insertQuery = @"
-                    INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
-                    VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
-                    SELECT SCOPE_IDENTITY();";
                         int newPatientInsertedID;
-                        using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                        // Если дата выписки задана, выполняем запрос с параметром для даты выписки
+                        if (dischargeDate.HasValue)
                         {
-                            cmdInsert.Parameters.AddWithValue("@FullName", fullName);
-                            cmdInsert.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
-                            cmdInsert.Parameters.AddWithValue("@Gender", gender);
-                            cmdInsert.Parameters.AddWithValue("@RecordDate", recordDate);
-                            cmdInsert.Parameters.AddWithValue("@DischargeDate", dischargeDate);
-                            newPatientInsertedID = Convert.ToInt32(cmdInsert.ExecuteScalar());
+                            string insertQuery = @"
+                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
+                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
+                                SELECT SCOPE_IDENTITY();";
+                            using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                            {
+                                cmdInsert.Parameters.AddWithValue("@FullName", fullName);
+                                cmdInsert.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
+                                cmdInsert.Parameters.AddWithValue("@Gender", gender);
+                                cmdInsert.Parameters.AddWithValue("@RecordDate", recordDate);
+                                cmdInsert.Parameters.AddWithValue("@DischargeDate", dischargeDate.Value);
+                                newPatientInsertedID = Convert.ToInt32(cmdInsert.ExecuteScalar());
+                            }
+                        }
+                        else // Иначе – без даты выписки
+                        {
+                            string insertQuery = @"
+                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate)
+                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate);
+                                SELECT SCOPE_IDENTITY();";
+                            using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                            {
+                                cmdInsert.Parameters.AddWithValue("@FullName", fullName);
+                                cmdInsert.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
+                                cmdInsert.Parameters.AddWithValue("@Gender", gender);
+                                cmdInsert.Parameters.AddWithValue("@RecordDate", recordDate);
+                                newPatientInsertedID = Convert.ToInt32(cmdInsert.ExecuteScalar());
+                            }
                         }
 
-                        // 2. Связываем пациента с выбранным врачом (PatientDoctorAssignments)
+                        // Связываем пациента с выбранным врачом (PatientDoctorAssignments)
                         string assignQuery = "INSERT INTO PatientDoctorAssignments (PatientID, DoctorID) VALUES (@PatientID, @DoctorID)";
                         using (SqlCommand cmdAssign = new SqlCommand(assignQuery, con, tran))
                         {
@@ -277,29 +303,26 @@ namespace VrachDubRosh
                             cmdAssign.ExecuteNonQuery();
                         }
 
-                        // 3. Удаляем связанные записи из "NewPatient*" таблиц (чтобы не было конфликта)
+                        // Удаляем связанные записи из вспомогательных таблиц
                         string deleteSymptomsQuery = "DELETE FROM NewPatientSymptoms WHERE NewPatientID = @NewPatientID";
                         using (SqlCommand cmdDelSymptoms = new SqlCommand(deleteSymptomsQuery, con, tran))
                         {
                             cmdDelSymptoms.Parameters.AddWithValue("@NewPatientID", newPatientID);
                             cmdDelSymptoms.ExecuteNonQuery();
                         }
-
                         string deleteAnswersQuery = "DELETE FROM NewPatientAnswers WHERE NewPatientID = @NewPatientID";
                         using (SqlCommand cmdDelAnswers = new SqlCommand(deleteAnswersQuery, con, tran))
                         {
                             cmdDelAnswers.Parameters.AddWithValue("@NewPatientID", newPatientID);
                             cmdDelAnswers.ExecuteNonQuery();
                         }
-
                         string deleteDiagnosesQuery = "DELETE FROM NewPatientDiagnoses WHERE NewPatientID = @NewPatientID";
                         using (SqlCommand cmdDelDiagnoses = new SqlCommand(deleteDiagnosesQuery, con, tran))
                         {
                             cmdDelDiagnoses.Parameters.AddWithValue("@NewPatientID", newPatientID);
                             cmdDelDiagnoses.ExecuteNonQuery();
                         }
-
-                        // 4. Удаляем запись из NewPatients
+                        // Удаляем запись из NewPatients
                         string deleteQuery = "DELETE FROM NewPatients WHERE NewPatientID = @NewPatientID";
                         using (SqlCommand cmdDelete = new SqlCommand(deleteQuery, con, tran))
                         {
@@ -371,7 +394,6 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    // Открываем транзакцию для группового удаления
                     using (SqlTransaction tran = con.BeginTransaction())
                     {
                         foreach (var selectedItem in dgPatients.SelectedItems)
@@ -380,44 +402,28 @@ namespace VrachDubRosh
                             {
                                 int patientID = Convert.ToInt32(row["PatientID"]);
 
-                                // 1. Удаляем связанные записи из ProcedureAppointments
-                                string deleteAppointments = @"
-                            DELETE FROM ProcedureAppointments
-                            WHERE PatientID = @PatientID
-                        ";
+                                string deleteAppointments = @"DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
                                 using (SqlCommand cmdApp = new SqlCommand(deleteAppointments, con, tran))
                                 {
                                     cmdApp.Parameters.AddWithValue("@PatientID", patientID);
                                     cmdApp.ExecuteNonQuery();
                                 }
 
-                                // 2. Удаляем связанные записи из PatientDescriptions
-                                string deleteDescriptions = @"
-                            DELETE FROM PatientDescriptions
-                            WHERE PatientID = @PatientID
-                        ";
+                                string deleteDescriptions = @"DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
                                 using (SqlCommand cmdDesc = new SqlCommand(deleteDescriptions, con, tran))
                                 {
                                     cmdDesc.Parameters.AddWithValue("@PatientID", patientID);
                                     cmdDesc.ExecuteNonQuery();
                                 }
 
-                                // 3. Удаляем связи в PatientDoctorAssignments
-                                string deleteAssignments = @"
-                            DELETE FROM PatientDoctorAssignments
-                            WHERE PatientID = @PatientID
-                        ";
+                                string deleteAssignments = @"DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
                                 using (SqlCommand cmdAssign = new SqlCommand(deleteAssignments, con, tran))
                                 {
                                     cmdAssign.Parameters.AddWithValue("@PatientID", patientID);
                                     cmdAssign.ExecuteNonQuery();
                                 }
 
-                                // 4. Удаляем самого пациента из Patients
-                                string deletePatient = @"
-                            DELETE FROM Patients
-                            WHERE PatientID = @PatientID
-                        ";
+                                string deletePatient = @"DELETE FROM Patients WHERE PatientID = @PatientID";
                                 using (SqlCommand cmdPat = new SqlCommand(deletePatient, con, tran))
                                 {
                                     cmdPat.Parameters.AddWithValue("@PatientID", patientID);
@@ -428,9 +434,8 @@ namespace VrachDubRosh
                         tran.Commit();
                     }
                 }
-
                 MessageBox.Show("Выбранные пациенты удалены.");
-                LoadPatients(); // Обновляем список пациентов
+                LoadPatients();
             }
             catch (Exception ex)
             {
@@ -438,7 +443,6 @@ namespace VrachDubRosh
             }
         }
 
-        // Кнопка для назначения (нескольких) врачей уже существующему пациенту
         private void btnAssignDoctors_Click(object sender, RoutedEventArgs e)
         {
             if (dgPatients.SelectedItem == null)
@@ -454,6 +458,7 @@ namespace VrachDubRosh
             assignmentWindow.Owner = this;
             assignmentWindow.ShowDialog();
         }
+
         private void btnOpenReports_Click(object sender, RoutedEventArgs e)
         {
             ReportWindow reportWindow = new ReportWindow();
@@ -512,7 +517,6 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    // Открываем транзакцию для группового удаления
                     using (SqlTransaction tran = con.BeginTransaction())
                     {
                         foreach (var selectedItem in dgDoctors.SelectedItems)
@@ -521,67 +525,42 @@ namespace VrachDubRosh
                             {
                                 int doctorID = Convert.ToInt32(row["DoctorID"]);
 
-                                // 1. Удаляем связанные записи из ProcedureAppointments
-                                string deleteAppointments = @"
-                            DELETE FROM ProcedureAppointments
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteAppointments = @"DELETE FROM ProcedureAppointments WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdApp = new SqlCommand(deleteAppointments, con, tran))
                                 {
                                     cmdApp.Parameters.AddWithValue("@DoctorID", doctorID);
                                     cmdApp.ExecuteNonQuery();
                                 }
 
-                                // 2. Удаляем связанные записи из PatientDescriptions
-                                string deleteDescriptions = @"
-                            DELETE FROM PatientDescriptions
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteDescriptions = @"DELETE FROM PatientDescriptions WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdDesc = new SqlCommand(deleteDescriptions, con, tran))
                                 {
                                     cmdDesc.Parameters.AddWithValue("@DoctorID", doctorID);
                                     cmdDesc.ExecuteNonQuery();
                                 }
 
-                                // 3. Удаляем связи в PatientDoctorAssignments
-                                string deleteAssignments = @"
-                            DELETE FROM PatientDoctorAssignments
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteAssignments = @"DELETE FROM PatientDoctorAssignments WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdAssign = new SqlCommand(deleteAssignments, con, tran))
                                 {
                                     cmdAssign.Parameters.AddWithValue("@DoctorID", doctorID);
                                     cmdAssign.ExecuteNonQuery();
                                 }
 
-                                // 4. Удаляем записи из DoctorDiagnoses (если используется)
-                                string deleteDoctorDiagnoses = @"
-                            DELETE FROM DoctorDiagnoses
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteDoctorDiagnoses = @"DELETE FROM DoctorDiagnoses WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdDocDiag = new SqlCommand(deleteDoctorDiagnoses, con, tran))
                                 {
                                     cmdDocDiag.Parameters.AddWithValue("@DoctorID", doctorID);
                                     cmdDocDiag.ExecuteNonQuery();
                                 }
 
-                                // 5. Удаляем связанные процедуры из Procedures
-                                //    (если нужно полностью убрать все процедуры этого врача)
-                                string deleteProcedures = @"
-                            DELETE FROM Procedures
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteProcedures = @"DELETE FROM Procedures WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdProcs = new SqlCommand(deleteProcedures, con, tran))
                                 {
                                     cmdProcs.Parameters.AddWithValue("@DoctorID", doctorID);
                                     cmdProcs.ExecuteNonQuery();
                                 }
 
-                                // 6. Удаляем врача из Doctors
-                                string deleteDoctor = @"
-                            DELETE FROM Doctors
-                            WHERE DoctorID = @DoctorID
-                        ";
+                                string deleteDoctor = @"DELETE FROM Doctors WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdDoc = new SqlCommand(deleteDoctor, con, tran))
                                 {
                                     cmdDoc.Parameters.AddWithValue("@DoctorID", doctorID);
@@ -592,17 +571,15 @@ namespace VrachDubRosh
                         tran.Commit();
                     }
                 }
-
                 MessageBox.Show("Выбранные врачи удалены.");
-                LoadDoctors(); // Обновляем список врачей
-                LoadDoctorsForComboBox(); // Если нужно обновить ComboBox
+                LoadDoctors();
+                LoadDoctorsForComboBox();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка при удалении врачей: " + ex.Message);
             }
         }
-
         #endregion
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
