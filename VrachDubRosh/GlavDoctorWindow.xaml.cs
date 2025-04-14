@@ -10,7 +10,6 @@ namespace VrachDubRosh
 {
     public partial class GlavDoctorWindow : Window
     {
-        // Замените строку подключения на актуальную для вашей базы данных
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
 
         // Кэшированные таблицы для фильтрации
