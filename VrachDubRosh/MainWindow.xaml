@@ -134,7 +134,7 @@
                 <TextBlock Text="Санаторий Дубовая Роща" 
                            FontSize="22" FontWeight="Bold" Foreground="#2E7D32" 
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Система управления" 
+                <TextBlock Text="Система управления пациентами" 
                            FontSize="16" Foreground="#555555" 
                            HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
