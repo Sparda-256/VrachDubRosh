@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.IO;
 
 namespace VrachDubRosh
 {
@@ -31,6 +32,10 @@ namespace VrachDubRosh
             
             // Установка источника данных для ItemsControl заметок
             icMedicalNotes.ItemsSource = _medicalNotes;
+            
+            // Инициализация DatePicker
+            dpStartDate.SelectedDate = DateTime.Today;
+            dpEndDate.SelectedDate = DateTime.Today;
             
             LoadPatientInfo();
             LoadAllMedicalNotes();
@@ -92,6 +97,18 @@ namespace VrachDubRosh
         {
             try
             {
+                // Получаем выбранные даты
+                DateTime? startDate = dpStartDate.SelectedDate;
+                DateTime? endDate = dpEndDate.SelectedDate;
+                
+                // Проверяем валидность дат
+                if (startDate == null)
+                    startDate = DateTime.MinValue;
+                if (endDate == null)
+                    endDate = DateTime.MaxValue;
+                else
+                    endDate = endDate.Value.AddDays(1).AddSeconds(-1); // До конца выбранного дня
+                
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
@@ -100,10 +117,13 @@ namespace VrachDubRosh
                                     FROM PatientDescriptions pd
                                     LEFT JOIN Doctors d ON pd.DoctorID = d.DoctorID
                                     WHERE pd.PatientID = @PatientID
-                                    ORDER BY pd.DescriptionDate DESC";
+                                    AND pd.DescriptionDate BETWEEN @StartDate AND @EndDate
+                                    ORDER BY CONVERT(date, pd.DescriptionDate) DESC, pd.DescriptionDate DESC";
                     
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
+                    da.SelectCommand.Parameters.AddWithValue("@StartDate", startDate);
+                    da.SelectCommand.Parameters.AddWithValue("@EndDate", endDate);
                     _patientDescriptions = new DataTable();
                     da.Fill(_patientDescriptions);
 
@@ -112,17 +132,13 @@ namespace VrachDubRosh
                         // Заполняем комбобокс со списком врачей
                         LoadDoctorsComboBox();
                         
-                        // Заполняем комбобокс с датами для выбранного врача
-                        LoadDatesComboBox();
-                        
-                        // Показываем последнюю запись
-                        DisplaySelectedNote();
+                        // Показываем заметки
+                        DisplaySelectedNotes();
                     }
                     else
                     {
                         _medicalNotes.Clear();
                         cbDoctors.ItemsSource = null;
-                        cbDates.ItemsSource = null;
                     }
                 }
             }
@@ -168,62 +184,14 @@ namespace VrachDubRosh
         }
 
         /// <summary>
-        /// Заполняет комбобокс с датами для выбранного врача
+        /// Отображает выбранные заметки
         /// </summary>
-        private void LoadDatesComboBox()
+        private void DisplaySelectedNotes()
         {
-            var uniqueDates = new List<DateItem>();
-            var datesSet = new HashSet<DateTime>();
-            
             // Получаем выбранного врача
             DoctorItem selectedDoctor = cbDoctors.SelectedItem as DoctorItem;
             
-            if (selectedDoctor != null)
-            {
-                foreach (DataRow row in _patientDescriptions.Rows)
-                {
-                    // Если выбран конкретный врач, фильтруем по нему
-                    if (selectedDoctor.DoctorID.HasValue && 
-                        row["DoctorID"] != DBNull.Value && 
-                        Convert.ToInt32(row["DoctorID"]) != selectedDoctor.DoctorID.Value)
-                    {
-                        continue;
-                    }
-                    
-                    DateTime date = Convert.ToDateTime(row["DescriptionDate"]);
-                    if (!datesSet.Contains(date))
-                    {
-                        uniqueDates.Add(new DateItem { 
-                            Date = date,
-                            DisplayText = date.ToString("dd.MM.yyyy HH:mm") 
-                        });
-                        datesSet.Add(date);
-                    }
-                }
-                
-                // Сортируем даты по убыванию (новые сверху)
-                uniqueDates.Sort((a, b) => b.Date.CompareTo(a.Date));
-                
-                // Добавляем опцию "Все даты"
-                uniqueDates.Insert(0, new DateItem { Date = DateTime.MinValue, DisplayText = "Все даты" });
-                
-                cbDates.DisplayMemberPath = "DisplayText";
-                cbDates.SelectedValuePath = "Date";
-                cbDates.ItemsSource = uniqueDates;
-                cbDates.SelectedIndex = 0; // Выбираем "Все даты" по умолчанию
-            }
-        }
-
-        /// <summary>
-        /// Отображает выбранную или все заметки
-        /// </summary>
-        private void DisplaySelectedNote()
-        {
-            // Получаем выбранного врача и дату
-            DoctorItem selectedDoctor = cbDoctors.SelectedItem as DoctorItem;
-            DateItem selectedDate = cbDates.SelectedItem as DateItem;
-            
-            if (selectedDoctor == null || selectedDate == null)
+            if (selectedDoctor == null)
             {
                 _medicalNotes.Clear();
                 return;
@@ -238,10 +206,7 @@ namespace VrachDubRosh
                     (row["DoctorID"] != DBNull.Value && 
                      Convert.ToInt32(row["DoctorID"]) == selectedDoctor.DoctorID.Value);
                 
-                bool dateMatch = selectedDate.Date == DateTime.MinValue || 
-                    Convert.ToDateTime(row["DescriptionDate"]).Date == selectedDate.Date.Date;
-                
-                if (doctorMatch && dateMatch)
+                if (doctorMatch)
                 {
                     string doctorName = row["DoctorName"] != DBNull.Value 
                         ? row["DoctorName"].ToString() 
@@ -268,19 +233,7 @@ namespace VrachDubRosh
         {
             if (!_isInitialLoad)
             {
-                LoadDatesComboBox();
-                DisplaySelectedNote();
-            }
-        }
-
-        /// <summary>
-        /// Обработчик события выбора даты
-        /// </summary>
-        private void cbDates_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!_isInitialLoad)
-            {
-                DisplaySelectedNote();
+                DisplaySelectedNotes();
             }
         }
 
@@ -330,14 +283,12 @@ namespace VrachDubRosh
                         ? description.ToString()
                         : "Описание не указано";
                     
-                    // Автоматически открываем панель деталей
-                    expanderProcedureDetails.IsExpanded = true;
+                    // Удаляем автоматическое открытие панели деталей
                 }
             }
             else
             {
                 txtProcedureDescription.Text = "";
-                expanderProcedureDetails.IsExpanded = false;
             }
         }
 
@@ -414,13 +365,65 @@ namespace VrachDubRosh
                 MessageBox.Show("Ошибка при загрузке деталей процедуры: " + ex.Message);
             }
         }
+       
+        /// <summary>
+        /// Получает список всех врачей из базы данных
+        /// </summary>
+        private DataTable GetDoctorsList()
+        {
+            DataTable dtDoctors = new DataTable();
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT DoctorID, FullName FROM Doctors ORDER BY FullName";
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.Fill(dtDoctors);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при получении списка врачей: " + ex.Message);
+                return null;
+            }
+            return dtDoctors;
+        }
 
         /// <summary>
-        /// Показывает историю медицинских записей пациента
+        /// Сохраняет новую медицинскую заметку в базу данных
         /// </summary>
-        private void btnHistory_Click(object sender, RoutedEventArgs e)
+        private void SaveNewMedicalNote(int? doctorID, string description)
         {
-            ShowPatientHistoryWindow();
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = @"INSERT INTO PatientDescriptions (PatientID, DoctorID, Description, DescriptionDate) 
+                                     VALUES (@PatientID, @DoctorID, @Description, @DescriptionDate)";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", _patientID);
+                        
+                        if (doctorID.HasValue)
+                            cmd.Parameters.AddWithValue("@DoctorID", doctorID.Value);
+                        else
+                            cmd.Parameters.AddWithValue("@DoctorID", DBNull.Value);
+                        
+                        cmd.Parameters.AddWithValue("@Description", description);
+                        cmd.Parameters.AddWithValue("@DescriptionDate", DateTime.Now);
+                        
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                MessageBox.Show("Медицинская заметка успешно добавлена.", "Информация", 
+                               MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при сохранении заметки: " + ex.Message);
+            }
         }
 
         /// <summary>
@@ -441,36 +444,248 @@ namespace VrachDubRosh
         }
 
         /// <summary>
-        /// Открывает окно с историей медицинских записей пациента
-        /// </summary>
-        private void ShowPatientHistoryWindow()
-        {
-            try
-            {
-                PatientHistoryWindow historyWindow = new PatientHistoryWindow(_patientID, _patientName);
-                historyWindow.Owner = this;
-                historyWindow.ShowDialog();
-                
-                // После закрытия окна истории, обновляем данные
-                LoadAllMedicalNotes();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка при открытии истории пациента: " + ex.Message);
-            }
-        }
-
-        /// <summary>
         /// Сохраняет изменения в медицинских заметках.
         /// </summary>
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Для добавления новой медицинской заметки воспользуйтесь кнопкой 'История'.");
+            MessageBox.Show("Изменения сохранены.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+        }
+
+        /// <summary>
+        /// Обработчик нажатия на кнопку печати
+        /// </summary>
+        private void btnPrint_Click(object sender, RoutedEventArgs e)
+        {
+            PrintMedicalCard();
+        }
+
+        /// <summary>
+        /// Создаёт и печатает медицинскую карточку пациента
+        /// </summary>
+        private void PrintMedicalCard()
+        {
+            try
+            {
+                FlowDocument document = CreatePrintDocument();
+                
+                System.Windows.Controls.PrintDialog printDialog = new System.Windows.Controls.PrintDialog();
+                if (printDialog.ShowDialog() == true)
+                {
+                    // Настраиваем размер страницы
+                    document.PageHeight = printDialog.PrintableAreaHeight;
+                    document.PageWidth = printDialog.PrintableAreaWidth;
+                    document.ColumnWidth = printDialog.PrintableAreaWidth;
+                    
+                    // Печать через DocumentWriter
+                    IDocumentPaginatorSource paginatorSource = document;
+                    printDialog.PrintDocument(paginatorSource.DocumentPaginator, "Медицинская карта - " + _patientName);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при печати: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Создаёт документ FlowDocument для печати медицинской карты
+        /// </summary>
+        private FlowDocument CreatePrintDocument()
+        {
+            // Создание документа
+            FlowDocument document = new FlowDocument();
+            document.PagePadding = new Thickness(50);
+            document.FontFamily = new FontFamily("Segoe UI");
+            document.FontSize = 12;
+            document.ColumnWidth = 700;
+
+            // Стили для документа
+            Style titleStyle = new Style(typeof(Paragraph));
+            titleStyle.Setters.Add(new Setter(Block.FontSizeProperty, 20.0));
+            titleStyle.Setters.Add(new Setter(Block.FontWeightProperty, FontWeights.Bold));
+            titleStyle.Setters.Add(new Setter(Block.TextAlignmentProperty, TextAlignment.Center));
+            titleStyle.Setters.Add(new Setter(Block.MarginProperty, new Thickness(0, 0, 0, 20)));
+
+            Style sectionTitleStyle = new Style(typeof(Paragraph));
+            sectionTitleStyle.Setters.Add(new Setter(Block.FontSizeProperty, 16.0));
+            sectionTitleStyle.Setters.Add(new Setter(Block.FontWeightProperty, FontWeights.Bold));
+            sectionTitleStyle.Setters.Add(new Setter(Block.MarginProperty, new Thickness(0, 15, 0, 5)));
+            
+            Style subtitleStyle = new Style(typeof(Paragraph));
+            subtitleStyle.Setters.Add(new Setter(Block.FontSizeProperty, 14.0));
+            subtitleStyle.Setters.Add(new Setter(Block.FontWeightProperty, FontWeights.SemiBold));
+            subtitleStyle.Setters.Add(new Setter(Block.MarginProperty, new Thickness(0, 10, 0, 5)));
+
+            // Заголовок документа
+            Paragraph title = new Paragraph(new Run("Медицинская карта пациента"));
+            title.Style = titleStyle;
+            document.Blocks.Add(title);
+
+            // Информация о пациенте
+            Paragraph patientInfoTitle = new Paragraph(new Run("Информация о пациенте"));
+            patientInfoTitle.Style = sectionTitleStyle;
+            document.Blocks.Add(patientInfoTitle);
+
+            Table patientInfoTable = new Table();
+            patientInfoTable.CellSpacing = 0;
+            patientInfoTable.BorderThickness = new Thickness(1);
+            patientInfoTable.BorderBrush = Brushes.Black;
+
+            // Определение колонок таблицы
+            patientInfoTable.Columns.Add(new TableColumn() { Width = new GridLength(150) });
+            patientInfoTable.Columns.Add(new TableColumn() { Width = new GridLength(400) });
+
+            // Добавление строк таблицы
+            TableRowGroup patientRowGroup = new TableRowGroup();
+            patientInfoTable.RowGroups.Add(patientRowGroup);
+
+            // ФИО пациента
+            TableRow nameRow = new TableRow();
+            nameRow.Cells.Add(new TableCell(new Paragraph(new Run("ФИО:"))));
+            nameRow.Cells.Add(new TableCell(new Paragraph(new Run(_patientName))));
+            patientRowGroup.Rows.Add(nameRow);
+
+            // Дата рождения
+            TableRow birthRow = new TableRow();
+            birthRow.Cells.Add(new TableCell(new Paragraph(new Run("Дата рождения:"))));
+            birthRow.Cells.Add(new TableCell(new Paragraph(new Run(tbDateOfBirth.Text))));
+            patientRowGroup.Rows.Add(birthRow);
+
+            // Пол
+            TableRow genderRow = new TableRow();
+            genderRow.Cells.Add(new TableCell(new Paragraph(new Run("Пол:"))));
+            genderRow.Cells.Add(new TableCell(new Paragraph(new Run(tbGender.Text))));
+            patientRowGroup.Rows.Add(genderRow);
+
+            // Дата записи
+            TableRow recordRow = new TableRow();
+            recordRow.Cells.Add(new TableCell(new Paragraph(new Run("Дата записи:"))));
+            recordRow.Cells.Add(new TableCell(new Paragraph(new Run(tbRecordDate.Text))));
+            patientRowGroup.Rows.Add(recordRow);
+
+            // Дата выписки
+            TableRow dischargeRow = new TableRow();
+            dischargeRow.Cells.Add(new TableCell(new Paragraph(new Run("Дата выписки:"))));
+            dischargeRow.Cells.Add(new TableCell(new Paragraph(new Run(tbDischargeDate.Text))));
+            patientRowGroup.Rows.Add(dischargeRow);
+
+            document.Blocks.Add(patientInfoTable);
+
+            // Раздел медицинских заметок
+            Paragraph notesTitle = new Paragraph(new Run("Медицинские заметки"));
+            notesTitle.Style = sectionTitleStyle;
+            document.Blocks.Add(notesTitle);
+
+            if (_medicalNotes.Count > 0)
+            {
+                foreach (var note in _medicalNotes)
+                {
+                    // Заголовок заметки с датой и врачом
+                    Paragraph noteHeader = new Paragraph();
+                    noteHeader.Style = subtitleStyle;
+                    noteHeader.Inlines.Add(new Run(note.Date + " | " + note.Doctor));
+                    document.Blocks.Add(noteHeader);
+
+                    // Текст заметки
+                    Paragraph noteText = new Paragraph(new Run(note.Description));
+                    noteText.Margin = new Thickness(10, 0, 10, 15);
+                    document.Blocks.Add(noteText);
+                }
+            }
+            else
+            {
+                document.Blocks.Add(new Paragraph(new Run("Медицинские заметки отсутствуют.")));
+            }
+
+            // Процедуры пациента
+            Paragraph proceduresTitle = new Paragraph(new Run("Проведённые процедуры"));
+            proceduresTitle.Style = sectionTitleStyle;
+            document.Blocks.Add(proceduresTitle);
+
+            // Создание таблицы для процедур
+            Table proceduresTable = new Table();
+            proceduresTable.CellSpacing = 0;
+            proceduresTable.BorderThickness = new Thickness(1);
+            proceduresTable.BorderBrush = Brushes.Black;
+
+            // Определение колонок таблицы
+            proceduresTable.Columns.Add(new TableColumn() { Width = new GridLength(25) });
+            proceduresTable.Columns.Add(new TableColumn() { Width = new GridLength(180) });
+            proceduresTable.Columns.Add(new TableColumn() { Width = new GridLength(140) });
+            proceduresTable.Columns.Add(new TableColumn() { Width = new GridLength(75) });
+            proceduresTable.Columns.Add(new TableColumn() { Width = new GridLength(130) });
+
+            // Добавление строк таблицы
+            TableRowGroup proceduresRowGroup = new TableRowGroup();
+            proceduresTable.RowGroups.Add(proceduresRowGroup);
+
+            // Заголовок таблицы
+            TableRow headerRow = new TableRow();
+            headerRow.Background = Brushes.LightGray;
+            headerRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("ID")))));
+            headerRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Процедура")))));
+            headerRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Дата и время")))));
+            headerRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Статус")))));
+            headerRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Врач")))));
+            proceduresRowGroup.Rows.Add(headerRow);
+
+            // Получение данных о процедурах
+            DataView proceduresView = dgProcedures.ItemsSource as DataView;
+            if (proceduresView != null && proceduresView.Count > 0)
+            {
+                foreach (DataRowView rowView in proceduresView)
+                {
+                    TableRow row = new TableRow();
+                    row.Cells.Add(new TableCell(new Paragraph(new Run(rowView["AppointmentID"].ToString()))));
+                    row.Cells.Add(new TableCell(new Paragraph(new Run(rowView["ProcedureName"].ToString()))));
+                    
+                    string dateTime = Convert.ToDateTime(rowView["AppointmentDateTime"]).ToString("dd.MM.yyyy HH:mm");
+                    row.Cells.Add(new TableCell(new Paragraph(new Run(dateTime))));
+                    
+                    row.Cells.Add(new TableCell(new Paragraph(new Run(rowView["Status"].ToString()))));
+                    
+                    string doctorName = rowView["DoctorName"] != DBNull.Value 
+                        ? rowView["DoctorName"].ToString() 
+                        : "Не указан";
+                    row.Cells.Add(new TableCell(new Paragraph(new Run(doctorName))));
+                    
+                    proceduresRowGroup.Rows.Add(row);
+                }
+            }
+            else
+            {
+                TableRow row = new TableRow();
+                TableCell cell = new TableCell(new Paragraph(new Run("Нет данных о процедурах")));
+                cell.ColumnSpan = 5;
+                row.Cells.Add(cell);
+                proceduresRowGroup.Rows.Add(row);
+            }
+
+            document.Blocks.Add(proceduresTable);
+
+            // Дата и время печати
+            Paragraph footer = new Paragraph(new Run("Дата печати: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm")));
+            footer.Margin = new Thickness(0, 30, 0, 0);
+            footer.TextAlignment = TextAlignment.Right;
+            document.Blocks.Add(footer);
+
+            return document;
+        }
+
+        /// <summary>
+        /// Обработчик изменения дат в DatePicker
+        /// </summary>
+        private void DatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!_isInitialLoad)
+            {
+                LoadAllMedicalNotes();
+            }
         }
     }
 
@@ -483,15 +698,6 @@ namespace VrachDubRosh
         public string DoctorName { get; set; }
     }
 
-    /// <summary>
-    /// Класс для хранения информации о дате для комбобокса
-    /// </summary>
-    public class DateItem
-    {
-        public DateTime Date { get; set; }
-        public string DisplayText { get; set; }
-    }
-    
     /// <summary>
     /// Класс для хранения информации о медицинской заметке
     /// </summary>

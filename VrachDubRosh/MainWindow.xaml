@@ -4,7 +4,7 @@
         Title="Врач ДубРощ - Авторизация" 
         Height="600" Width="400"
         MinHeight="550" MinWidth="350"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -13,7 +13,7 @@
     <Window.Resources>
         <!-- Кнопка -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,8"/>
@@ -32,10 +32,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E8E41"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#2E7D32"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -46,7 +46,7 @@
         <!-- Текстовое поле -->
         <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
             <!-- Общие настройки -->
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
             <Setter Property="FontSize" Value="16"/>
@@ -79,7 +79,7 @@
         <!-- Поле пароля -->
         <Style x:Key="RoundedPasswordBoxStyle" TargetType="PasswordBox">
             <!-- Общие настройки -->
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
             <Setter Property="FontSize" Value="16"/>
@@ -105,6 +105,84 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Стиль для переключателя темы -->
+        <Style x:Key="ThemeToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Border" 
+                                CornerRadius="15" 
+                                Background="#7F7F7F"
+                                BorderThickness="0">
+                            <Grid>
+                                <!-- Светлая тема - иконка солнца -->
+                                <Canvas x:Name="SunIcon" 
+                                        Width="16" Height="16" 
+                                        HorizontalAlignment="Left" 
+                                        VerticalAlignment="Center" 
+                                        Margin="7,0,0,0">
+                                    <Ellipse Width="10" Height="10" 
+                                             Canvas.Left="3" Canvas.Top="3" 
+                                             Fill="White"/>
+                                    <!-- Лучи солнца -->
+                                    <Line X1="8" Y1="0" X2="8" Y2="2" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="8" Y1="14" X2="8" Y2="16" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="0" Y1="8" X2="2" Y2="8" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="14" Y1="8" X2="16" Y2="8" Stroke="White" StrokeThickness="1.5"/>
+                                    <!-- Диагональные лучи -->
+                                    <Line X1="2.5" Y1="2.5" X2="4" Y2="4" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="12" Y1="12" X2="13.5" Y2="13.5" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="2.5" Y1="13.5" X2="4" Y2="12" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="12" Y1="4" X2="13.5" Y2="2.5" Stroke="White" StrokeThickness="1.5"/>
+                                </Canvas>
+                                
+                                <!-- Темная тема - иконка луны -->
+                                <Canvas x:Name="MoonIcon" 
+                                        Width="18" Height="18" 
+                                        HorizontalAlignment="Right" 
+                                        VerticalAlignment="Center" 
+                                        Margin="0,0,7,0">
+                                    <!-- Круг луны -->
+                                    <Ellipse Width="14" Height="14" 
+                                             Canvas.Left="2" Canvas.Top="2"
+                                             Fill="White"/>
+                                    <!-- Затенение для эффекта полумесяца -->
+                                    <Ellipse x:Name="MoonShade" Width="10" Height="10"
+                                             Canvas.Left="8" Canvas.Top="2"
+                                             Fill="#7F7F7F"/>
+                                </Canvas>
+                                
+                                <!-- Переключатель -->
+                                <Ellipse x:Name="Ellipse" 
+                                         Width="24" 
+                                         Height="24" 
+                                         HorizontalAlignment="Left" 
+                                         Margin="3,0,0,0" 
+                                         Fill="White"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ellipse" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Ellipse" Property="Margin" Value="0,0,3,0"/>
+                                <Setter TargetName="Border" Property="Background" Value="#3B3B3B"/>
+                                <Setter TargetName="SunIcon" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="MoonIcon" Property="Opacity" Value="1"/>
+                                <Setter TargetName="MoonShade" Property="Fill" Value="#3B3B3B"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="SunIcon" Property="Opacity" Value="1"/>
+                                <Setter TargetName="MoonIcon" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="MoonShade" Property="Fill" Value="#7F7F7F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Viewbox (если нужна авто-масштабируемость). Или можно оставить ScrollViewer -->
@@ -120,59 +198,71 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- Переключатель темы -->
+            <ToggleButton Grid.Row="0" 
+                      Style="{StaticResource ThemeToggleButtonStyle}"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Top"
+                      Margin="0,0,0,10"
+                      Checked="ThemeToggle_Checked"
+                      Unchecked="ThemeToggle_Unchecked"
+                      x:Name="themeToggle"
+                      ToolTip="Переключить тему"/>
+
             <!-- Логотип -->
-            <Image Grid.Row="0" 
+            <Image Grid.Row="1" 
                    Source="/icodubrosh.png" 
                    Width="120" Height="120" 
                    Margin="0,0,0,15" 
                    HorizontalAlignment="Center"/>
 
             <!-- Название -->
-            <StackPanel Grid.Row="1" Margin="0,0,0,25">
+            <StackPanel Grid.Row="2" Margin="0,0,0,25">
                 <TextBlock Text="Санаторий Дубовая Роща" 
-                           FontSize="22" FontWeight="Bold" Foreground="#2E7D32" 
+                           FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" 
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Система управления пациентами" 
-                           FontSize="16" Foreground="#555555" 
+                           FontSize="16" Foreground="{DynamicResource SubtitleBrush}" 
                            HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
 
             <!-- Заголовок формы -->
-            <TextBlock Grid.Row="2" 
+            <TextBlock Grid.Row="3" 
                        Text="Авторизация" 
-                       FontSize="20" FontWeight="SemiBold" Foreground="#333333" 
+                       FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" 
                        HorizontalAlignment="Center" Margin="0,0,0,30"/>
 
             <!-- Логин подпись -->
-            <TextBlock Grid.Row="3" 
+            <TextBlock Grid.Row="4" 
                        Text="Логин" 
                        Margin="5,0,0,8" 
-                       FontSize="16" Foreground="#555555"/>
+                       FontSize="16" Foreground="{DynamicResource SubtitleBrush}"/>
 
             <!-- Логин поле -->
-            <TextBox Grid.Row="4" 
+            <TextBox Grid.Row="5" 
                      x:Name="txtLogin" 
                      Style="{StaticResource RoundedTextBoxStyle}"
                      Height="40"
                      Margin="0,0,0,20"/>
 
             <!-- Пароль подпись -->
-            <TextBlock Grid.Row="5" 
+            <TextBlock Grid.Row="6" 
                        Text="Пароль" 
                        Margin="5,0,0,8" 
-                       FontSize="16" Foreground="#555555"/>
+                       FontSize="16" Foreground="{DynamicResource SubtitleBrush}"/>
 
             <!-- Пароль поле -->
-            <PasswordBox Grid.Row="6" 
+            <PasswordBox Grid.Row="7" 
                          x:Name="txtPassword" 
                          Style="{StaticResource RoundedPasswordBoxStyle}"
                          Height="40"
                          Margin="0,0,0,40"/>
 
             <!-- Кнопка входа -->
-            <Button Grid.Row="7" 
+            <Button Grid.Row="8" 
                     Content="Войти в систему" 
                     Style="{StaticResource RoundedButtonStyle}"
                     Width="240" Height="46" 
@@ -182,9 +272,9 @@
                     Click="LoginButton_Click"/>
 
             <!-- Нижняя надпись -->
-            <TextBlock Grid.Row="8" 
+            <TextBlock Grid.Row="9" 
                        Text="© 2025 Санаторий Дубовая Роща" 
-                       FontSize="13" Foreground="#888888" 
+                       FontSize="13" Foreground="{DynamicResource FooterBrush}" 
                        HorizontalAlignment="Center"/>
         </Grid>
     </Viewbox>

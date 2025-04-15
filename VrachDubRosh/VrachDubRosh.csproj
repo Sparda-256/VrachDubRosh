@@ -172,9 +172,6 @@
     <Compile Include="PatientAssignmentWindow.xaml.cs">
       <DependentUpon>PatientAssignmentWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PatientHistoryWindow.xaml.cs">
-      <DependentUpon>PatientHistoryWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Patients.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
@@ -265,13 +262,17 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="PatientHistoryWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="ReportWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\DarkTheme.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Themes\LightTheme.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>

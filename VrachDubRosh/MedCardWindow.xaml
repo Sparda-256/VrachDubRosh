@@ -196,10 +196,15 @@
                         <ComboBox x:Name="cbDoctors" Grid.Column="1" Margin="0,0,15,0"
                                   SelectionChanged="cbDoctors_SelectionChanged"/>
                         
-                        <TextBlock Grid.Column="2" Text="Дата:" Margin="0,0,5,0" 
+                        <TextBlock Grid.Column="2" Text="Период:" Margin="0,0,5,0" 
                                    VerticalAlignment="Center" FontWeight="SemiBold"/>
-                        <ComboBox x:Name="cbDates" Grid.Column="3" Margin="0,0,15,0"
-                                  SelectionChanged="cbDates_SelectionChanged"/>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal">
+                            <DatePicker x:Name="dpStartDate" Width="120" Margin="0,0,5,0"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged"/>
+                            <TextBlock Text="-" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <DatePicker x:Name="dpEndDate" Width="120" Margin="0,0,0,0"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged"/>
+                        </StackPanel>
                     </Grid>
                     
                     <Border Grid.Row="1" BorderBrush="#E0E0E0" BorderThickness="1" 
@@ -250,7 +255,7 @@
             </DataGrid>
 
             <!-- Панель с детальной информацией о выбранной процедуре -->
-            <Expander Grid.Row="4" Header="Детали выбранной процедуры" 
+            <Expander Grid.Row="4" Header="Описание выбранной процедуры" 
                       IsExpanded="False" Margin="0,0,0,10"
                       x:Name="expanderProcedureDetails">
                 <Grid Margin="10">
@@ -258,9 +263,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    
-                    <TextBlock Grid.Row="0" Text="Описание процедуры:" 
-                               FontWeight="SemiBold" Margin="0,0,0,5"/>
                     <TextBox Grid.Row="1" x:Name="txtProcedureDescription" 
                              IsReadOnly="True" TextWrapping="Wrap" 
                              Height="80" Margin="0,0,0,5"/>
@@ -272,9 +274,9 @@
                 <Button Content="Диагнозы" Width="120" Margin="5" Padding="6" 
                         Style="{StaticResource BlueButtonStyle}"
                         Click="btnDiagnoses_Click"/>
-                <Button Content="История" Width="120" Margin="5" Padding="6" 
+                <Button Content="Печать" Width="120" Margin="5" Padding="6" 
                         Style="{StaticResource BlueButtonStyle}"
-                        Click="btnHistory_Click"/>
+                        Click="btnPrint_Click"/>
                 <Button Content="Сохранить" Width="120" Margin="5" Padding="6" 
                         Style="{StaticResource RoundedButtonStyle}"
                         Click="btnSave_Click"/>
