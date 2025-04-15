@@ -42,6 +42,38 @@ namespace VrachDubRosh
             LoadProcedures();
             
             _isInitialLoad = false;
+            
+            this.Loaded += MedCardWindow_Loaded;
+        }
+
+        /// <summary>
+        /// Обработчик события загрузки окна
+        /// </summary>
+        private void MedCardWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Применяет темную тему к окну
+        /// </summary>
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         /// <summary>
@@ -696,6 +728,11 @@ namespace VrachDubRosh
     {
         public int? DoctorID { get; set; }
         public string DoctorName { get; set; }
+        
+        public override string ToString()
+        {
+            return DoctorName;
+        }
     }
 
     /// <summary>

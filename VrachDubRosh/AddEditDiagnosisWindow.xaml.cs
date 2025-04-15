@@ -37,6 +37,8 @@ namespace VrachDubRosh
             
             // Загружаем список диагнозов
             LoadDiagnoses();
+            
+            this.Loaded += AddEditDiagnosisWindow_Loaded;
         }
 
         /// <summary>
@@ -58,6 +60,38 @@ namespace VrachDubRosh
             
             // Загружаем данные диагноза
             LoadDiagnosisData();
+            
+            this.Loaded += AddEditDiagnosisWindow_Loaded;
+        }
+
+        /// <summary>
+        /// Обработчик события загрузки окна
+        /// </summary>
+        private void AddEditDiagnosisWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Применяет темную тему к окну
+        /// </summary>
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         /// <summary>

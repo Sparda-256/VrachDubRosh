@@ -16,10 +16,13 @@
     <SolidColorBrush x:Key="InputBackgroundBrush" Color="White"/>
     
     <!-- DataGrid -->
-    <SolidColorBrush x:Key="AlternateRowBrush" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="AlternateRowBackgroundBrush" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="SelectionBrush" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="SelectionHoverBrush" Color="#BBDEFB"/>
     <SolidColorBrush x:Key="SelectionForegroundBrush" Color="#000000"/>
     <SolidColorBrush x:Key="SelectionBorderBrush" Color="#90CAF9"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="HeaderForegroundBrush" Color="#222222"/>
     
     <!-- TabControl -->
     <SolidColorBrush x:Key="TabInactiveBrush" Color="#EEEEEE"/>
