@@ -20,6 +20,9 @@ namespace VrachDubRosh
 
         // Таймер для обновления списка новых пациентов
         private DispatcherTimer newPatientsTimer;
+        
+        // Флаг для отслеживания текущей темы
+        private bool isDarkTheme = false;
 
         public GlavDoctorWindow()
         {
@@ -37,11 +40,52 @@ namespace VrachDubRosh
             LoadDoctorsForComboBox();
             dpRecordDate.SelectedDate = DateTime.Today;
 
+            // Проверяем текущую тему приложения
+            ResourceDictionary currentDict = Application.Current.Resources.MergedDictionaries[0];
+            if (currentDict.Source.ToString().Contains("DarkTheme"))
+            {
+                isDarkTheme = true;
+                themeToggle.IsChecked = true;
+                this.Title = "Врач ДубРощ - Главврач (Темная тема)";
+            }
+
             // Настраиваем таймер для обновления списка новых пациентов каждые 3 секунды
             newPatientsTimer = new DispatcherTimer();
             newPatientsTimer.Interval = TimeSpan.FromSeconds(10);
             newPatientsTimer.Tick += (s, args) => LoadNewPatients();
             newPatientsTimer.Start();
+        }
+
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(true);
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(false);
+        }
+
+        private void ChangeTheme(bool isDark)
+        {
+            isDarkTheme = isDark;
+            // Получаем доступ к ресурсам приложения
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            
+            // Меняем источник ресурсов в зависимости от выбранной темы
+            if (isDark)
+            {
+                resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+                this.Title = "Врач ДубРощ - Главврач (Темная тема)";
+            }
+            else
+            {
+                resourceDict.Source = new Uri("/Themes/LightTheme.xaml", UriKind.Relative);
+                this.Title = "Врач ДубРощ - Главврач";
+            }
+            
+            // Обновляем ресурсы приложения
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         #region Обработчики поиска

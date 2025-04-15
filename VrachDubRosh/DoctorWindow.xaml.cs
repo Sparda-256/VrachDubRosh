@@ -14,6 +14,7 @@ namespace VrachDubRosh
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
         private int _doctorID; // Идентификатор врача, передается после авторизации
+        private bool isDarkTheme = false;
 
         private DispatcherTimer _refreshTimer;
 
@@ -40,11 +41,60 @@ namespace VrachDubRosh
             LoadProceduresForAssignment();
             UpdateAppointmentsStatus();
 
+            // Проверяем текущую тему приложения
+            ResourceDictionary currentDict = Application.Current.Resources.MergedDictionaries[0];
+            if (currentDict.Source.ToString().Contains("DarkTheme"))
+            {
+                isDarkTheme = true;
+                themeToggle.IsChecked = true;
+                this.Title = "Врач ДубРощ (Темная тема)";
+            }
+
             // Настраиваем и запускаем таймер
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Interval = TimeSpan.FromSeconds(3); // например, каждые 30 секунд
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
+        }
+
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(true);
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(false);
+        }
+
+        private void ChangeTheme(bool isDark)
+        {
+            isDarkTheme = isDark;
+            // Получаем доступ к ресурсам приложения
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            
+            // Меняем источник ресурсов в зависимости от выбранной темы
+            if (isDark)
+            {
+                resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+                this.Title = "Врач ДубРощ (Темная тема)";
+            }
+            else
+            {
+                resourceDict.Source = new Uri("/Themes/LightTheme.xaml", UriKind.Relative);
+                this.Title = "Врач ДубРощ";
+            }
+
+            // Заменяем текущие ресурсы приложения на новые
+            var appResources = Application.Current.Resources.MergedDictionaries;
+            if (appResources.Count > 0)
+            {
+                appResources[0] = resourceDict;
+            }
+            else
+            {
+                appResources.Add(resourceDict);
+            }
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)

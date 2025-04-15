@@ -7,7 +7,20 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E8E41"/>
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#2E7D32"/>
     <SolidColorBrush x:Key="BorderBrush" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="BorderHoverBrush" Color="#BBBBBB"/>
     <SolidColorBrush x:Key="SubtitleBrush" Color="#555555"/>
     <SolidColorBrush x:Key="FooterBrush" Color="#888888"/>
     <SolidColorBrush x:Key="ThemeToggleBrush" Color="#888888"/>
+    
+    <!-- Input controls -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="White"/>
+    
+    <!-- DataGrid -->
+    <SolidColorBrush x:Key="AlternateRowBrush" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="SelectionForegroundBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="SelectionBorderBrush" Color="#90CAF9"/>
+    
+    <!-- TabControl -->
+    <SolidColorBrush x:Key="TabInactiveBrush" Color="#EEEEEE"/>
 </ResourceDictionary> 
