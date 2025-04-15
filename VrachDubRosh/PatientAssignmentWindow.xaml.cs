@@ -153,27 +153,35 @@ namespace VrachDubRosh
                     con.Open();
                     using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        // Удаляем все предыдущие назначения
-                        string deleteQuery = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                        using (SqlCommand cmdDelete = new SqlCommand(deleteQuery, con, tran))
+                        try
                         {
-                            cmdDelete.Parameters.AddWithValue("@PatientID", patientID);
-                            cmdDelete.ExecuteNonQuery();
-                        }
-
-                        // Вставляем новые (отмеченные) назначения
-                        string insertQuery = "INSERT INTO PatientDoctorAssignments (PatientID, DoctorID) VALUES (@PatientID, @DoctorID)";
-                        foreach (int docID in toAssign)
-                        {
-                            using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                            // Удаляем все предыдущие назначения
+                            string deleteQuery = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
+                            using (SqlCommand cmdDelete = new SqlCommand(deleteQuery, con, tran))
                             {
-                                cmdInsert.Parameters.AddWithValue("@PatientID", patientID);
-                                cmdInsert.Parameters.AddWithValue("@DoctorID", docID);
-                                cmdInsert.ExecuteNonQuery();
+                                cmdDelete.Parameters.AddWithValue("@PatientID", patientID);
+                                cmdDelete.ExecuteNonQuery();
                             }
-                        }
 
-                        tran.Commit();
+                            // Вставляем новые (отмеченные) назначения
+                            string insertQuery = "INSERT INTO PatientDoctorAssignments (PatientID, DoctorID) VALUES (@PatientID, @DoctorID)";
+                            foreach (int docID in toAssign)
+                            {
+                                using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                                {
+                                    cmdInsert.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmdInsert.Parameters.AddWithValue("@DoctorID", docID);
+                                    cmdInsert.ExecuteNonQuery();
+                                }
+                            }
+
+                            tran.Commit();
+                        }
+                        catch
+                        {
+                            tran.Rollback();
+                            throw;
+                        }
                     }
                 }
 
