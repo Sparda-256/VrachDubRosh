@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Врач ДубРощ - Добавление описания пациента" 
         Height="450" Width="550"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -12,7 +12,7 @@
     <Window.Resources>
         <!-- Кнопка стандартная -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,8"/>
@@ -31,10 +31,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E8E41"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#2E7D32"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -57,9 +57,10 @@
 
         <!-- Текстовое поле -->
         <Style x:Key="MultilineTextBoxStyle" TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Padding" Value="10"/>
             <Setter Property="AcceptsReturn" Value="True"/>
@@ -96,7 +97,7 @@
             <!-- Заголовок окна -->
             <TextBlock Grid.Row="0"
                        Text="Добавление описания пациента"
-                       FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
+                       FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
             <!-- Текстовое описание -->

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace VrachDubRosh
 {
@@ -18,18 +20,60 @@ namespace VrachDubRosh
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
         private int patientID;
+        public bool isDarkTheme { get; private set; } = false;
 
         public PatientAssignmentWindow(int patientID, string patientName)
         {
             InitializeComponent();
             this.patientID = patientID;
             txtPatientInfo.Text = $"Пациент: {patientName} (ID: {patientID})";
-            Loaded += PatientAssignmentWindow_Loaded;
+            this.Loaded += PatientAssignmentWindow_Loaded;
+        }
+
+        // Обработчик клика по элементу списка
+        private void ListViewItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListViewItem item && item.DataContext is DoctorAssignment assignment)
+            {
+                // Инвертируем состояние IsAssigned
+                assignment.IsAssigned = !assignment.IsAssigned;
+                
+                // Обновляем представление
+                if (lvDoctors.ItemsSource != null)
+                {
+                    lvDoctors.Items.Refresh();
+                }
+                
+                // Помечаем событие как обработанное
+                e.Handled = true;
+            }
         }
 
         private void PatientAssignmentWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LoadDoctorsWithAssignment();
+            
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            isDarkTheme = true;
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         /// <summary>

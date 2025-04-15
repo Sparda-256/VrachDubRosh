@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Врач ДубРощ - Добавление/редактирование пациента" 
         Height="500" Width="550"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -12,7 +12,7 @@
     <Window.Resources>
         <!-- Кнопка стандартная -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,8"/>
@@ -31,10 +31,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E8E41"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#2E7D32"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -57,9 +57,10 @@
 
         <!-- Текстовое поле -->
         <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -85,9 +86,10 @@
 
         <!-- DatePicker стиль -->
         <Style x:Key="RoundedDatePickerStyle" TargetType="DatePicker">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="2"/>
@@ -110,6 +112,7 @@
                                          HorizontalAlignment="Stretch"
                                          VerticalAlignment="Center"
                                          Margin="8,0"
+                                         Foreground="{DynamicResource ForegroundBrush}"
                                          Background="Transparent"
                                          BorderThickness="0"/>
                                 <Button x:Name="PART_Button" 
@@ -123,7 +126,7 @@
                               Background="Transparent"
                               BorderThickness="0">
                                     <Button.Content>
-                                        <Path Fill="#555555" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
+                                        <Path Fill="{DynamicResource SubtitleBrush}" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
                                     </Button.Content>
                                 </Button>
                                 <Popup x:Name="PART_Popup" 
@@ -140,9 +143,10 @@
 
         <!-- ComboBox стиль -->
         <Style x:Key="RoundedComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="8,6"/>
@@ -158,8 +162,8 @@
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="templateRoot" CornerRadius="6" 
-                                        Background="White" 
-                                        BorderBrush="#D0D0D0" 
+                                        Background="{DynamicResource InputBackgroundBrush}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" 
                                         BorderThickness="1"
                                         SnapsToDevicePixels="true">
                                             <Grid>
@@ -171,7 +175,7 @@
                                                 <Path Grid.Column="1" 
                                             Width="10" Height="6" 
                                             Margin="0,0,8,0"
-                                            Fill="#555555"
+                                            Fill="{DynamicResource SubtitleBrush}"
                                             Data="M 0 0 L 4 4 L 8 0 Z"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"/>
@@ -179,7 +183,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="true">
-                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="#BBBBBB"/>
+                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="{DynamicResource BorderHoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -203,8 +207,8 @@
                           MaxHeight="{TemplateBinding MaxDropDownHeight}"
                           MinWidth="{TemplateBinding ActualWidth}">
                                     <Border CornerRadius="0,0,6,6" 
-                                 Background="White" 
-                                 BorderBrush="#D0D0D0" 
+                                 Background="{DynamicResource InputBackgroundBrush}" 
+                                 BorderBrush="{DynamicResource BorderBrush}" 
                                  BorderThickness="1">
                                         <ScrollViewer SnapsToDevicePixels="True">
                                             <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
@@ -213,6 +217,31 @@
                                 </Grid>
                             </Popup>
                         </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Style for ComboBoxItem to handle theming -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Border" 
+                                Padding="8,6" 
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SelectionBrush}" TargetName="Border" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SelectionBrush}" TargetName="Border" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -238,25 +267,25 @@
             <!-- Заголовок окна -->
             <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                        Text="Добавление/редактирование пациента"
-                       FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
+                       FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
             <!-- Поля ввода -->
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="5,12,5,5"
                        Text="ФИО:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <TextBox x:Name="txtFullName" Grid.Row="1" Grid.Column="1" Margin="5"
                      Style="{StaticResource RoundedTextBoxStyle}"/>
 
             <TextBlock Grid.Row="2" Grid.Column="0" Margin="5,12,5,5"
                        Text="Дата рождения:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <DatePicker x:Name="dpDateOfBirth" Grid.Row="2" Grid.Column="1" Margin="5"
                         Style="{StaticResource RoundedDatePickerStyle}"/>
 
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="5,12,5,5"
                        Text="Пол:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <ComboBox x:Name="cbGender" Grid.Row="3" Grid.Column="1" Margin="5"
                       Style="{StaticResource RoundedComboBoxStyle}">
                 <ComboBoxItem Content="Мужской"/>
@@ -265,13 +294,13 @@
 
             <TextBlock Grid.Row="4" Grid.Column="0" Margin="5,12,5,5"
                        Text="Дата записи:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <DatePicker x:Name="dpRecordDate" Grid.Row="4" Grid.Column="1" Margin="5"
                         Style="{StaticResource RoundedDatePickerStyle}"/>
 
             <TextBlock Grid.Row="5" Grid.Column="0" Margin="5,12,5,5"
                        Text="Дата выписки:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <DatePicker x:Name="dpDischargeDate" Grid.Row="5" Grid.Column="1" Margin="5"
                         Style="{StaticResource RoundedDatePickerStyle}"/>
 

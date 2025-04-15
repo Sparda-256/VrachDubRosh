@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Врач ДубРощ - Процедуры врача" 
         Height="540" Width="625"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -12,24 +12,25 @@
     <Window.Resources>
         <!-- DataGrid стиль -->
         <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="RowBackground" Value="White"/>
-            <Setter Property="AlternatingRowBackground" Value="#F5F5F5"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#E0E0E0"/>
-            <Setter Property="VerticalGridLinesBrush" Value="#E0E0E0"/>
+            <Setter Property="RowBackground" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="RowHeight" Value="36"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
         </Style>
 
         <!-- Заголовок DataGrid ячейки -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F0F4F8"/>
-            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -38,8 +39,9 @@
         <!-- Стиль для ячеек DataGrid -->
         <Style TargetType="DataGridCell">
             <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridCell">
@@ -54,9 +56,9 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#E3F2FD"/>
-                    <Setter Property="Foreground" Value="#000000"/>
-                    <Setter Property="BorderBrush" Value="#90CAF9"/>
+                    <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -72,7 +74,7 @@
             <!-- Заголовок -->
             <TextBlock Grid.Row="0"
                        Text="Процедуры врача"
-                       FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
+                       FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
             <!-- DataGrid для процедур -->

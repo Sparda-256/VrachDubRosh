@@ -3,16 +3,110 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Врач ДубРощ - Отчеты и аналитика" 
         Height="650" Width="900"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
         BorderThickness="0"
         WindowStyle="SingleBorderWindow">
     <Window.Resources>
+        <!-- Ресурсы для темы (светлая по умолчанию) -->
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#F0F4F8"/>
+        <SolidColorBrush x:Key="ForegroundBrush" Color="#333333"/>
+        <SolidColorBrush x:Key="SubtitleBrush" Color="#555555"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#D0D0D0"/>
+        <SolidColorBrush x:Key="BorderHoverBrush" Color="#BBBBBB"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E8E41"/>
+        <SolidColorBrush x:Key="AccentPressedBrush" Color="#2E7D32"/>
+        <SolidColorBrush x:Key="InputBackgroundBrush" Color="White"/>
+        <SolidColorBrush x:Key="AlternateRowBrush" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="TabInactiveBrush" Color="#EEEEEE"/>
+        <SolidColorBrush x:Key="SelectionBrush" Color="#E3F2FD"/>
+        <SolidColorBrush x:Key="SelectionBorderBrush" Color="#90CAF9"/>
+        <SolidColorBrush x:Key="SelectionForegroundBrush" Color="#000000"/>
+
+        <!-- Стиль для переключателя темы -->
+        <Style x:Key="ThemeToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Border" 
+                                CornerRadius="15" 
+                                Background="#7F7F7F"
+                                BorderThickness="0">
+                            <Grid>
+                                <!-- Светлая тема - иконка солнца -->
+                                <Canvas x:Name="SunIcon" 
+                                        Width="16" Height="16" 
+                                        HorizontalAlignment="Left" 
+                                        VerticalAlignment="Center" 
+                                        Margin="7,0,0,0">
+                                    <Ellipse Width="10" Height="10" 
+                                             Canvas.Left="3" Canvas.Top="3" 
+                                             Fill="White"/>
+                                    <!-- Лучи солнца -->
+                                    <Line X1="8" Y1="0" X2="8" Y2="2" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="8" Y1="14" X2="8" Y2="16" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="0" Y1="8" X2="2" Y2="8" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="14" Y1="8" X2="16" Y2="8" Stroke="White" StrokeThickness="1.5"/>
+                                    <!-- Диагональные лучи -->
+                                    <Line X1="2.5" Y1="2.5" X2="4" Y2="4" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="12" Y1="12" X2="13.5" Y2="13.5" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="2.5" Y1="13.5" X2="4" Y2="12" Stroke="White" StrokeThickness="1.5"/>
+                                    <Line X1="12" Y1="4" X2="13.5" Y2="2.5" Stroke="White" StrokeThickness="1.5"/>
+                                </Canvas>
+
+                                <!-- Темная тема - иконка луны -->
+                                <Canvas x:Name="MoonIcon" 
+                                        Width="18" Height="18" 
+                                        HorizontalAlignment="Right" 
+                                        VerticalAlignment="Center" 
+                                        Margin="0,0,7,0">
+                                    <!-- Круг луны -->
+                                    <Ellipse Width="14" Height="14" 
+                                             Canvas.Left="2" Canvas.Top="2"
+                                             Fill="White"/>
+                                    <!-- Затенение для эффекта полумесяца -->
+                                    <Ellipse x:Name="MoonShade" Width="10" Height="10"
+                                             Canvas.Left="8" Canvas.Top="2"
+                                             Fill="#7F7F7F"/>
+                                </Canvas>
+
+                                <!-- Переключатель -->
+                                <Ellipse x:Name="Ellipse" 
+                                         Width="24" 
+                                         Height="24" 
+                                         HorizontalAlignment="Left" 
+                                         Margin="3,0,0,0" 
+                                         Fill="White"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ellipse" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Ellipse" Property="Margin" Value="0,0,3,0"/>
+                                <Setter TargetName="Border" Property="Background" Value="#3B3B3B"/>
+                                <Setter TargetName="SunIcon" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="MoonIcon" Property="Opacity" Value="1"/>
+                                <Setter TargetName="MoonShade" Property="Fill" Value="#3B3B3B"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="SunIcon" Property="Opacity" Value="1"/>
+                                <Setter TargetName="MoonIcon" Property="Opacity" Value="0.2"/>
+                                <Setter TargetName="MoonShade" Property="Fill" Value="#7F7F7F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Кнопка стандартная -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,8"/>
@@ -31,10 +125,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E8E41"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#2E7D32"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -70,9 +164,10 @@
 
         <!-- Текстовое поле -->
         <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -98,9 +193,10 @@
 
         <!-- DatePicker стиль -->
         <Style x:Key="RoundedDatePickerStyle" TargetType="DatePicker">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="2"/>
@@ -123,6 +219,7 @@
                                          HorizontalAlignment="Stretch"
                                          VerticalAlignment="Center"
                                          Margin="8,0"
+                                         Foreground="{DynamicResource ForegroundBrush}"
                                          Background="Transparent"
                                          BorderThickness="0"/>
                                 <Button x:Name="PART_Button" 
@@ -136,7 +233,7 @@
                               Background="Transparent"
                               BorderThickness="0">
                                     <Button.Content>
-                                        <Path Fill="#555555" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
+                                        <Path Fill="{DynamicResource SubtitleBrush}" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
                                     </Button.Content>
                                 </Button>
                                 <Popup x:Name="PART_Popup" 
@@ -153,9 +250,10 @@
 
         <!-- ComboBox стиль -->
         <Style x:Key="RoundedComboBoxStyle" TargetType="ComboBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Padding" Value="8,6"/>
@@ -171,8 +269,8 @@
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <Border x:Name="templateRoot" CornerRadius="6" 
-                                        Background="White" 
-                                        BorderBrush="#D0D0D0" 
+                                        Background="{DynamicResource InputBackgroundBrush}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" 
                                         BorderThickness="1"
                                         SnapsToDevicePixels="true">
                                             <Grid>
@@ -184,7 +282,7 @@
                                                 <Path Grid.Column="1" 
                                             Width="10" Height="6" 
                                             Margin="0,0,8,0"
-                                            Fill="#555555"
+                                            Fill="{DynamicResource SubtitleBrush}"
                                             Data="M 0 0 L 4 4 L 8 0 Z"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Center"/>
@@ -192,7 +290,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="true">
-                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="#BBBBBB"/>
+                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="{DynamicResource BorderHoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -216,8 +314,8 @@
                           MaxHeight="{TemplateBinding MaxDropDownHeight}"
                           MinWidth="{TemplateBinding ActualWidth}">
                                     <Border CornerRadius="0,0,6,6" 
-                                 Background="White" 
-                                 BorderBrush="#D0D0D0" 
+                                 Background="{DynamicResource InputBackgroundBrush}" 
+                                 BorderBrush="{DynamicResource BorderBrush}" 
                                  BorderThickness="1">
                                         <ScrollViewer SnapsToDevicePixels="True">
                                             <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
@@ -233,24 +331,25 @@
 
         <!-- DataGrid стиль -->
         <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="RowBackground" Value="White"/>
-            <Setter Property="AlternatingRowBackground" Value="#F5F5F5"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#E0E0E0"/>
-            <Setter Property="VerticalGridLinesBrush" Value="#E0E0E0"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="RowHeight" Value="36"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
         </Style>
 
         <!-- Заголовок DataGrid ячейки -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#F0F4F8"/>
-            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -259,7 +358,8 @@
         <!-- Стиль для ячеек DataGrid -->
         <Style TargetType="DataGridCell">
             <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -275,9 +375,9 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#E3F2FD"/>
-                    <Setter Property="Foreground" Value="#000000"/>
-                    <Setter Property="BorderBrush" Value="#90CAF9"/>
+                    <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -288,7 +388,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="Border" Margin="0,0,4,0" CornerRadius="6,6,0,0"
-                                BorderThickness="1,1,1,0" BorderBrush="#D0D0D0"
+                                BorderThickness="1,1,1,0" BorderBrush="{DynamicResource BorderBrush}"
                                 Background="{TemplateBinding Background}">
                             <ContentPresenter x:Name="ContentSite" ContentSource="Header"
                                             Margin="10,6" HorizontalAlignment="Center"
@@ -296,13 +396,13 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="White" TargetName="Border"/>
+                                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" TargetName="Border"/>
                                 <Setter Property="TextElement.FontWeight" Value="Bold"/>
-                                <Setter Property="TextElement.Foreground" Value="#2E7D32"/>
+                                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="False">
-                                <Setter Property="Background" Value="#EEEEEE" TargetName="Border"/>
-                                <Setter Property="TextElement.Foreground" Value="#555555"/>
+                                <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}" TargetName="Border"/>
+                                <Setter Property="TextElement.Foreground" Value="{DynamicResource SubtitleBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -312,8 +412,8 @@
 
         <!-- Стиль для TabControl -->
         <Style TargetType="TabControl">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="2"/>
             <Setter Property="Template">
@@ -348,6 +448,20 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Label style -->
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="{DynamicResource SubtitleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- TextBlock style -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SubtitleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </Window.Resources>
     <Viewbox Stretch="Uniform">
         <Grid Width="900" Height="650" Margin="20">
@@ -356,24 +470,44 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Кнопка выхода -->
-            <Button Grid.Row="0" Content="Выход" 
+            <!-- Верхняя панель с кнопкой выхода и переключателем темы -->
+            <Grid Grid.Row="0" Margin="0,0,0,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Переключатель темы -->
+                <ToggleButton Grid.Column="1" 
+                          Style="{StaticResource ThemeToggleButtonStyle}"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Margin="0,0,15,0"
+                          Checked="ThemeToggle_Checked"
+                          Unchecked="ThemeToggle_Unchecked"
+                          x:Name="themeToggle"
+                          ToolTip="Переключить тему"/>
+
+                <!-- Кнопка выхода -->
+                <Button Grid.Column="2" Content="Выход" 
                     Style="{StaticResource RedButtonStyle}"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Width="100" Height="40" Margin="0,0,0,15"
+                    Width="100" Height="40"
                     Click="ExitButton_Click"/>
+            </Grid>
 
             <!-- Основное содержимое -->
-            <TabControl Grid.Row="1" Margin="0,10,0,0">
+            <TabControl Grid.Row="1" Margin="0,10,0,0" Background="{DynamicResource BackgroundBrush}">
                 <!-- Вкладка 1: Все процедуры -->
                 <TabItem Header="Все процедуры">
                     <StackPanel Margin="10">
                         <!-- Параметры фильтра -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                            <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                             <DatePicker x:Name="dpStart_All" Width="120" Margin="5,0"
                                         Style="{StaticResource RoundedDatePickerStyle}"/>
-                            <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                            <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                             <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"
                                         Style="{StaticResource RoundedDatePickerStyle}"/>
                             <Button Content="Показать" Click="btnShowAll_Click" Margin="15,0,5,0" 
@@ -398,7 +532,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <!-- Итоговые показатели -->
-                        <TextBlock x:Name="txtAllSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
+                        <TextBlock x:Name="txtAllSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </TabItem>
 
@@ -413,7 +547,7 @@
                             
                             <!-- Выбор врача -->
                             <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
-                                <TextBlock Text="Поиск врача:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBlock Text="Поиск врача:" Foreground="{DynamicResource SubtitleBrush}" FontSize="14" Margin="0,0,0,5"/>
                                 <TextBox x:Name="txtSearchDoctor" 
                                          Style="{StaticResource RoundedTextBoxStyle}"
                                          TextChanged="txtSearchDoctor_TextChanged" Margin="0,0,0,5"/>
@@ -422,7 +556,7 @@
                                           SelectedValuePath="DoctorID">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding FullName}" />
+                                            <TextBlock Text="{Binding FullName}" Foreground="{DynamicResource ForegroundBrush}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -430,10 +564,10 @@
                             
                             <!-- Фильтры по дате и кнопки -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpStart_Doctor" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
                                 <Button Content="Показать" Click="btnShowDoctor_Click" Margin="15,0,5,0" 
@@ -457,7 +591,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <!-- Итоговые показатели -->
-                        <TextBlock x:Name="txtDoctorSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
+                        <TextBlock x:Name="txtDoctorSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </TabItem>
 
@@ -472,7 +606,7 @@
                             
                             <!-- Выбор пациента -->
                             <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
-                                <TextBlock Text="Поиск пациента:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBlock Text="Поиск пациента:" Foreground="{DynamicResource SubtitleBrush}" FontSize="14" Margin="0,0,0,5"/>
                                 <TextBox x:Name="txtSearchPatient" 
                                          Style="{StaticResource RoundedTextBoxStyle}"
                                          TextChanged="txtSearchPatient_TextChanged" Margin="0,0,0,5"/>
@@ -481,7 +615,7 @@
                                           SelectedValuePath="PatientID">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding FullName}" />
+                                            <TextBlock Text="{Binding FullName}" Foreground="{DynamicResource ForegroundBrush}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -489,10 +623,10 @@
                             
                             <!-- Фильтры по дате и кнопки -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpStart_Patient" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
                                 <Button Content="Показать" Click="btnShowPatient_Click" Margin="15,0,5,0" 
@@ -516,7 +650,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <!-- Итоговые показатели -->
-                        <TextBlock x:Name="txtPatientSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
+                        <TextBlock x:Name="txtPatientSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </TabItem>
 
@@ -531,7 +665,7 @@
                             
                             <!-- Выбор процедуры -->
                             <StackPanel Grid.Column="0" Width="200" Margin="0,0,20,0">
-                                <TextBlock Text="Поиск процедуры:" Foreground="#555555" FontSize="14" Margin="0,0,0,5"/>
+                                <TextBlock Text="Поиск процедуры:" Foreground="{DynamicResource SubtitleBrush}" FontSize="14" Margin="0,0,0,5"/>
                                 <TextBox x:Name="txtSearchProcedure" 
                                          Style="{StaticResource RoundedTextBoxStyle}"
                                          TextChanged="txtSearchProcedure_TextChanged" Margin="0,0,0,5"/>
@@ -540,7 +674,7 @@
                                           SelectedValuePath="ProcedureID">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding ProcedureDisplay}" />
+                                            <TextBlock Text="{Binding ProcedureDisplay}" Foreground="{DynamicResource ForegroundBrush}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -548,10 +682,10 @@
                             
                             <!-- Фильтры по дате и кнопки -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Начало:" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpStart_Procedure" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="#555555" FontSize="14"/>
+                                <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
                                 <Button Content="Показать" Click="btnShowProcedure_Click" Margin="15,0,5,0" 
@@ -574,7 +708,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <!-- Итоговые показатели -->
-                        <TextBlock x:Name="txtProcedureSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
+                        <TextBlock x:Name="txtProcedureSummary" Margin="0,5,0,0" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
                 </TabItem>
             </TabControl>

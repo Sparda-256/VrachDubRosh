@@ -11,6 +11,7 @@ namespace VrachDubRosh
         private int _doctorID;
         // Если описание уже существует, сохраняем его идентификатор
         private int? _patientDescriptionID = null;
+        public bool isDarkTheme { get; private set; } = false;
 
         public AddPatientDescriptionWindow(int patientID, int doctorID)
         {
@@ -18,6 +19,32 @@ namespace VrachDubRosh
             _patientID = patientID;
             _doctorID = doctorID;
             LoadDescription();
+            this.Loaded += AddPatientDescriptionWindow_Loaded;
+        }
+
+        private void AddPatientDescriptionWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            isDarkTheme = true;
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         private void LoadDescription()

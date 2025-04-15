@@ -13,6 +13,7 @@ namespace VrachDubRosh
         {
             InitializeComponent();
             this.Title = "Добавить врача";
+            this.Loaded += AddEditDoctorWindow_Loaded;
         }
 
         public AddEditDoctorWindow(int doctorID) : this()
@@ -20,6 +21,30 @@ namespace VrachDubRosh
             this.doctorID = doctorID;
             this.Title = "Редактировать врача";
             LoadDoctorData();
+        }
+
+        private void AddEditDoctorWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         private void LoadDoctorData()

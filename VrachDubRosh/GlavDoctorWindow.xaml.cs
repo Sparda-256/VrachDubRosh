@@ -22,7 +22,7 @@ namespace VrachDubRosh
         private DispatcherTimer newPatientsTimer;
         
         // Флаг для отслеживания текущей темы
-        private bool isDarkTheme = false;
+        public bool isDarkTheme = false;
 
         public GlavDoctorWindow()
         {
@@ -519,6 +519,20 @@ namespace VrachDubRosh
         {
             ReportWindow reportWindow = new ReportWindow();
             reportWindow.Owner = this;
+            
+            // Передаем информацию о текущей теме
+            if (isDarkTheme)
+            {
+                reportWindow.Loaded += (s, args) =>
+                {
+                    // Устанавливаем темную тему в окне отчетов
+                    if (reportWindow.themeToggle != null)
+                    {
+                        reportWindow.themeToggle.IsChecked = true;
+                    }
+                };
+            }
+            
             reportWindow.ShowDialog();
         }
         #endregion

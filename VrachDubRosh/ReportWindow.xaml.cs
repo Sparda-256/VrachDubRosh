@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace VrachDubRosh
 {
@@ -14,6 +15,9 @@ namespace VrachDubRosh
     {
         private readonly string connectionString =
             "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
+
+        // Для переключения темы
+        private bool isDarkTheme = false;
 
         // Для фильтрации ComboBox
         private DataTable dtDoctors;
@@ -57,6 +61,58 @@ namespace VrachDubRosh
             LoadPatients();
             LoadProcedures();
         }
+
+        #region Переключение темы (светлая/тёмная)
+        
+        private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(true);
+        }
+
+        private void ThemeToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ChangeTheme(false);
+        }
+
+        private void ChangeTheme(bool isDark)
+        {
+            isDarkTheme = isDark;
+            ResourceDictionary resources = Resources;
+
+            if (isDark)
+            {
+                // Тёмная тема
+                resources["BackgroundBrush"] = new SolidColorBrush(Color.FromRgb(32, 32, 32));
+                resources["ForegroundBrush"] = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+                resources["SubtitleBrush"] = new SolidColorBrush(Color.FromRgb(180, 180, 180));
+                resources["BorderBrush"] = new SolidColorBrush(Color.FromRgb(70, 70, 70));
+                resources["BorderHoverBrush"] = new SolidColorBrush(Color.FromRgb(100, 100, 100));
+                resources["InputBackgroundBrush"] = new SolidColorBrush(Color.FromRgb(50, 50, 50));
+                resources["AlternateRowBrush"] = new SolidColorBrush(Color.FromRgb(45, 45, 45));
+                resources["TabInactiveBrush"] = new SolidColorBrush(Color.FromRgb(60, 60, 60));
+                resources["SelectionBrush"] = new SolidColorBrush(Color.FromRgb(45, 66, 85));
+                resources["SelectionBorderBrush"] = new SolidColorBrush(Color.FromRgb(60, 90, 120));
+                resources["SelectionForegroundBrush"] = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+            }
+            else
+            {
+                // Светлая тема
+                resources["BackgroundBrush"] = new SolidColorBrush(Color.FromRgb(240, 244, 248));
+                resources["ForegroundBrush"] = new SolidColorBrush(Color.FromRgb(51, 51, 51));
+                resources["SubtitleBrush"] = new SolidColorBrush(Color.FromRgb(85, 85, 85));
+                resources["BorderBrush"] = new SolidColorBrush(Color.FromRgb(208, 208, 208));
+                resources["BorderHoverBrush"] = new SolidColorBrush(Color.FromRgb(187, 187, 187));
+                resources["InputBackgroundBrush"] = new SolidColorBrush(Colors.White);
+                resources["AlternateRowBrush"] = new SolidColorBrush(Color.FromRgb(245, 245, 245));
+                resources["TabInactiveBrush"] = new SolidColorBrush(Color.FromRgb(238, 238, 238));
+                resources["SelectionBrush"] = new SolidColorBrush(Color.FromRgb(227, 242, 253));
+                resources["SelectionBorderBrush"] = new SolidColorBrush(Color.FromRgb(144, 202, 249));
+                resources["SelectionForegroundBrush"] = new SolidColorBrush(Colors.Black);
+            }
+        }
+
+        #endregion
+
         private void UpdateAppointmentsStatus()
         {
             try

@@ -14,6 +14,15 @@ namespace VrachDubRosh
         {
             InitializeComponent();
             WindowState = WindowState.Maximized;
+            
+            // Проверяем текущую тему при запуске
+            ResourceDictionary currentDict = Application.Current.Resources.MergedDictionaries[0];
+            if (currentDict.Source.ToString().Contains("DarkTheme"))
+            {
+                isDarkTheme = true;
+                themeToggle.IsChecked = true;
+                this.Title = "Врач ДубРощ - Авторизация (Темная тема)";
+            }
         }
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)

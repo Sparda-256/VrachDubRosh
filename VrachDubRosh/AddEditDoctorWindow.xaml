@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Врач ДубРощ - Добавление/редактирование врача" 
         Height="500" Width="550"
-        Background="#F0F4F8"
+        Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip"
@@ -12,7 +12,7 @@
     <Window.Resources>
         <!-- Кнопка стандартная -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,8"/>
@@ -31,10 +31,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#3E8E41"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#2E7D32"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -57,9 +57,10 @@
 
         <!-- Текстовое поле -->
         <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -85,9 +86,10 @@
 
         <!-- PasswordBox стиль -->
         <Style x:Key="RoundedPasswordBoxStyle" TargetType="PasswordBox">
-            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="Height" Value="36"/>
@@ -104,6 +106,31 @@
                                           HorizontalScrollBarVisibility="Hidden"
                                           Background="Transparent"/>
                         </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Style for ComboBoxItem to handle theming -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Border" 
+                                Padding="8,6" 
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SelectionBrush}" TargetName="Border" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SelectionBrush}" TargetName="Border" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -129,37 +156,37 @@
             <!-- Заголовок окна -->
             <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                        Text="Добавление/редактирование врача"
-                       FontSize="22" FontWeight="Bold" Foreground="#2E7D32"
+                       FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
             <!-- Поля ввода -->
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="5,12,5,5"
                        Text="ФИО:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <TextBox x:Name="txtFullName" Grid.Row="1" Grid.Column="1" Margin="5"
                      Style="{StaticResource RoundedTextBoxStyle}"/>
 
             <TextBlock Grid.Row="2" Grid.Column="0" Margin="5,12,5,5"
                        Text="Специальность:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <TextBox x:Name="txtSpecialty" Grid.Row="2" Grid.Column="1" Margin="5"
                      Style="{StaticResource RoundedTextBoxStyle}"/>
 
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="5,12,5,5"
                        Text="Номер кабинета:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <TextBox x:Name="txtOfficeNumber" Grid.Row="3" Grid.Column="1" Margin="5"
                      Style="{StaticResource RoundedTextBoxStyle}"/>
 
             <TextBlock Grid.Row="4" Grid.Column="0" Margin="5,12,5,5"
                        Text="Пароль:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <PasswordBox x:Name="txtPassword" Grid.Row="4" Grid.Column="1" Margin="5"
                          Style="{StaticResource RoundedPasswordBoxStyle}"/>
 
             <TextBlock Grid.Row="5" Grid.Column="0" Margin="5,12,5,5"
                        Text="Стаж:" 
-                       Foreground="#555555" FontSize="14"/>
+                       Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
             <TextBox x:Name="txtWorkExperience" Grid.Row="5" Grid.Column="1" Margin="5"
                      Style="{StaticResource RoundedTextBoxStyle}"/>
 

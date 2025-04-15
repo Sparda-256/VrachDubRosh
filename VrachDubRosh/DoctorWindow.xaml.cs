@@ -14,7 +14,7 @@ namespace VrachDubRosh
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
         private int _doctorID; // Идентификатор врача, передается после авторизации
-        private bool isDarkTheme = false;
+        public bool isDarkTheme = false;
 
         private DispatcherTimer _refreshTimer;
 

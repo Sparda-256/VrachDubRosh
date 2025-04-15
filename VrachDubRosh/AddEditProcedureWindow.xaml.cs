@@ -17,6 +17,7 @@ namespace VrachDubRosh
             InitializeComponent();
             _doctorID = doctorID;
             this.Title = "Добавить процедуру";
+            this.Loaded += AddEditProcedureWindow_Loaded;
         }
 
         // Конструктор для редактирования
@@ -25,6 +26,30 @@ namespace VrachDubRosh
             _procedureID = procedureID;
             this.Title = "Редактировать процедуру";
             LoadProcedureData();
+        }
+
+        private void AddEditProcedureWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Проверяем тему родительского окна и применяем её
+            if (this.Owner != null)
+            {
+                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
+                {
+                    ApplyDarkTheme();
+                }
+            }
+        }
+
+        private void ApplyDarkTheme()
+        {
+            // Применяем темную тему
+            ResourceDictionary resourceDict = new ResourceDictionary();
+            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
+            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         private void LoadProcedureData()
