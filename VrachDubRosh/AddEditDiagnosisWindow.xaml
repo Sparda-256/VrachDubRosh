@@ -231,11 +231,16 @@
                            FontWeight="SemiBold" Margin="0,0,15,15" VerticalAlignment="Center"
                            Foreground="{DynamicResource SubtitleBrush}"/>
                 <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cbDiagnoses" 
-                          Style="{StaticResource RoundedComboBoxStyle}" 
-                          DisplayMemberPath="DiagnosisName" 
-                          SelectedValuePath="DiagnosisID" 
-                          Margin="0,0,0,15"/>
-                
+          Style="{StaticResource RoundedComboBoxStyle}" 
+          SelectedValuePath="DiagnosisID" 
+          Margin="0,0,0,15">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DiagnosisName}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
                 <!-- Вероятность диагноза -->
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Вероятность (%):" 
                            FontWeight="SemiBold" Margin="0,0,15,15" VerticalAlignment="Center"
