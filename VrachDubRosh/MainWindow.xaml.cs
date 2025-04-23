@@ -59,6 +59,23 @@ namespace VrachDubRosh
                         }
                     }
 
+                    // Проверка в таблице Managers
+                    string queryManager = "SELECT COUNT(*) FROM Managers WHERE FullName = @login AND Password = @password";
+                    using (SqlCommand cmd = new SqlCommand(queryManager, con))
+                    {
+                        cmd.Parameters.AddWithValue("@login", login);
+                        cmd.Parameters.AddWithValue("@password", password);
+                        int count = (int)cmd.ExecuteScalar();
+                        if (count > 0)
+                        {
+                            // Если найден менеджер, открываем окно менеджера
+                            ManagerWindow managerWindow = new ManagerWindow();
+                            managerWindow.Show();
+                            this.Close();
+                            return;
+                        }
+                    }
+
                     // Проверка в таблице Doctors — получаем DoctorID
                     string queryDoctor = "SELECT DoctorID FROM Doctors WHERE FullName = @login AND Password = @password";
                     using (SqlCommand cmd = new SqlCommand(queryDoctor, con))

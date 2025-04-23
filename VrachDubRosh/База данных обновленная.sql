@@ -9,6 +9,13 @@ CREATE TABLE ChiefDoctors (
     Password NVARCHAR(100)
 );
 
+-- Создание таблицы для менеджеров
+CREATE TABLE Managers (
+    ManagerID INT IDENTITY PRIMARY KEY,
+    FullName NVARCHAR(100),
+    Password NVARCHAR(100)
+);
+
 -- Создание таблицы для врачей
 CREATE TABLE Doctors (
     DoctorID INT IDENTITY PRIMARY KEY,
