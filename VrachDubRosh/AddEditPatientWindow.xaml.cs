@@ -1,50 +1,45 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace VrachDubRosh
 {
     public partial class AddEditPatientWindow : Window
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
-        private int? patientID = null; // Если null – добавление, иначе редактирование
+        private readonly int patientID;
+        private readonly bool isEditMode;
+        private readonly Window owner;
 
-        public AddEditPatientWindow()
+        // Конструктор для добавления нового пациента
+        public AddEditPatientWindow(Window owner)
         {
             InitializeComponent();
-            this.Title = "Добавить пациента";
-            this.Loaded += AddEditPatientWindow_Loaded;
+            this.owner = owner;
+            this.Owner = owner;
+            isEditMode = false;
+            patientID = -1;
+            Title = "Добавление пациента";
+            
+            // Устанавливаем текущую дату
+            dpRecordDate.SelectedDate = DateTime.Today;
+            // По умолчанию выбираем мужской пол
+            cbGender.SelectedIndex = 0;
         }
 
-        public AddEditPatientWindow(int patientID) : this()
+        // Конструктор для редактирования существующего пациента
+        public AddEditPatientWindow(Window owner, int patientID)
         {
+            InitializeComponent();
+            this.owner = owner;
+            this.Owner = owner;
+            isEditMode = true;
             this.patientID = patientID;
-            this.Title = "Редактировать пациента";
+            Title = "Редактирование пациента";
+            
+            // Загружаем данные пациента
             LoadPatientData();
-        }
-
-        private void AddEditPatientWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            // Проверяем тему родительского окна и применяем её
-            if (this.Owner != null)
-            {
-                if (this.Owner is GlavDoctorWindow glavWindow && glavWindow.isDarkTheme)
-                {
-                    ApplyDarkTheme();
-                }
-                else if (this.Owner is DoctorWindow doctorWindow && doctorWindow.isDarkTheme)
-                {
-                    ApplyDarkTheme();
-                }
-            }
-        }
-
-        private void ApplyDarkTheme()
-        {
-            // Применяем темную тему
-            ResourceDictionary resourceDict = new ResourceDictionary();
-            resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
-            Application.Current.Resources.MergedDictionaries[0] = resourceDict;
         }
 
         private void LoadPatientData()
@@ -57,31 +52,29 @@ namespace VrachDubRosh
                     string query = "SELECT FullName, DateOfBirth, Gender, RecordDate, DischargeDate FROM Patients WHERE PatientID = @PatientID";
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
-                        cmd.Parameters.AddWithValue("@PatientID", patientID.Value);
+                        cmd.Parameters.AddWithValue("@PatientID", patientID);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
                             {
                                 txtFullName.Text = reader["FullName"].ToString();
-                                dpDateOfBirth.SelectedDate = Convert.ToDateTime(reader["DateOfBirth"]);
-                                // Определяем пол (если это "Мужской" или "Женский", выбираем соответствующий пункт)
-                                string genderValue = reader["Gender"].ToString();
-                                if (genderValue == "Мужской")
-                                {
-                                    cbGender.SelectedIndex = 0;
-                                }
-                                else if (genderValue == "Женский")
-                                {
-                                    cbGender.SelectedIndex = 1;
-                                }
-                                else
-                                {
-                                    // Если вдруг в БД другое значение, можно оставить ComboBox невыбранным
-                                    cbGender.SelectedIndex = -1;
-                                }
-
-                                dpRecordDate.SelectedDate = reader["RecordDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(reader["RecordDate"]);
-                                dpDischargeDate.SelectedDate = reader["DischargeDate"] == DBNull.Value ? (DateTime?)null : Convert.ToDateTime(reader["DischargeDate"]);
+                                
+                                if (reader["DateOfBirth"] != DBNull.Value)
+                                    dpDateOfBirth.SelectedDate = Convert.ToDateTime(reader["DateOfBirth"]);
+                                
+                                string gender = reader["Gender"].ToString();
+                                cbGender.SelectedIndex = gender.Equals("Мужской", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                                
+                                if (reader["RecordDate"] != DBNull.Value)
+                                    dpRecordDate.SelectedDate = Convert.ToDateTime(reader["RecordDate"]);
+                                
+                                if (reader["DischargeDate"] != DBNull.Value)
+                                    dpDischargeDate.SelectedDate = Convert.ToDateTime(reader["DischargeDate"]);
+                            }
+                            else
+                            {
+                                MessageBox.Show("Пациент не найден.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                                this.Close();
                             }
                         }
                     }
@@ -89,78 +82,167 @@ namespace VrachDubRosh
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка загрузки данных пациента: " + ex.Message);
+                MessageBox.Show("Ошибка при загрузке данных пациента: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Close();
             }
         }
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtFullName.Text) || dpDateOfBirth.SelectedDate == null || cbGender.SelectedIndex < 0)
+            // Проверка заполнения обязательных полей
+            if (string.IsNullOrWhiteSpace(txtFullName.Text))
             {
-                MessageBox.Show("Пожалуйста, заполните поля ФИО, Дата рождения и выберите Пол.");
+                MessageBox.Show("Пожалуйста, введите ФИО пациента.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                txtFullName.Focus();
                 return;
             }
 
-            // Получаем выбранный пол
-            string gender = ((System.Windows.Controls.ComboBoxItem)cbGender.SelectedItem).Content.ToString();
+            if (dpDateOfBirth.SelectedDate == null)
+            {
+                MessageBox.Show("Пожалуйста, выберите дату рождения пациента.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                dpDateOfBirth.Focus();
+                return;
+            }
+
+            if (dpRecordDate.SelectedDate == null)
+            {
+                MessageBox.Show("Пожалуйста, выберите дату записи пациента.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                dpRecordDate.Focus();
+                return;
+            }
+
+            // Проверка валидности дат
+            DateTime dateOfBirth = dpDateOfBirth.SelectedDate.Value;
+            DateTime recordDate = dpRecordDate.SelectedDate.Value;
+            DateTime? dischargeDate = dpDischargeDate.SelectedDate;
+
+            if (dateOfBirth > DateTime.Today)
+            {
+                MessageBox.Show("Дата рождения не может быть в будущем.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                dpDateOfBirth.Focus();
+                return;
+            }
+
+            if (recordDate > DateTime.Today)
+            {
+                MessageBox.Show("Дата записи не может быть в будущем.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                dpRecordDate.Focus();
+                return;
+            }
+
+            if (dischargeDate.HasValue && dischargeDate.Value < recordDate)
+            {
+                MessageBox.Show("Дата выписки не может быть раньше даты записи.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                dpDischargeDate.Focus();
+                return;
+            }
+
+            // Получение данных из формы
+            string fullName = txtFullName.Text.Trim();
+            string gender = ((ComboBoxItem)cbGender.SelectedItem).Content.ToString();
 
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    if (patientID == null)
+                    
+                    if (isEditMode)
                     {
-                        // Добавление нового пациента
-                        string insertQuery = @"
-                            INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
-                            VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate)";
-                        using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+                        // Обновление существующего пациента
+                        string updateQuery;
+                        if (dischargeDate.HasValue)
                         {
-                            cmd.Parameters.AddWithValue("@FullName", txtFullName.Text.Trim());
-                            cmd.Parameters.AddWithValue("@DateOfBirth", dpDateOfBirth.SelectedDate.Value);
-                            cmd.Parameters.AddWithValue("@Gender", gender);
-                            cmd.Parameters.AddWithValue("@RecordDate", dpRecordDate.SelectedDate.HasValue ? (object)dpRecordDate.SelectedDate.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@DischargeDate", dpDischargeDate.SelectedDate.HasValue ? (object)dpDischargeDate.SelectedDate.Value : DBNull.Value);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    else
-                    {
-                        // Редактирование пациента
-                        string updateQuery = @"
-                            UPDATE Patients 
-                            SET FullName = @FullName, 
+                            updateQuery = @"
+                                UPDATE Patients SET 
+                                FullName = @FullName, 
                                 DateOfBirth = @DateOfBirth, 
                                 Gender = @Gender, 
                                 RecordDate = @RecordDate, 
-                                DischargeDate = @DischargeDate
-                            WHERE PatientID = @PatientID";
+                                DischargeDate = @DischargeDate 
+                                WHERE PatientID = @PatientID";
+                        }
+                        else
+                        {
+                            updateQuery = @"
+                                UPDATE Patients SET 
+                                FullName = @FullName, 
+                                DateOfBirth = @DateOfBirth, 
+                                Gender = @Gender, 
+                                RecordDate = @RecordDate, 
+                                DischargeDate = NULL 
+                                WHERE PatientID = @PatientID";
+                        }
+
                         using (SqlCommand cmd = new SqlCommand(updateQuery, con))
                         {
-                            cmd.Parameters.AddWithValue("@FullName", txtFullName.Text.Trim());
-                            cmd.Parameters.AddWithValue("@DateOfBirth", dpDateOfBirth.SelectedDate.Value);
+                            cmd.Parameters.AddWithValue("@FullName", fullName);
+                            cmd.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
                             cmd.Parameters.AddWithValue("@Gender", gender);
-                            cmd.Parameters.AddWithValue("@RecordDate", dpRecordDate.SelectedDate.HasValue ? (object)dpRecordDate.SelectedDate.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@DischargeDate", dpDischargeDate.SelectedDate.HasValue ? (object)dpDischargeDate.SelectedDate.Value : DBNull.Value);
-                            cmd.Parameters.AddWithValue("@PatientID", patientID.Value);
+                            cmd.Parameters.AddWithValue("@RecordDate", recordDate);
+                            
+                            if (dischargeDate.HasValue)
+                                cmd.Parameters.AddWithValue("@DischargeDate", dischargeDate.Value);
+                            
+                            cmd.Parameters.AddWithValue("@PatientID", patientID);
+                            
                             cmd.ExecuteNonQuery();
+                        }
+                        
+                        MessageBox.Show("Пациент успешно обновлен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        // Добавление нового пациента
+                        string insertQuery;
+                        if (dischargeDate.HasValue)
+                        {
+                            insertQuery = @"
+                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
+                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
+                                SELECT SCOPE_IDENTITY();";
+                        }
+                        else
+                        {
+                            insertQuery = @"
+                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate)
+                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate);
+                                SELECT SCOPE_IDENTITY();";
+                        }
+
+                        using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+                        {
+                            cmd.Parameters.AddWithValue("@FullName", fullName);
+                            cmd.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
+                            cmd.Parameters.AddWithValue("@Gender", gender);
+                            cmd.Parameters.AddWithValue("@RecordDate", recordDate);
+                            
+                            if (dischargeDate.HasValue)
+                                cmd.Parameters.AddWithValue("@DischargeDate", dischargeDate.Value);
+                            
+                            int newPatientID = Convert.ToInt32(cmd.ExecuteScalar());
+                            
+                            MessageBox.Show("Пациент успешно добавлен.\n\nТеперь вы можете добавить документы пациента в разделе 'Документы'.", 
+                                           "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                            
+                            // Устанавливаем ID добавленного пациента для возможности открытия окна документов
+                            DialogResult = true;
                         }
                     }
                 }
-                this.DialogResult = true;
-                this.Close();
+                
+                DialogResult = true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка сохранения данных пациента: " + ex.Message);
+                MessageBox.Show("Ошибка при сохранении пациента: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void btnCancel_Click(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = false;
+            Close();
         }
     }
 }

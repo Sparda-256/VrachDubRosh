@@ -1,0 +1,196 @@
+<Window x:Class="VrachDubRosh.AccompanyingDocumentsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Документы сопровождающего" 
+        Height="600" Width="850"
+        MinHeight="550" MinWidth="800"
+        Background="{DynamicResource BackgroundBrush}"
+        Icon="/icodubrosh.png"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        BorderThickness="0"
+        WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <!-- Кнопка стандартная -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Красная кнопка -->
+        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#F44336"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D32F2F"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Зеленая кнопка -->
+        <Style x:Key="GreenButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#388E3C"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#1B5E20"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- DataGrid стиль -->
+        <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="RowHeight" Value="36"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+        </Style>
+        
+        <!-- Заголовок DataGrid ячейки -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Стиль для ячеек DataGrid -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Viewbox Stretch="Uniform">
+        <Grid Width="810" Height="560" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Заголовок -->
+            <TextBlock Grid.Row="0" x:Name="txtAccompanyingInfo" 
+                   Text="Документы сопровождающего: " 
+                   FontSize="22" FontWeight="Bold" 
+                   Foreground="{DynamicResource AccentBrush}" 
+                   Margin="0,0,0,15"/>
+        
+            <!-- Информация о пациенте -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                <TextBlock x:Name="txtPatientInfo" Text="Пациент: " 
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text=" | " Foreground="{DynamicResource SubtitleBrush}" FontSize="14" VerticalAlignment="Center" Margin="10,0"/>
+                <TextBlock Text="Статус документов: " 
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock x:Name="txtDocumentStatus" Text="Неполный комплект" 
+                           Foreground="#F44336" FontWeight="Bold"
+                           FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+            </StackPanel>
+
+            <!-- Таблица документов -->
+            <DataGrid Grid.Row="2" x:Name="dgDocuments" 
+                      Style="{StaticResource ModernDataGridStyle}" 
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True" 
+                      SelectionMode="Single"
+                      SelectionChanged="dgDocuments_SelectionChanged"
+                      Margin="0,0,0,15">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding DocumentTypeID}" Width="40"/>
+                    <DataGridTextColumn Header="Наименование документа" Binding="{Binding DocumentName}" Width="*"/>
+                    <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="170"/>
+                    <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="120"/>
+                    <DataGridTextColumn Header="Дата загрузки" Binding="{Binding UploadDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                    <DataGridTextColumn Header="Срок действия" Binding="{Binding ExpiryDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                    <DataGridCheckBoxColumn Header="Обязательный" Binding="{Binding IsRequired}" Width="100"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Кнопки управления -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Загрузить" 
+                        Style="{StaticResource GreenButtonStyle}" 
+                        Width="140" Height="40" Margin="0,0,15,0"
+                        Click="btnUpload_Click"/>
+                <Button Content="Просмотреть" 
+                        Style="{StaticResource RoundedButtonStyle}" 
+                        Width="140" Height="40" Margin="0,0,15,0"
+                        Click="btnView_Click"/>
+                <Button Content="Удалить" 
+                        Style="{StaticResource RedButtonStyle}" 
+                        Width="120" Height="40" Margin="0,0,15,0"
+                        Click="btnDelete_Click"/>
+                <Button Content="Закрыть" 
+                        Style="{StaticResource RoundedButtonStyle}" 
+                        Width="120" Height="40"
+                        Click="btnClose_Click"/>
+            </StackPanel>
+        </Grid>
+    </Viewbox>
+</Window> 

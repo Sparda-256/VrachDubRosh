@@ -406,7 +406,7 @@ namespace VrachDubRosh
 
         private void btnAddPatient_Click(object sender, RoutedEventArgs e)
         {
-            AddEditPatientWindow addPatientWindow = new AddEditPatientWindow();
+            AddEditPatientWindow addPatientWindow = new AddEditPatientWindow(this);
             addPatientWindow.Owner = this;
             if (addPatientWindow.ShowDialog() == true)
             {
@@ -423,7 +423,7 @@ namespace VrachDubRosh
             }
             DataRowView row = dgPatients.SelectedItem as DataRowView;
             int patientID = Convert.ToInt32(row["PatientID"]);
-            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(patientID);
+            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(this, patientID);
             editPatientWindow.Owner = this;
             if (editPatientWindow.ShowDialog() == true)
             {

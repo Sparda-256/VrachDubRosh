@@ -109,6 +109,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AccompanyingDocumentsWindow.xaml.cs">
+      <DependentUpon>AccompanyingDocumentsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="AddEditAccompanyingWindow.xaml.cs">
+      <DependentUpon>AddEditAccompanyingWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="AddEditDiagnosisWindow.xaml.cs">
       <DependentUpon>AddEditDiagnosisWindow.xaml</DependentUpon>
     </Compile>
@@ -175,6 +181,9 @@
     <Compile Include="PatientAssignmentWindow.xaml.cs">
       <DependentUpon>PatientAssignmentWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PatientDocumentsWindow.xaml.cs">
+      <DependentUpon>PatientDocumentsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Patients.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
@@ -199,6 +208,14 @@
     <Compile Include="sysdiagrams.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
+    <Page Include="AccompanyingDocumentsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="AddEditAccompanyingWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="AddEditDiagnosisWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -268,6 +285,10 @@
     <Page Include="PatientAssignmentWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PatientDocumentsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="ReportWindow.xaml">
       <SubType>Designer</SubType>

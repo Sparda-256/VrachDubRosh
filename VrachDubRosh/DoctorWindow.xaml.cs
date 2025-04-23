@@ -244,8 +244,7 @@ namespace VrachDubRosh
             }
             DataRowView row = dgDoctorPatients.SelectedItem as DataRowView;
             int patientID = Convert.ToInt32(row["PatientID"]);
-            // Открываем окно редактирования пациента (AddEditPatientWindow)
-            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(patientID);
+            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(this, patientID);
             editPatientWindow.Owner = this;
             if (editPatientWindow.ShowDialog() == true)
             {

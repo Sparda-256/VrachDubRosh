@@ -133,6 +133,319 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        
+        <!-- Зеленая кнопка -->
+        <Style x:Key="GreenButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#4CAF50"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#388E3C"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#1B5E20"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Серая кнопка -->
+        <Style x:Key="GrayButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#757575"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#616161"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#424242"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Текстовое поле -->
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="false"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          Background="Transparent" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- DatePicker стиль -->
+        <Style x:Key="RoundedDatePickerStyle" TargetType="DatePicker">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Border CornerRadius="6" Background="{TemplateBinding Background}" 
+                        BorderBrush="{TemplateBinding BorderBrush}" 
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox" 
+                                         Grid.Column="0" 
+                                         Focusable="True"
+                                         HorizontalContentAlignment="Left"
+                                         VerticalContentAlignment="Center"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
+                                         Margin="8,0"
+                                         Foreground="{DynamicResource ForegroundBrush}"
+                                         Background="Transparent"
+                                         BorderThickness="0"/>
+                                <Button x:Name="PART_Button" 
+                              Grid.Column="1"
+                              Focusable="False"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Margin="0,0,8,0"
+                              Width="20"
+                              Height="20"
+                              Background="Transparent"
+                              BorderThickness="0">
+                                    <Button.Content>
+                                        <Path Fill="{DynamicResource SubtitleBrush}" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Popup x:Name="PART_Popup" 
+                             StaysOpen="False"
+                             AllowsTransparency="True"
+                             PopupAnimation="Slide"
+                             PlacementTarget="{Binding ElementName=PART_Button}"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- ComboBox стиль -->
+        <Style x:Key="RoundedComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" 
+                              ClickMode="Press" 
+                              Focusable="false"
+                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                              IsHitTestVisible="True">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="templateRoot" CornerRadius="6" 
+                                        Background="{DynamicResource InputBackgroundBrush}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" 
+                                        BorderThickness="1"
+                                        SnapsToDevicePixels="true">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Leave empty for content presenter -->
+                                                <Path Grid.Column="1" 
+                                            Width="10" Height="6" 
+                                            Margin="0,0,8,0"
+                                            Fill="{DynamicResource SubtitleBrush}"
+                                            Data="M 0 0 L 4 4 L 8 0 Z"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="true">
+                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="{DynamicResource BorderHoverBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!-- Content presenter for selected item -->
+                            <ContentPresenter x:Name="ContentSite" 
+                                  Content="{TemplateBinding SelectionBoxItem}" 
+                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                  IsHitTestVisible="False"
+                                  Margin="8,0,30,0"
+                                  VerticalAlignment="Center"/>
+                            <Popup Name="Popup" 
+                         Placement="Bottom"
+                         IsOpen="{TemplateBinding IsDropDownOpen}"
+                         Focusable="False" 
+                         AllowsTransparency="True"
+                         PopupAnimation="Slide">
+                                <Grid Name="DropDown" 
+                          SnapsToDevicePixels="True"
+                          MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                          MinWidth="{TemplateBinding ActualWidth}">
+                                    <Border CornerRadius="0,0,6,6" 
+                                 Background="{DynamicResource InputBackgroundBrush}" 
+                                 BorderBrush="{DynamicResource BorderBrush}" 
+                                 BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- DataGrid стиль -->
+        <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="RowHeight" Value="36"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+        </Style>
+        
+        <!-- Заголовок DataGrid ячейки -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Стиль для ячеек DataGrid -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Стиль для вкладок TabControl -->
+        <Style TargetType="TabItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Border" Margin="0,0,4,0" CornerRadius="6,6,0,0"
+                                BorderThickness="1,1,1,0" BorderBrush="{DynamicResource BorderBrush}"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter x:Name="ContentSite" ContentSource="Header"
+                                            Margin="10,6" HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" TargetName="Border"/>
+                                <Setter Property="TextElement.FontWeight" Value="Bold"/>
+                                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="False">
+                                <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}" TargetName="Border"/>
+                                <Setter Property="TextElement.Foreground" Value="{DynamicResource SubtitleBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Стиль для TabControl -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TabPanel x:Name="HeaderPanel"
+                                   Grid.Row="0"
+                                   Panel.ZIndex="1"
+                                   Margin="4,4,4,0"
+                                   IsItemsHost="True"
+                                   KeyboardNavigation.TabIndex="1"
+                                   Background="Transparent"/>
+                            <Border x:Name="ContentBorder"
+                                  Grid.Row="1"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="0,6,6,6"
+                                  KeyboardNavigation.TabNavigation="Local"
+                                  KeyboardNavigation.DirectionalNavigation="Contained"
+                                  KeyboardNavigation.TabIndex="2">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                               ContentSource="SelectedContent"
+                                               Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Viewbox Stretch="Uniform">
@@ -158,24 +471,108 @@
                         Click="ExitButton_Click"/>
             </StackPanel>
 
-            <!-- Контент окна менеджера - заполним позже -->
-            <Border Grid.Row="1" 
-                    Background="{DynamicResource BackgroundBrush}" 
-                    BorderBrush="{DynamicResource BorderBrush}" 
-                    BorderThickness="1"
-                    CornerRadius="8">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="Окно менеджера" 
-                               FontSize="32" 
-                               Foreground="{DynamicResource AccentBrush}" 
-                               FontWeight="Bold"
-                               Margin="0,0,0,20"/>
-                    <TextBlock Text="Функциональность будет реализована позже" 
-                               FontSize="16" 
-                               Foreground="{DynamicResource SubtitleBrush}"
-                               TextAlignment="Center"/>
-                </StackPanel>
-            </Border>
+            <!-- Основной контент: TabControl -->
+            <TabControl Grid.Row="1" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                
+                <!-- Вкладка "Пациенты" -->
+                <TabItem Header="Пациенты">
+                    <Grid Margin="15">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Панель поиска -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
+                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
+                            <TextBox x:Name="txtSearchPatients" Width="250" Margin="5,0,0,0" 
+                                     Style="{StaticResource RoundedTextBoxStyle}"
+                                     TextChanged="txtSearchPatients_TextChanged"/>
+                        </StackPanel>
+                        
+                        <!-- DataGrid для пациентов -->
+                        <DataGrid x:Name="dgPatients" Grid.Row="1" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
+                                  MouseDoubleClick="dgPatients_MouseDoubleClick"
+                                  SelectionChanged="dgPatients_SelectionChanged">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Дата рождения" 
+                                                    Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
+                                                    Width="120"/>
+                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
+                                <DataGridTextColumn Header="Дата записи" 
+                                                    Binding="{Binding RecordDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                                <DataGridTextColumn Header="Дата выписки" 
+                                                    Binding="{Binding DischargeDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- Кнопки управления пациентами -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+                            <Button Content="Добавить" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnAddPatient_Click"/>
+                            <Button Content="Редактировать" Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnEditPatient_Click"/>
+                            <Button Content="Документы" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnManageDocuments_Click"/>
+                            <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnDeletePatient_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+                
+                <!-- Вкладка "Сопровождающие" -->
+                <TabItem Header="Сопровождающие">
+                    <Grid Margin="15">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Панель поиска -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
+                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
+                            <TextBox x:Name="txtSearchAccompanying" Width="250" Margin="5,0,0,0" 
+                                     Style="{StaticResource RoundedTextBoxStyle}"
+                                     TextChanged="txtSearchAccompanying_TextChanged"/>
+                        </StackPanel>
+                        
+                        <!-- DataGrid для сопровождающих -->
+                        <DataGrid x:Name="dgAccompanying" Grid.Row="1" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
+                                  MouseDoubleClick="dgAccompanying_MouseDoubleClick"
+                                  SelectionChanged="dgAccompanying_SelectionChanged">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding AccompanyingPersonID}" Width="50"/>
+                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
+                                <DataGridTextColumn Header="ФИО пациента" Binding="{Binding PatientName}" Width="*"/>
+                                <DataGridTextColumn Header="Отношение" Binding="{Binding Relationship}" Width="150"/>
+                                <DataGridCheckBoxColumn Header="Доверенность" Binding="{Binding HasPowerOfAttorney}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- Кнопки управления сопровождающими -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+                            <Button Content="Добавить" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnAddAccompanying_Click"/>
+                            <Button Content="Редактировать" Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnEditAccompanying_Click"/>
+                            <Button Content="Документы" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnManageAccompanyingDocuments_Click"/>
+                            <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnDeleteAccompanying_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
         </Grid>
     </Viewbox>
 </Window> 
