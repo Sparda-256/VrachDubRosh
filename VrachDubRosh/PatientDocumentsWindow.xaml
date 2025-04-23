@@ -145,7 +145,7 @@
                            Foreground="{DynamicResource ForegroundBrush}"
                            FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock Text=" | " Foreground="{DynamicResource SubtitleBrush}" FontSize="14" VerticalAlignment="Center" Margin="10,0"/>
-                <TextBlock Text="Статус документов: " 
+                <TextBlock Text="Статус обязательных документов: " 
                            Foreground="{DynamicResource ForegroundBrush}"
                            FontSize="14" VerticalAlignment="Center"/>
                 <TextBlock x:Name="txtDocumentStatus" Text="Неполный комплект" 

@@ -338,15 +338,27 @@
                 </ComboBox>
 
                 <!-- Доверенность -->
-                <Label Grid.Row="4" Grid.Column="0" Content="Статус:" 
+                <Label Grid.Row="4" Grid.Column="0" Content="Доверенность:" 
                        Foreground="{DynamicResource ForegroundBrush}" 
                        VerticalAlignment="Center" 
                        Margin="0,0,10,15"/>
-                <CheckBox Grid.Row="4" Grid.Column="1" x:Name="chkHasPowerOfAttorney" 
-                          Content="Имеется доверенность от законных представителей" 
-                          Style="{StaticResource ModernCheckBoxStyle}" 
-                          Margin="0,0,0,15"
-                          VerticalAlignment="Center"/>
+                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtPowerOfAttorneyStatus" 
+                               Text="Не требуется" 
+                               Foreground="{DynamicResource SubtitleBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="btnUploadPowerOfAttorney" 
+                            Content="Загрузить" 
+                            Grid.Column="1"
+                            Style="{StaticResource RoundedButtonStyle}" 
+                            Width="120" Height="30"
+                            Click="btnUploadPowerOfAttorney_Click"
+                            Visibility="Collapsed"/>
+                </Grid>
                 
                 <!-- Примечание о доверенности -->
                 <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
