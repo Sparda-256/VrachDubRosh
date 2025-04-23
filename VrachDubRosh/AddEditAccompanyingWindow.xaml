@@ -298,11 +298,39 @@
                        Foreground="{DynamicResource ForegroundBrush}" 
                        VerticalAlignment="Center" 
                        Margin="0,0,10,15"/>
-                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cbPatients" 
-                          Style="{StaticResource RoundedComboBoxStyle}" 
-                          Margin="0,0,0,15"
-                          DisplayMemberPath="FullName"
-                          SelectedValuePath="PatientID"/>
+                <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBox Grid.Row="0" x:Name="txtPatientSearch" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,0,5"
+                             TextChanged="txtPatientSearch_TextChanged"
+                             ToolTip="Введите имя пациента для поиска">
+                        <TextBox.Resources>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource RoundedTextBoxStyle}">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <VisualBrush Stretch="None" TileMode="None" Opacity="0.5" AlignmentX="Left">
+                                                    <VisualBrush.Visual>
+                                                        <TextBlock Text="Поиск пациента..." Foreground="{DynamicResource SubtitleBrush}"/>
+                                                    </VisualBrush.Visual>
+                                                </VisualBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                    <ComboBox Grid.Row="1" x:Name="cbPatients" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              DisplayMemberPath="FullName"
+                              SelectedValuePath="PatientID"/>
+                </Grid>
 
                 <!-- ФИО -->
                 <Label Grid.Row="1" Grid.Column="0" Content="ФИО сопровождающего:" 

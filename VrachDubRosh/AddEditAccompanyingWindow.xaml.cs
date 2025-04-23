@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -29,6 +30,7 @@ namespace VrachDubRosh
         private readonly Window owner;
         private string powerOfAttorneyPath; // Путь к файлу доверенности
         private bool isPowerOfAttorneyRequired; // Флаг, указывающий, требуется ли доверенность
+        private List<PatientInfo> allPatients; // Полный список пациентов для поиска
 
         // Конструктор для добавления нового сопровождающего
         public AddEditAccompanyingWindow(Window owner)
@@ -74,19 +76,32 @@ namespace VrachDubRosh
         {
             try
             {
+                allPatients = new List<PatientInfo>();
+                
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     string query = "SELECT PatientID, FullName FROM Patients ORDER BY FullName";
-                    SqlDataAdapter adapter = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt);
-                    
-                    // Убедимся, что ComboBox показывает имя пациента, а не DataRowView.ToString()
-                    cbPatients.DisplayMemberPath = "FullName";
-                    cbPatients.SelectedValuePath = "PatientID";
-                    cbPatients.ItemsSource = dt.DefaultView;
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                allPatients.Add(new PatientInfo
+                                {
+                                    PatientID = Convert.ToInt32(reader["PatientID"]),
+                                    FullName = reader["FullName"].ToString()
+                                });
+                            }
+                        }
+                    }
                 }
+                
+                // Настраиваем комбобокс для отображения пациентов
+                cbPatients.ItemsSource = allPatients;
+                cbPatients.DisplayMemberPath = "FullName";
+                cbPatients.SelectedValuePath = "PatientID";
             }
             catch (Exception ex)
             {
@@ -512,6 +527,33 @@ namespace VrachDubRosh
         {
             DialogResult = false;
             Close();
+        }
+
+        // Обработчик события изменения текста в поле поиска
+        private void txtPatientSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string searchText = txtPatientSearch.Text.ToLower();
+            
+            // Если строка поиска пуста, отображаем весь список
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                cbPatients.ItemsSource = allPatients;
+                return;
+            }
+            
+            // Фильтруем список пациентов по введенному тексту
+            var filteredPatients = allPatients
+                .Where(p => p.FullName.ToLower().Contains(searchText))
+                .ToList();
+            
+            // Обновляем комбобокс отфильтрованным списком
+            cbPatients.ItemsSource = filteredPatients;
+            
+            // Открываем выпадающий список, если найдены совпадения
+            if (filteredPatients.Count > 0)
+            {
+                cbPatients.IsDropDownOpen = true;
+            }
         }
     }
 } 
