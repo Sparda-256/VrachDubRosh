@@ -57,7 +57,6 @@ namespace VrachDubRosh
                         END AS Status,
                         apd.DocumentID,
                         apd.UploadDate,
-                        apd.ExpiryDate,
                         apd.DocumentPath,
                         apd.IsVerified
                     FROM DocumentTypes dt
@@ -87,7 +86,6 @@ namespace VrachDubRosh
         {
             int requiredCount = 0;
             int uploadedCount = 0;
-            int expiredCount = 0;
             
             foreach (DataRow row in documentsTable.Rows)
             {
@@ -98,17 +96,6 @@ namespace VrachDubRosh
                     
                     if (row["DocumentID"] != DBNull.Value)
                     {
-                        // Проверка на истекший срок действия
-                        if (row["ExpiryDate"] != DBNull.Value)
-                        {
-                            DateTime expiryDate = Convert.ToDateTime(row["ExpiryDate"]);
-                            if (expiryDate < DateTime.Today)
-                            {
-                                expiredCount++;
-                                continue;
-                            }
-                        }
-                        
                         uploadedCount++;
                     }
                 }
@@ -119,11 +106,6 @@ namespace VrachDubRosh
             {
                 txtDocumentStatus.Text = "Не требуются документы";
                 txtDocumentStatus.Foreground = System.Windows.Media.Brushes.Green;
-            }
-            else if (expiredCount > 0)
-            {
-                txtDocumentStatus.Text = $"Истек срок: {expiredCount} документ(ов)";
-                txtDocumentStatus.Foreground = System.Windows.Media.Brushes.Red;
             }
             else if (uploadedCount < requiredCount)
             {
@@ -170,7 +152,6 @@ namespace VrachDubRosh
             // Получаем информацию о типе документа
             string documentName = "";
             bool isRequired = false;
-            int validityDays = 0;
             
             if (dgDocuments.SelectedItem is DataRowView row)
             {
@@ -225,28 +206,9 @@ namespace VrachDubRosh
                     // Копируем файл
                     File.Copy(selectedFilePath, destinationPath, true);
                     
-                    // Получаем срок действия документа из базы данных
                     using (SqlConnection con = new SqlConnection(connectionString))
                     {
                         con.Open();
-                        
-                        string validityQuery = "SELECT ValidityDays FROM DocumentTypes WHERE DocumentTypeID = @DocumentTypeID";
-                        using (SqlCommand cmd = new SqlCommand(validityQuery, con))
-                        {
-                            cmd.Parameters.AddWithValue("@DocumentTypeID", selectedDocumentTypeID);
-                            object result = cmd.ExecuteScalar();
-                            if (result != DBNull.Value && result != null)
-                            {
-                                validityDays = Convert.ToInt32(result);
-                            }
-                        }
-                        
-                        // Рассчитываем дату окончания срока действия
-                        DateTime? expiryDate = null;
-                        if (validityDays > 0)
-                        {
-                            expiryDate = DateTime.Today.AddDays(validityDays);
-                        }
                         
                         // Сохраняем информацию о документе в базу данных
                         if (selectedDocumentID > 0)
@@ -256,7 +218,6 @@ namespace VrachDubRosh
                                 UPDATE AccompanyingPersonDocuments SET 
                                 DocumentPath = @DocumentPath, 
                                 UploadDate = @UploadDate, 
-                                ExpiryDate = @ExpiryDate,
                                 IsVerified = 0
                                 WHERE DocumentID = @DocumentID";
                             
@@ -264,12 +225,6 @@ namespace VrachDubRosh
                             {
                                 cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
                                 cmd.Parameters.AddWithValue("@UploadDate", DateTime.Today);
-                                
-                                if (expiryDate.HasValue)
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", expiryDate.Value);
-                                else
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", DBNull.Value);
-                                
                                 cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
                                 
                                 cmd.ExecuteNonQuery();
@@ -284,14 +239,12 @@ namespace VrachDubRosh
                                     DocumentTypeID, 
                                     DocumentPath, 
                                     UploadDate, 
-                                    ExpiryDate, 
                                     IsVerified
                                 ) VALUES (
                                     @AccompanyingPersonID, 
                                     @DocumentTypeID, 
                                     @DocumentPath, 
                                     @UploadDate, 
-                                    @ExpiryDate, 
                                     0
                                 )";
                             
@@ -301,11 +254,6 @@ namespace VrachDubRosh
                                 cmd.Parameters.AddWithValue("@DocumentTypeID", selectedDocumentTypeID);
                                 cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
                                 cmd.Parameters.AddWithValue("@UploadDate", DateTime.Today);
-                                
-                                if (expiryDate.HasValue)
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", expiryDate.Value);
-                                else
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", DBNull.Value);
                                 
                                 cmd.ExecuteNonQuery();
                             }

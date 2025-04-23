@@ -59,10 +59,9 @@ namespace VrachDubRosh
                     // Получаем список типов документов, соответствующих возрасту пациента
                     string query = @"
                         SELECT dt.DocumentTypeID, dt.DocumentName, dt.Description, dt.IsRequired, dt.ValidityDays,
-                               pd.DocumentID, pd.DocumentPath, pd.UploadDate, pd.ExpiryDate,
+                               pd.DocumentID, pd.DocumentPath, pd.UploadDate,
                                CASE 
                                    WHEN pd.DocumentID IS NULL THEN 'Не загружен'
-                                   WHEN pd.ExpiryDate IS NOT NULL AND pd.ExpiryDate < GETDATE() THEN 'Просрочен'
                                    WHEN pd.IsVerified = 1 THEN 'Проверен'
                                    ELSE 'Загружен'
                                END AS Status
@@ -98,7 +97,6 @@ namespace VrachDubRosh
         {
             int totalRequired = 0;
             int uploadedRequired = 0;
-            int expiredRequired = 0;
             
             foreach (DataRow row in documentsTable.Rows)
             {
@@ -112,10 +110,6 @@ namespace VrachDubRosh
                     {
                         uploadedRequired++;
                     }
-                    else if (status == "Просрочен")
-                    {
-                        expiredRequired++;
-                    }
                 }
             }
             
@@ -128,11 +122,6 @@ namespace VrachDubRosh
             {
                 txtDocumentStatus.Text = "Полный комплект";
                 txtDocumentStatus.Foreground = System.Windows.Media.Brushes.Green;
-            }
-            else if (expiredRequired > 0)
-            {
-                txtDocumentStatus.Text = "Есть просроченные документы";
-                txtDocumentStatus.Foreground = System.Windows.Media.Brushes.Red;
             }
             else
             {
@@ -220,20 +209,6 @@ namespace VrachDubRosh
                     // Копируем файл в папку назначения
                     File.Copy(sourceFilePath, destinationPath);
                     
-                    // Получаем информацию о типе документа
-                    int validityDays = 0;
-                    if (row["ValidityDays"] != DBNull.Value)
-                    {
-                        validityDays = Convert.ToInt32(row["ValidityDays"]);
-                    }
-                    
-                    // Вычисляем дату истечения срока действия
-                    DateTime? expiryDate = null;
-                    if (validityDays > 0)
-                    {
-                        expiryDate = DateTime.Today.AddDays(validityDays);
-                    }
-                    
                     using (SqlConnection con = new SqlConnection(connectionString))
                     {
                         con.Open();
@@ -245,7 +220,6 @@ namespace VrachDubRosh
                                 UPDATE PatientDocuments SET 
                                 DocumentPath = @DocumentPath, 
                                 UploadDate = GETDATE(), 
-                                ExpiryDate = @ExpiryDate, 
                                 IsVerified = 0
                                 WHERE DocumentID = @DocumentID";
                             
@@ -253,12 +227,6 @@ namespace VrachDubRosh
                             {
                                 cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
                                 cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
-                                
-                                if (expiryDate.HasValue)
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", expiryDate.Value);
-                                else
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", DBNull.Value);
-                                
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -266,20 +234,14 @@ namespace VrachDubRosh
                         {
                             // Добавляем новый документ
                             string insertQuery = @"
-                                INSERT INTO PatientDocuments (PatientID, DocumentTypeID, DocumentPath, UploadDate, ExpiryDate, IsVerified)
-                                VALUES (@PatientID, @DocumentTypeID, @DocumentPath, GETDATE(), @ExpiryDate, 0)";
+                                INSERT INTO PatientDocuments (PatientID, DocumentTypeID, DocumentPath, UploadDate, IsVerified)
+                                VALUES (@PatientID, @DocumentTypeID, @DocumentPath, GETDATE(), 0)";
                             
                             using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                             {
                                 cmd.Parameters.AddWithValue("@PatientID", patientID);
                                 cmd.Parameters.AddWithValue("@DocumentTypeID", selectedDocumentTypeID);
                                 cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
-                                
-                                if (expiryDate.HasValue)
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", expiryDate.Value);
-                                else
-                                    cmd.Parameters.AddWithValue("@ExpiryDate", DBNull.Value);
-                                
                                 cmd.ExecuteNonQuery();
                             }
                         }

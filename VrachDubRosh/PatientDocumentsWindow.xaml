@@ -167,7 +167,6 @@
                     <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="170"/>
                     <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="120"/>
                     <DataGridTextColumn Header="Дата загрузки" Binding="{Binding UploadDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
-                    <DataGridTextColumn Header="Срок действия" Binding="{Binding ExpiryDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
                     <DataGridCheckBoxColumn Header="Обязательный" Binding="{Binding IsRequired}" Width="100"/>
                 </DataGrid.Columns>
             </DataGrid>
