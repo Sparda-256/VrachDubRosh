@@ -222,8 +222,14 @@ namespace VrachDubRosh
                             
                             int newPatientID = Convert.ToInt32(cmd.ExecuteScalar());
                             
-                            MessageBox.Show("Пациент успешно добавлен.\n\nТеперь вы можете добавить документы пациента в разделе 'Документы'.", 
-                                           "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                            MessageBox.Show("Пациент успешно добавлен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                            
+                            // Автоматически открываем окно документов для нового пациента
+                            PatientDocumentsWindow documentsWindow = new PatientDocumentsWindow(
+                                newPatientID, 
+                                txtFullName.Text.Trim(), 
+                                dpDateOfBirth.SelectedDate);
+                            documentsWindow.ShowDialog();
                             
                             // Устанавливаем ID добавленного пациента для возможности открытия окна документов
                             DialogResult = true;

@@ -502,8 +502,17 @@ namespace VrachDubRosh
                             }
                             else
                             {
-                                MessageBox.Show("Сопровождающий успешно добавлен.\n\nТеперь вы можете добавить документы сопровождающего в разделе 'Документы'.", 
-                                               "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                                MessageBox.Show("Сопровождающий успешно добавлен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                                
+                                // Автоматически открываем окно документов для нового сопровождающего
+                                // Получаем информацию о пациенте
+                                PatientInfo selectedPatient = (PatientInfo)cbPatients.SelectedItem;
+                                AccompanyingDocumentsWindow documentsWindow = new AccompanyingDocumentsWindow(
+                                    selectedPatient.PatientID,
+                                    selectedPatient.FullName,
+                                    newAccompanyingID,
+                                    txtFullName.Text.Trim());
+                                documentsWindow.ShowDialog();
                             }
                             
                             DialogResult = true;

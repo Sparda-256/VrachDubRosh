@@ -9,6 +9,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         BorderThickness="0"
+        WindowState="Maximized"
         WindowStyle="SingleBorderWindow">
     <Window.Resources>
         <!-- Кнопка стандартная -->

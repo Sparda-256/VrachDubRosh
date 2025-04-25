@@ -9,6 +9,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         BorderThickness="0"
+        WindowState="Maximized"
         WindowStyle="SingleBorderWindow">
     <Window.Resources>
         <!-- Кнопка стандартная -->
@@ -164,7 +165,6 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" Binding="{Binding DocumentTypeID}" Width="40"/>
                     <DataGridTextColumn Header="Наименование документа" Binding="{Binding DocumentName}" Width="*"/>
-                    <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="170"/>
                     <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="120"/>
                     <DataGridTextColumn Header="Дата загрузки" Binding="{Binding UploadDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
                     <DataGridCheckBoxColumn Header="Обязательный" Binding="{Binding IsRequired}" Width="100"/>
