@@ -15,6 +15,7 @@ namespace VrachDubRosh
     {
         public int PatientID { get; set; }
         public string FullName { get; set; }
+        public string StayType { get; set; }
 
         public override string ToString()
         {
@@ -25,12 +26,20 @@ namespace VrachDubRosh
     public partial class AddEditAccompanyingWindow : Window
     {
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
-        private readonly int accompaningPersonID;
+        private readonly int accompanyingID;
         private readonly bool isEditMode;
         private readonly Window owner;
         private string powerOfAttorneyPath; // Путь к файлу доверенности
         private bool isPowerOfAttorneyRequired; // Флаг, указывающий, требуется ли доверенность
         private List<PatientInfo> allPatients; // Полный список пациентов для поиска
+        
+        // Поля для размещения
+        private List<Building> buildings;
+        private List<Room> rooms;
+        private int selectedBuildingID = -1;
+        private int selectedRoomID = -1;
+        private int selectedBedNumber = 1; // По умолчанию кровать 1
+        private bool needAccommodation = false; // Требуется ли размещение
 
         // Конструктор для добавления нового сопровождающего
         public AddEditAccompanyingWindow(Window owner)
@@ -39,7 +48,7 @@ namespace VrachDubRosh
             this.owner = owner;
             this.Owner = owner;
             isEditMode = false;
-            accompaningPersonID = -1;
+            accompanyingID = -1;
             Title = "Добавление сопровождающего";
             
             // По умолчанию выбираем отношение "Родитель"
@@ -48,22 +57,32 @@ namespace VrachDubRosh
             // Загружаем список пациентов
             LoadPatients();
             
+            // Загружаем список корпусов
+            LoadBuildings();
+            
             // Подписываемся на событие изменения выбора отношения
             cbRelationship.SelectionChanged += CbRelationship_SelectionChanged;
+
+            // По умолчанию скрываем панель размещения
+            lblAccommodation.Visibility = Visibility.Collapsed;
+            accommodationPanel.Visibility = Visibility.Collapsed;
         }
 
         // Конструктор для редактирования существующего сопровождающего
-        public AddEditAccompanyingWindow(Window owner, int accompaningPersonID)
+        public AddEditAccompanyingWindow(Window owner, int accompanyingID)
         {
             InitializeComponent();
             this.owner = owner;
             this.Owner = owner;
             isEditMode = true;
-            this.accompaningPersonID = accompaningPersonID;
+            this.accompanyingID = accompanyingID;
             Title = "Редактирование сопровождающего";
             
             // Загружаем список пациентов
             LoadPatients();
+            
+            // Загружаем список корпусов
+            LoadBuildings();
             
             // Загружаем данные сопровождающего
             LoadAccompanyingPersonData();
@@ -81,7 +100,7 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT PatientID, FullName FROM Patients ORDER BY FullName";
+                    string query = "SELECT PatientID, FullName, StayType FROM Patients ORDER BY FullName";
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         using (SqlDataReader reader = cmd.ExecuteReader())
@@ -91,7 +110,8 @@ namespace VrachDubRosh
                                 allPatients.Add(new PatientInfo
                                 {
                                     PatientID = Convert.ToInt32(reader["PatientID"]),
-                                    FullName = reader["FullName"].ToString()
+                                    FullName = reader["FullName"].ToString(),
+                                    StayType = reader["StayType"].ToString()
                                 });
                             }
                         }
@@ -102,10 +122,35 @@ namespace VrachDubRosh
                 cbPatients.ItemsSource = allPatients;
                 cbPatients.DisplayMemberPath = "FullName";
                 cbPatients.SelectedValuePath = "PatientID";
+                
+                // Подписываемся на событие изменения выбора пациента
+                cbPatients.SelectionChanged += CbPatients_SelectionChanged;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка при загрузке списка пациентов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CbPatients_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbPatients.SelectedItem != null)
+            {
+                PatientInfo selectedPatient = (PatientInfo)cbPatients.SelectedItem;
+                
+                // Определяем, требуется ли размещение для сопровождающего
+                needAccommodation = selectedPatient.StayType == "Круглосуточный";
+                
+                // Показываем или скрываем панель размещения
+                lblAccommodation.Visibility = needAccommodation ? Visibility.Visible : Visibility.Collapsed;
+                accommodationPanel.Visibility = needAccommodation ? Visibility.Visible : Visibility.Collapsed;
+                
+                // Если требуется размещение, загружаем доступные комнаты
+                if (needAccommodation && cbBuilding.SelectedItem != null)
+                {
+                    int buildingID = (int)cbBuilding.SelectedValue;
+                    LoadRooms(buildingID);
+                }
             }
         }
         
@@ -119,7 +164,7 @@ namespace VrachDubRosh
                     string query = "SELECT PatientID, FullName, DateOfBirth, Relationship, HasPowerOfAttorney FROM AccompanyingPersons WHERE AccompanyingPersonID = @AccompanyingPersonID";
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
-                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompaningPersonID);
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             if (reader.Read())
@@ -151,6 +196,13 @@ namespace VrachDubRosh
                                 
                                 // Обновляем UI с учетом загруженных данных
                                 UpdatePowerOfAttorneyUI();
+                                
+                                // Загружаем размещение сопровождающего, если пациент на круглосуточном стационаре
+                                PatientInfo selectedPatient = cbPatients.SelectedItem as PatientInfo;
+                                if (selectedPatient != null && selectedPatient.StayType == "Круглосуточный")
+                                {
+                                    LoadAccompanyingAccommodation();
+                                }
                             }
                             else
                             {
@@ -165,6 +217,60 @@ namespace VrachDubRosh
             {
                 MessageBox.Show("Ошибка при загрузке данных сопровождающего: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.Close();
+            }
+        }
+        
+        private void LoadAccompanyingAccommodation()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT a.RoomID, a.BedNumber, r.RoomNumber, b.BuildingID, b.BuildingNumber 
+                        FROM Accommodations a
+                        JOIN Rooms r ON a.RoomID = r.RoomID
+                        JOIN Buildings b ON r.BuildingID = b.BuildingID
+                        WHERE a.AccompanyingPersonID = @AccompanyingPersonID AND a.CheckOutDate IS NULL";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                int buildingID = Convert.ToInt32(reader["BuildingID"]);
+                                int roomID = Convert.ToInt32(reader["RoomID"]);
+                                int bedNumber = Convert.ToInt32(reader["BedNumber"]);
+                                
+                                // Выбираем корпус
+                                foreach (var building in buildings)
+                                {
+                                    if (building.BuildingID == buildingID)
+                                    {
+                                        cbBuilding.SelectedValue = buildingID;
+                                        break;
+                                    }
+                                }
+                                
+                                // Загружаем комнаты для выбранного корпуса
+                                LoadRooms(buildingID);
+                                
+                                // Выбираем комнату
+                                cbRoom.SelectedValue = roomID;
+                                
+                                // Выбираем кровать
+                                cbBed.SelectedIndex = bedNumber - 1; // индексы начинаются с 0
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при загрузке размещения сопровождающего: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
@@ -243,7 +349,7 @@ namespace VrachDubRosh
                     
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
-                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompaningPersonID);
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
                         object result = cmd.ExecuteScalar();
                         
                         if (result != null && result != DBNull.Value)
@@ -340,6 +446,34 @@ namespace VrachDubRosh
                 btnUploadPowerOfAttorney.Focus();
                 return;
             }
+            
+            // Проверка выбора размещения для пациентов на круглосуточном стационаре
+            PatientInfo selectedPatient = cbPatients.SelectedItem as PatientInfo;
+            bool isInpatient = selectedPatient != null && selectedPatient.StayType == "Круглосуточный";
+            
+            if (isInpatient)
+            {
+                if (cbBuilding.SelectedItem == null)
+                {
+                    MessageBox.Show("Пожалуйста, выберите корпус для размещения сопровождающего.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                    cbBuilding.Focus();
+                    return;
+                }
+                
+                if (cbRoom.SelectedItem == null)
+                {
+                    MessageBox.Show("Пожалуйста, выберите комнату для размещения сопровождающего.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                    cbRoom.Focus();
+                    return;
+                }
+                
+                if (cbBed.SelectedItem == null)
+                {
+                    MessageBox.Show("Пожалуйста, выберите кровать для размещения сопровождающего.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                    cbBed.Focus();
+                    return;
+                }
+            }
 
             // Получение данных из формы
             int patientID = Convert.ToInt32(cbPatients.SelectedValue);
@@ -385,12 +519,12 @@ namespace VrachDubRosh
                                     
                                     cmd.Parameters.AddWithValue("@Relationship", relationship);
                                     cmd.Parameters.AddWithValue("@HasPowerOfAttorney", hasPowerOfAttorney);
-                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompaningPersonID);
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
                                     
                                     cmd.ExecuteNonQuery();
                                 }
                                 
-                                newAccompanyingID = accompaningPersonID;
+                                newAccompanyingID = accompanyingID;
                             }
                             else
                             {
@@ -414,6 +548,62 @@ namespace VrachDubRosh
                                     cmd.Parameters.AddWithValue("@HasPowerOfAttorney", hasPowerOfAttorney);
                                     
                                     newAccompanyingID = Convert.ToInt32(cmd.ExecuteScalar());
+                                }
+                            }
+                            
+                            // Обновляем размещение сопровождающего, если пациент на круглосуточном стационаре
+                            if (isInpatient)
+                            {
+                                // Получаем выбранную кровать
+                                ComboBoxItem selectedBedItem = (ComboBoxItem)cbBed.SelectedItem;
+                                string bedContent = selectedBedItem.Content.ToString();
+                                int bedNumber = int.Parse(bedContent.Replace("Кровать ", ""));
+                                
+                                if (isEditMode)
+                                {
+                                    // Обновляем существующее размещение
+                                    // Сначала помечаем все текущие размещения сопровождающего как выселенные
+                                    string updateQuery = @"
+                                        UPDATE Accommodations 
+                                        SET CheckOutDate = @CheckOutDate 
+                                        WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(updateQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@CheckOutDate", DateTime.Now);
+                                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                                
+                                // Добавляем новое размещение
+                                string insertAccommodationQuery = @"
+                                    INSERT INTO Accommodations (RoomID, AccompanyingPersonID, BedNumber, CheckInDate)
+                                    VALUES (@RoomID, @AccompanyingPersonID, @BedNumber, @CheckInDate)";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@RoomID", selectedRoomID);
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", newAccompanyingID);
+                                    cmd.Parameters.AddWithValue("@BedNumber", bedNumber);
+                                    cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                            else if (isEditMode)
+                            {
+                                // Если пациент переведен с круглосуточного на дневной стационар,
+                                // необходимо выселить сопровождающего из комнаты
+                                string updateQuery = @"
+                                    UPDATE Accommodations 
+                                    SET CheckOutDate = @CheckOutDate 
+                                    WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(updateQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@CheckOutDate", DateTime.Now);
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                                    cmd.ExecuteNonQuery();
                                 }
                             }
                             
@@ -504,12 +694,11 @@ namespace VrachDubRosh
                             {
                                 MessageBox.Show("Сопровождающий успешно добавлен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                                 
-                                // Автоматически открываем окно документов для нового сопровождающего
-                                // Получаем информацию о пациенте
-                                PatientInfo selectedPatient = (PatientInfo)cbPatients.SelectedItem;
+                                // Автоматически открываем окно документов только для нового сопровождающего
+                                PatientInfo selectedPatientInfo = (PatientInfo)cbPatients.SelectedItem;
                                 AccompanyingDocumentsWindow documentsWindow = new AccompanyingDocumentsWindow(
-                                    selectedPatient.PatientID,
-                                    selectedPatient.FullName,
+                                    selectedPatientInfo.PatientID,
+                                    selectedPatientInfo.FullName,
                                     newAccompanyingID,
                                     txtFullName.Text.Trim());
                                 documentsWindow.ShowDialog();
@@ -563,6 +752,249 @@ namespace VrachDubRosh
             {
                 cbPatients.IsDropDownOpen = true;
             }
+        }
+
+        private void LoadBuildings()
+        {
+            try
+            {
+                buildings = new List<Building>();
+                
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT BuildingID, BuildingNumber, Description FROM Buildings ORDER BY BuildingNumber";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                buildings.Add(new Building
+                                {
+                                    BuildingID = Convert.ToInt32(reader["BuildingID"]),
+                                    BuildingNumber = Convert.ToInt32(reader["BuildingNumber"]),
+                                    Description = reader["Description"] as string
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                cbBuilding.ItemsSource = buildings;
+                cbBuilding.SelectedValuePath = "BuildingID";
+                
+                // По умолчанию выбираем первый корпус
+                if (buildings.Count > 0)
+                {
+                    cbBuilding.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при загрузке списка корпусов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        private void LoadRooms(int buildingID)
+        {
+            try
+            {
+                rooms = new List<Room>();
+                selectedBuildingID = buildingID;
+                
+                // Запоминаем текущую комнату сопровождающего (если он уже размещен)
+                int currentRoomID = -1;
+                int currentBedNumber = -1;
+                
+                if (isEditMode)
+                {
+                    using (SqlConnection con = new SqlConnection(connectionString))
+                    {
+                        con.Open();
+                        string query = @"
+                            SELECT a.RoomID, a.BedNumber
+                            FROM Accommodations a
+                            WHERE a.AccompanyingPersonID = @AccompanyingPersonID AND a.CheckOutDate IS NULL";
+                        
+                        using (SqlCommand cmd = new SqlCommand(query, con))
+                        {
+                            cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    currentRoomID = Convert.ToInt32(reader["RoomID"]);
+                                    currentBedNumber = Convert.ToInt32(reader["BedNumber"]);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    
+                    // Запрос для получения комнат и информации о занятых местах
+                    string query = @"
+                        SELECT r.RoomID, r.RoomNumber, r.IsAvailable,
+                               (SELECT COUNT(*) FROM Accommodations a WHERE a.RoomID = r.RoomID AND a.CheckOutDate IS NULL) AS OccupiedBeds
+                        FROM Rooms r
+                        WHERE r.BuildingID = @BuildingID
+                        ORDER BY r.RoomNumber";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@BuildingID", buildingID);
+                        
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                int roomID = Convert.ToInt32(reader["RoomID"]);
+                                string roomNumber = reader["RoomNumber"].ToString();
+                                bool isAvailable = Convert.ToBoolean(reader["IsAvailable"]);
+                                int occupiedBeds = Convert.ToInt32(reader["OccupiedBeds"]);
+                                
+                                Room room = new Room
+                                {
+                                    RoomID = roomID,
+                                    RoomNumber = roomNumber,
+                                    IsAvailable = isAvailable
+                                };
+                                
+                                // Проверка, является ли комната текущей комнатой сопровождающего
+                                bool isCurrentRoom = (roomID == currentRoomID);
+                                
+                                // Определение доступных кроватей (всего 2 кровати в комнате)
+                                if (occupiedBeds < 2 || isCurrentRoom)
+                                {
+                                    // Получаем информацию о том, какие кровати заняты
+                                    string bedQuery = @"
+                                        SELECT BedNumber, PatientID, AccompanyingPersonID
+                                        FROM Accommodations
+                                        WHERE RoomID = @RoomID AND CheckOutDate IS NULL";
+                                    
+                                    using (SqlCommand bedCmd = new SqlCommand(bedQuery, con))
+                                    {
+                                        bedCmd.Parameters.AddWithValue("@RoomID", roomID);
+                                        
+                                        List<int> occupiedBedNumbers = new List<int>();
+                                        using (SqlDataReader bedReader = bedCmd.ExecuteReader())
+                                        {
+                                            while (bedReader.Read())
+                                            {
+                                                int bedNumber = Convert.ToInt32(bedReader["BedNumber"]);
+                                                
+                                                // Если кровать занята не этим сопровождающим, то считаем её занятой
+                                                if (!isCurrentRoom || bedNumber != currentBedNumber)
+                                                {
+                                                    occupiedBedNumbers.Add(bedNumber);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Добавляем свободные кровати
+                                        for (int i = 1; i <= 2; i++)
+                                        {
+                                            if (!occupiedBedNumbers.Contains(i))
+                                            {
+                                                room.AvailableBeds.Add(i);
+                                            }
+                                        }
+                                        
+                                        // Если это текущая комната сопровождающего, добавляем его кровать в список доступных
+                                        if (isCurrentRoom)
+                                        {
+                                            if (!room.AvailableBeds.Contains(currentBedNumber))
+                                            {
+                                                room.AvailableBeds.Add(currentBedNumber);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Добавляем комнату в список, если она доступна и есть свободные кровати
+                                // Или если это текущая комната сопровождающего
+                                if ((isAvailable && room.AvailableBeds.Count > 0) || isCurrentRoom)
+                                {
+                                    rooms.Add(room);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                cbRoom.ItemsSource = rooms;
+                cbRoom.SelectedValuePath = "RoomID";
+                
+                // По умолчанию выбираем первую комнату или текущую комнату сопровождающего
+                if (currentRoomID > 0)
+                {
+                    // Находим текущую комнату в списке
+                    foreach (var room in rooms)
+                    {
+                        if (room.RoomID == currentRoomID)
+                        {
+                            cbRoom.SelectedValue = currentRoomID;
+                            break;
+                        }
+                    }
+                }
+                else if (rooms.Count > 0)
+                {
+                    cbRoom.SelectedIndex = 0;
+                }
+                else
+                {
+                    cbRoom.ItemsSource = null;
+                    cbBed.ItemsSource = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при загрузке списка комнат: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        private void UpdateAvailableBeds()
+        {
+            if (cbRoom.SelectedItem != null)
+            {
+                Room selectedRoom = (Room)cbRoom.SelectedItem;
+                selectedRoomID = selectedRoom.RoomID;
+                
+                // Обновляем выпадающий список с кроватями
+                cbBed.Items.Clear();
+                
+                foreach (int bedNumber in selectedRoom.AvailableBeds)
+                {
+                    cbBed.Items.Add(new ComboBoxItem { Content = $"Кровать {bedNumber}" });
+                }
+                
+                // Выбираем первую доступную кровать
+                if (cbBed.Items.Count > 0)
+                {
+                    cbBed.SelectedIndex = 0;
+                    selectedBedNumber = selectedRoom.AvailableBeds[0];
+                }
+            }
+        }
+        
+        private void cbBuilding_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbBuilding.SelectedItem != null)
+            {
+                int buildingID = (int)cbBuilding.SelectedValue;
+                LoadRooms(buildingID);
+            }
+        }
+        
+        private void cbRoom_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateAvailableBeds();
         }
     }
 } 

@@ -246,6 +246,11 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -283,26 +288,80 @@
                     <ComboBoxItem Content="Женский"/>
                 </ComboBox>
 
-                <!-- Дата записи -->
-                <Label Grid.Row="3" Grid.Column="0" Content="Дата записи:" 
+                <!-- Тип стационара -->
+                <Label Grid.Row="3" Grid.Column="0" Content="Тип стационара:" 
                        Foreground="{DynamicResource ForegroundBrush}" 
                        VerticalAlignment="Center" 
                        Margin="0,0,10,15"/>
-                <DatePicker Grid.Row="3" Grid.Column="1" x:Name="dpRecordDate" 
+                <ComboBox Grid.Row="3" Grid.Column="1" x:Name="cbStayType" 
+                          Style="{StaticResource RoundedComboBoxStyle}" 
+                          Margin="0,0,0,15"
+                          SelectionChanged="cbStayType_SelectionChanged">
+                    <ComboBoxItem Content="Дневной"/>
+                    <ComboBoxItem Content="Круглосуточный"/>
+                </ComboBox>
+
+                <!-- Панель для выбора размещения (видима только при выборе круглосуточного стационара) -->
+                <Label Grid.Row="4" Grid.Column="0" Content="Размещение:" 
+                       Foreground="{DynamicResource ForegroundBrush}" 
+                       VerticalAlignment="Center" 
+                       Margin="0,0,10,15"
+                       x:Name="lblAccommodation"
+                       Visibility="Collapsed"/>
+                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,15" 
+                      x:Name="accommodationPanel"
+                      Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" x:Name="cbBuilding" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="0,0,5,0"
+                              DisplayMemberPath="BuildingNumber"
+                              SelectedValuePath="BuildingID"
+                              SelectionChanged="cbBuilding_SelectionChanged">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="ToolTip" Value="{Binding Description}"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+                    <ComboBox Grid.Column="1" x:Name="cbRoom" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="5,0,5,0"
+                              DisplayMemberPath="RoomNumber"
+                              SelectedValuePath="RoomID"
+                              SelectionChanged="cbRoom_SelectionChanged"/>
+                    <ComboBox Grid.Column="2" x:Name="cbBed" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="5,0,0,0">
+                        <ComboBoxItem Content="Кровать 1"/>
+                        <ComboBoxItem Content="Кровать 2"/>
+                    </ComboBox>
+                </Grid>
+
+                <!-- Дата записи -->
+                <Label Grid.Row="5" Grid.Column="0" Content="Дата записи:" 
+                       Foreground="{DynamicResource ForegroundBrush}" 
+                       VerticalAlignment="Center" 
+                       Margin="0,0,10,15"/>
+                <DatePicker Grid.Row="5" Grid.Column="1" x:Name="dpRecordDate" 
                             Style="{StaticResource RoundedDatePickerStyle}" 
                             Margin="0,0,0,15"/>
 
                 <!-- Дата выписки -->
-                <Label Grid.Row="4" Grid.Column="0" Content="Дата выписки:" 
+                <Label Grid.Row="6" Grid.Column="0" Content="Дата выписки:" 
                        Foreground="{DynamicResource ForegroundBrush}" 
                        VerticalAlignment="Center" 
                        Margin="0,0,10,15"/>
-                <DatePicker Grid.Row="4" Grid.Column="1" x:Name="dpDischargeDate" 
+                <DatePicker Grid.Row="6" Grid.Column="1" x:Name="dpDischargeDate" 
                             Style="{StaticResource RoundedDatePickerStyle}" 
                             Margin="0,0,0,15"/>
                 
                 <!-- Примечание о датах выписки -->
-                <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
                            Text="Примечание: поле 'Дата выписки' можно оставить пустым"
                            Foreground="{DynamicResource SubtitleBrush}"
                            TextWrapping="Wrap" 
@@ -310,7 +369,7 @@
             </Grid>
 
             <!-- Кнопки -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="Отмена" Style="{StaticResource RedButtonStyle}" 
                         Width="120" Height="40" Margin="0,0,15,0"
                         Click="btnCancel_Click"/>

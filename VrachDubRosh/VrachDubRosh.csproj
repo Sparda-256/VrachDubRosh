@@ -145,6 +145,7 @@
     <Compile Include="MedCardWindow.xaml.cs">
       <DependentUpon>MedCardWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Models.cs" />
     <Compile Include="PatientAssignmentWindow.xaml.cs">
       <DependentUpon>PatientAssignmentWindow.xaml</DependentUpon>
     </Compile>

@@ -286,6 +286,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -365,12 +367,51 @@
                     <ComboBoxItem Content="Иное лицо"/>
                 </ComboBox>
 
+                <!-- Размещение (для круглосуточного стационара) -->
+                <Label Grid.Row="4" Grid.Column="0" Content="Размещение:" 
+                       Foreground="{DynamicResource ForegroundBrush}" 
+                       VerticalAlignment="Center"
+                       x:Name="lblAccommodation"
+                       Margin="0,0,10,15"/>
+                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,15"
+                      x:Name="accommodationPanel">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" x:Name="cbBuilding" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="0,0,5,0"
+                              DisplayMemberPath="BuildingNumber"
+                              SelectedValuePath="BuildingID"
+                              SelectionChanged="cbBuilding_SelectionChanged">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="ToolTip" Value="{Binding Description}"/>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+                    <ComboBox Grid.Column="1" x:Name="cbRoom" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="5,0,5,0"
+                              DisplayMemberPath="RoomNumber"
+                              SelectedValuePath="RoomID"
+                              SelectionChanged="cbRoom_SelectionChanged"/>
+                    <ComboBox Grid.Column="2" x:Name="cbBed" 
+                              Style="{StaticResource RoundedComboBoxStyle}" 
+                              Margin="5,0,0,0">
+                        <ComboBoxItem Content="Кровать 1"/>
+                        <ComboBoxItem Content="Кровать 2"/>
+                    </ComboBox>
+                </Grid>
+
                 <!-- Доверенность -->
-                <Label Grid.Row="4" Grid.Column="0" Content="Доверенность:" 
+                <Label Grid.Row="5" Grid.Column="0" Content="Доверенность:" 
                        Foreground="{DynamicResource ForegroundBrush}" 
                        VerticalAlignment="Center" 
                        Margin="0,0,10,15"/>
-                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,15">
+                <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -389,7 +430,7 @@
                 </Grid>
                 
                 <!-- Примечание о доверенности -->
-                <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
                            Text="Примечание: Доверенность от законных представителей требуется, если сопровождающий не является родителем или официальным опекуном пациента."
                            Foreground="{DynamicResource SubtitleBrush}"
                            TextWrapping="Wrap" 
@@ -397,7 +438,7 @@
             </Grid>
 
             <!-- Кнопки -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="Отмена" Style="{StaticResource RedButtonStyle}" 
                         Width="120" Height="40" Margin="0,0,15,0"
                         Click="btnCancel_Click"/>

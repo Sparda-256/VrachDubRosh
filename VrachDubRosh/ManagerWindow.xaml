@@ -495,7 +495,7 @@
                         <DataGrid x:Name="dgPatients" Grid.Row="1" 
                                   Style="{StaticResource ModernDataGridStyle}"
                                   AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgPatients_MouseDoubleClick"
                                   SelectionChanged="dgPatients_SelectionChanged">
                             <DataGrid.Columns>
@@ -547,7 +547,7 @@
                         <DataGrid x:Name="dgAccompanying" Grid.Row="1" 
                                   Style="{StaticResource ModernDataGridStyle}"
                                   AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgAccompanying_MouseDoubleClick"
                                   SelectionChanged="dgAccompanying_SelectionChanged">
                             <DataGrid.Columns>
@@ -569,6 +569,76 @@
                                     Click="btnManageAccompanyingDocuments_Click"/>
                             <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
                                     Click="btnDeleteAccompanying_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+                
+                <!-- Вкладка "Размещение" для управления проживанием -->
+                <TabItem Header="Размещение">
+                    <Grid Margin="15">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Панель фильтров для корпусов и комнат -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
+                            <Label Content="Корпус:" VerticalAlignment="Center" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
+                            <ComboBox x:Name="cbBuildingFilter" Width="100" Margin="5,0,15,0" 
+                                      Style="{StaticResource RoundedComboBoxStyle}"
+                                      SelectedValuePath="BuildingID"
+                                      SelectionChanged="cbBuildingFilter_SelectionChanged"/>
+                            
+                            <Label Content="Статус:" VerticalAlignment="Center" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
+                            <ComboBox x:Name="cbRoomStatus" Width="150" Margin="5,0,0,0" 
+                                      Style="{StaticResource RoundedComboBoxStyle}"
+                                      SelectionChanged="cbRoomStatus_SelectionChanged">
+                                <ComboBoxItem Content="Все комнаты"/>
+                                <ComboBoxItem Content="Свободные"/>
+                                <ComboBoxItem Content="Заполненные"/>
+                                <ComboBoxItem Content="Частично заполненные"/>
+                            </ComboBox>
+                        </StackPanel>
+                        
+                        <!-- Панель с информацией о свободных местах -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,0,0,15">
+                            <TextBlock Text="Всего комнат:" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}" FontSize="14"/>
+                            <TextBlock x:Name="txtTotalRooms" Text="0" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14" Margin="5,0,15,0"/>
+                            
+                            <TextBlock Text="Свободных мест:" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}" FontSize="14"/>
+                            <TextBlock x:Name="txtAvailableBeds" Text="0" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14" Margin="5,0,15,0"/>
+                            
+                            <TextBlock Text="Занятых мест:" VerticalAlignment="Center" Foreground="{DynamicResource ForegroundBrush}" FontSize="14"/>
+                            <TextBlock x:Name="txtOccupiedBeds" Text="0" VerticalAlignment="Center" Foreground="#F44336" FontWeight="Bold" FontSize="14" Margin="5,0,0,0"/>
+                        </StackPanel>
+                        
+                        <!-- DataGrid для комнат и проживающих -->
+                        <DataGrid x:Name="dgAccommodation" Grid.Row="2" 
+                                  Style="{StaticResource ModernDataGridStyle}"
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
+                                  SelectionChanged="dgAccommodation_SelectionChanged">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Корпус" Binding="{Binding BuildingNumber}" Width="60"/>
+                                <DataGridTextColumn Header="Комната" Binding="{Binding RoomNumber}" Width="70"/>
+                                <DataGridTextColumn Header="Кровать" Binding="{Binding BedNumber}" Width="60"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
+                                <DataGridTextColumn Header="Проживающий" Binding="{Binding PersonName}" Width="*"/>
+                                <DataGridTextColumn Header="Тип" Binding="{Binding PersonType}" Width="120"/>
+                                <DataGridTextColumn Header="Дата заселения" Binding="{Binding CheckInDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- Кнопки управления размещением -->
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
+                            <Button Content="Заселить" x:Name="btnCheckIn" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnCheckIn_Click"/>
+                            <Button Content="Выселить" x:Name="btnCheckOut" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnCheckOut_Click"/>
+                            <Button Content="Обновить" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnRefreshAccommodation_Click"/>
                         </StackPanel>
                     </Grid>
                 </TabItem>

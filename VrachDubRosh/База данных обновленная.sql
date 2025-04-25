@@ -33,7 +33,8 @@ CREATE TABLE Patients (
     DateOfBirth DATE,
     Gender NVARCHAR(10),
     RecordDate DATETIME,
-    DischargeDate DATETIME
+    DischargeDate DATETIME,
+    StayType NVARCHAR(20) DEFAULT 'Дневной' -- Тип стационара: 'Дневной' или 'Круглосуточный'
 );
 
 -- Создание таблицы для связи пациентов и врачей (многие ко многим)
@@ -217,6 +218,44 @@ CREATE TABLE AccompanyingPersonDocuments (
     FOREIGN KEY (DocumentTypeID) REFERENCES DocumentTypes(DocumentTypeID)
 );
 
+-- Таблица для корпусов
+CREATE TABLE Buildings (
+    BuildingID INT IDENTITY PRIMARY KEY,
+    BuildingNumber INT NOT NULL,
+    TotalRooms INT NOT NULL,
+    Description NVARCHAR(500) NULL
+);
+
+-- Таблица для комнат
+CREATE TABLE Rooms (
+    RoomID INT IDENTITY PRIMARY KEY,
+    BuildingID INT NOT NULL,
+    RoomNumber NVARCHAR(10) NOT NULL, -- Например "1А", "1Б", и т.д.
+    MaxCapacity INT DEFAULT 2, -- Каждая комната двухместная
+    IsAvailable BIT DEFAULT 1, -- Доступна ли комната
+    FOREIGN KEY (BuildingID) REFERENCES Buildings(BuildingID),
+    CONSTRAINT UQ_BuildingRoom UNIQUE (BuildingID, RoomNumber)
+);
+
+-- Таблица для размещения (проживания)
+CREATE TABLE Accommodations (
+    AccommodationID INT IDENTITY PRIMARY KEY,
+    RoomID INT NOT NULL,
+    PatientID INT NULL, -- Может быть NULL, если это место занимает сопровождающий
+    AccompanyingPersonID INT NULL, -- Может быть NULL, если это место занимает пациент
+    CheckInDate DATETIME NOT NULL DEFAULT GETDATE(),
+    CheckOutDate DATETIME NULL, -- NULL означает, что еще проживает
+    BedNumber INT NOT NULL, -- 1 или 2, в двухместной комнате
+    FOREIGN KEY (RoomID) REFERENCES Rooms(RoomID),
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (AccompanyingPersonID) REFERENCES AccompanyingPersons(AccompanyingPersonID),
+    -- Проверка: должен быть указан либо пациент, либо сопровождающий, но не оба одновременно
+    CONSTRAINT CK_PersonType CHECK ((PatientID IS NULL AND AccompanyingPersonID IS NOT NULL) OR 
+                                   (PatientID IS NOT NULL AND AccompanyingPersonID IS NULL)),
+    -- Проверка: в одной комнате на одной кровати может быть только один человек в один момент времени
+    CONSTRAINT UQ_RoomBed UNIQUE (RoomID, BedNumber, CheckOutDate)
+);
+
 -- Заполнение таблицы типов документов
 INSERT INTO DocumentTypes (DocumentName, IsRequired, MinimumAge, MaximumAge, ForAccompanyingPerson)
 VALUES
@@ -252,4 +291,32 @@ VALUES
 ('Результат бактериологического посева кала на дизентерийную группу и сальмонеллёз', 1, 0, 200, 1),
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
-('Доверенность от законных представителей', 0, 0, 200, 1); 
+('Доверенность от законных представителей', 0, 0, 200, 1);
+
+-- Заполнение таблицы корпусов
+INSERT INTO Buildings (BuildingNumber, TotalRooms, Description) VALUES
+(2, 20, 'Корпус 2'),
+(5, 20, 'Корпус 5'),
+(6, 20, 'Корпус 6');
+
+-- Заполнение таблицы комнат
+-- Скрипт для генерации комнат для всех корпусов
+DECLARE @BuildingID INT = 1;
+WHILE @BuildingID <= 3
+BEGIN
+    DECLARE @RoomCounter INT = 1;
+    WHILE @RoomCounter <= 10
+    BEGIN
+        -- Добавляем комнату А для текущего номера
+        INSERT INTO Rooms (BuildingID, RoomNumber) 
+        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'А');
+        
+        -- Добавляем комнату Б для текущего номера
+        INSERT INTO Rooms (BuildingID, RoomNumber) 
+        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'Б');
+        
+        SET @RoomCounter = @RoomCounter + 1;
+    END
+    
+    SET @BuildingID = @BuildingID + 1;
+END; 
