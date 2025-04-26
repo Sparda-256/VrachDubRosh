@@ -163,7 +163,6 @@
                       SelectionChanged="dgDocuments_SelectionChanged"
                       Margin="0,0,0,15">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding DocumentTypeID}" Width="40"/>
                     <DataGridTextColumn Header="Наименование документа" Binding="{Binding DocumentName}" Width="*"/>
                     <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="120"/>
                     <DataGridTextColumn Header="Дата загрузки" Binding="{Binding UploadDate, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>

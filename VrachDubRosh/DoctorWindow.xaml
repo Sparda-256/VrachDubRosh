@@ -538,7 +538,6 @@
                                   IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
                                   MouseDoubleClick="dgDoctorPatients_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Дата рождения" 
                                                     Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
@@ -624,7 +623,6 @@
                                   IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
                                   MouseDoubleClick="dgAppointments_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
                                 <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
                                 <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="150"/>
                                 <DataGridTextColumn Header="Дата и время" 
@@ -689,7 +687,6 @@
                                   IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgProcedures_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding ProcedureID}" Width="50"/>
                                 <DataGridTextColumn Header="Наименование" Binding="{Binding ProcedureName}" Width="*"/>
                                 <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding Duration}" Width="150"/>
                             </DataGrid.Columns>

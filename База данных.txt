@@ -160,6 +160,7 @@ VALUES
 ('admin', 'admin'),
 ('Admin', 'Admin'),
 ('Админ', 'Админ'),
+('2', '2'),
 ('админ', 'админ');
 
 INSERT INTO Doctors (FullName, Specialty, OfficeNumber, Password, WorkExperience)

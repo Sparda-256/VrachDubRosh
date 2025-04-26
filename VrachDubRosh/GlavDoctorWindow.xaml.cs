@@ -14,12 +14,8 @@ namespace VrachDubRosh
         private readonly string connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework";
 
         // Кэшированные таблицы для фильтрации
-        private DataTable dtNewPatients;
         private DataTable dtPatients;
         private DataTable dtDoctors;
-
-        // Таймер для обновления списка новых пациентов
-        private DispatcherTimer newPatientsTimer;
         
         // Флаг для отслеживания текущей темы
         public bool isDarkTheme = false;
@@ -34,11 +30,8 @@ namespace VrachDubRosh
         private void GlavDoctorWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // Первоначальная загрузка данных
-            LoadNewPatients();
             LoadPatients();
             LoadDoctors();
-            LoadDoctorsForComboBox();
-            dpRecordDate.SelectedDate = DateTime.Today;
 
             // Проверяем текущую тему приложения
             ResourceDictionary currentDict = Application.Current.Resources.MergedDictionaries[0];
@@ -48,12 +41,6 @@ namespace VrachDubRosh
                 themeToggle.IsChecked = true;
                 this.Title = "Врач ДубРощ - Главврач (Темная тема)";
             }
-
-            // Настраиваем таймер для обновления списка новых пациентов каждые 3 секунды
-            newPatientsTimer = new DispatcherTimer();
-            newPatientsTimer.Interval = TimeSpan.FromSeconds(10);
-            newPatientsTimer.Tick += (s, args) => LoadNewPatients();
-            newPatientsTimer.Start();
         }
 
         private void ThemeToggle_Checked(object sender, RoutedEventArgs e)
@@ -100,17 +87,6 @@ namespace VrachDubRosh
             }
         }
 
-        private void txtSearchNewPatients_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (dtNewPatients != null)
-            {
-                string filter = txtSearchNewPatients.Text.Trim().Replace("'", "''");
-                dtNewPatients.DefaultView.RowFilter = string.IsNullOrEmpty(filter)
-                    ? ""
-                    : $"FullName LIKE '%{filter}%'";
-            }
-        }
-
         private void txtSearchDoctors_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (dtDoctors != null)
@@ -124,28 +100,6 @@ namespace VrachDubRosh
         #endregion
 
         #region Обработчики кликов
-
-        private void dgNewPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            // Можно добавить логику двойного клика для новых пациентов при необходимости
-        }
-
-        private void dgNewPatients_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (dgNewPatients.SelectedItem is DataRowView row)
-            {
-                if (row["PredictedDoctorID"] != DBNull.Value)
-                {
-                    int predictedDoctorId = Convert.ToInt32(row["PredictedDoctorID"]);
-                    cbDoctors.SelectedValue = predictedDoctorId;
-                }
-                else
-                {
-                    cbDoctors.SelectedIndex = -1;
-                }
-            }
-        }
-
         private void dgPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (dgPatients.SelectedItem is DataRowView row)
@@ -172,27 +126,6 @@ namespace VrachDubRosh
         #endregion
 
         #region Загрузка данных
-
-        private void LoadNewPatients()
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender, PredictedDoctorID FROM NewPatients";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    dtNewPatients = new DataTable();
-                    da.Fill(dtNewPatients);
-                    dgNewPatients.ItemsSource = dtNewPatients.DefaultView;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки новых пациентов: " + ex.Message);
-            }
-        }
-
         private void LoadPatients()
         {
             try
@@ -232,272 +165,9 @@ namespace VrachDubRosh
                 MessageBox.Show("Ошибка загрузки врачей: " + ex.Message);
             }
         }
-
-        private void LoadDoctorsForComboBox()
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    string query = "SELECT DoctorID, FullName FROM Doctors";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    cbDoctors.ItemsSource = dt.DefaultView;
-                    cbDoctors.SelectedValuePath = "DoctorID";
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка загрузки списка врачей: " + ex.Message);
-            }
-        }
-
-        #endregion
-
-        #region Новые пациенты -> Перенос в Patients
-
-        private void btnAssignPatient_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgNewPatients.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите пациента из списка новых пациентов.");
-                return;
-            }
-
-            if (cbDoctors.SelectedValue == null)
-            {
-                MessageBox.Show("Выберите врача для назначения.");
-                return;
-            }
-
-            // Проверяем обязательную дату записи
-            if (dpRecordDate.SelectedDate == null)
-            {
-                MessageBox.Show("Выберите дату записи.");
-                return;
-            }
-
-            DateTime recordDate = dpRecordDate.SelectedDate.Value;
-            DateTime? dischargeDate = dpDischargeDate.SelectedDate; // Может быть null
-
-            // Если дата выписки задана, проверяем, что она не раньше даты записи
-            if (dischargeDate.HasValue && dischargeDate.Value < recordDate)
-            {
-                MessageBox.Show("Дата выписки не может быть раньше даты записи.");
-                return;
-            }
-
-            DataRowView row = dgNewPatients.SelectedItem as DataRowView;
-            int newPatientID = Convert.ToInt32(row["NewPatientID"]);
-            string fullName = row["FullName"].ToString();
-            DateTime dateOfBirth = Convert.ToDateTime(row["DateOfBirth"]);
-            string gender = row["Gender"].ToString();
-            int doctorID = Convert.ToInt32(cbDoctors.SelectedValue);
-
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    using (SqlTransaction tran = con.BeginTransaction())
-                    {
-                        int newPatientInsertedID;
-                        // Если дата выписки задана, выполняем запрос с параметром для даты выписки
-                        if (dischargeDate.HasValue)
-                        {
-                            string insertQuery = @"
-                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
-                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate);
-                                SELECT SCOPE_IDENTITY();";
-                            using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
-                            {
-                                cmdInsert.Parameters.AddWithValue("@FullName", fullName);
-                                cmdInsert.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
-                                cmdInsert.Parameters.AddWithValue("@Gender", gender);
-                                cmdInsert.Parameters.AddWithValue("@RecordDate", recordDate);
-                                cmdInsert.Parameters.AddWithValue("@DischargeDate", dischargeDate.Value);
-                                newPatientInsertedID = Convert.ToInt32(cmdInsert.ExecuteScalar());
-                            }
-                        }
-                        else // Иначе – без даты выписки
-                        {
-                            string insertQuery = @"
-                                INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate)
-                                VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate);
-                                SELECT SCOPE_IDENTITY();";
-                            using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
-                            {
-                                cmdInsert.Parameters.AddWithValue("@FullName", fullName);
-                                cmdInsert.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
-                                cmdInsert.Parameters.AddWithValue("@Gender", gender);
-                                cmdInsert.Parameters.AddWithValue("@RecordDate", recordDate);
-                                newPatientInsertedID = Convert.ToInt32(cmdInsert.ExecuteScalar());
-                            }
-                        }
-
-                        // Связываем пациента с выбранным врачом (PatientDoctorAssignments)
-                        string assignQuery = "INSERT INTO PatientDoctorAssignments (PatientID, DoctorID) VALUES (@PatientID, @DoctorID)";
-                        using (SqlCommand cmdAssign = new SqlCommand(assignQuery, con, tran))
-                        {
-                            cmdAssign.Parameters.AddWithValue("@PatientID", newPatientInsertedID);
-                            cmdAssign.Parameters.AddWithValue("@DoctorID", doctorID);
-                            cmdAssign.ExecuteNonQuery();
-                        }
-
-                        // Переносим диагнозы из NewPatientDiagnoses в PatientDiagnoses
-                        string copyDiagnosesQuery = @"
-                            INSERT INTO PatientDiagnoses (PatientID, DiagnosisID, PercentageOfDiagnosis)
-                            SELECT @PatientID, DiagnosisID, PercentageOfDiagnosis
-                            FROM NewPatientDiagnoses
-                            WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdCopyDiagnoses = new SqlCommand(copyDiagnosesQuery, con, tran))
-                        {
-                            cmdCopyDiagnoses.Parameters.AddWithValue("@PatientID", newPatientInsertedID);
-                            cmdCopyDiagnoses.Parameters.AddWithValue("@NewPatientID", newPatientID);
-                            cmdCopyDiagnoses.ExecuteNonQuery();
-                        }
-
-                        // Удаляем связанные записи из вспомогательных таблиц
-                        string deleteSymptomsQuery = "DELETE FROM NewPatientSymptoms WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelSymptoms = new SqlCommand(deleteSymptomsQuery, con, tran))
-                        {
-                            cmdDelSymptoms.Parameters.AddWithValue("@NewPatientID", newPatientID);
-                            cmdDelSymptoms.ExecuteNonQuery();
-                        }
-                        string deleteAnswersQuery = "DELETE FROM NewPatientAnswers WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelAnswers = new SqlCommand(deleteAnswersQuery, con, tran))
-                        {
-                            cmdDelAnswers.Parameters.AddWithValue("@NewPatientID", newPatientID);
-                            cmdDelAnswers.ExecuteNonQuery();
-                        }
-                        string deleteDiagnosesQuery = "DELETE FROM NewPatientDiagnoses WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelDiagnoses = new SqlCommand(deleteDiagnosesQuery, con, tran))
-                        {
-                            cmdDelDiagnoses.Parameters.AddWithValue("@NewPatientID", newPatientID);
-                            cmdDelDiagnoses.ExecuteNonQuery();
-                        }
-                        // Удаляем запись из NewPatients
-                        string deleteQuery = "DELETE FROM NewPatients WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelete = new SqlCommand(deleteQuery, con, tran))
-                        {
-                            cmdDelete.Parameters.AddWithValue("@NewPatientID", newPatientID);
-                            cmdDelete.ExecuteNonQuery();
-                        }
-
-                        tran.Commit();
-                    }
-                }
-
-                MessageBox.Show("Пациент успешно назначен.");
-                LoadNewPatients();
-                LoadPatients();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка при назначении пациента: " + ex.Message);
-            }
-        }
-
         #endregion
 
         #region Управление пациентами
-
-        private void btnAddPatient_Click(object sender, RoutedEventArgs e)
-        {
-            AddEditPatientWindow addPatientWindow = new AddEditPatientWindow(this);
-            addPatientWindow.Owner = this;
-            if (addPatientWindow.ShowDialog() == true)
-            {
-                LoadPatients();
-            }
-        }
-
-        private void btnEditPatient_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgPatients.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите пациента для редактирования.");
-                return;
-            }
-            DataRowView row = dgPatients.SelectedItem as DataRowView;
-            int patientID = Convert.ToInt32(row["PatientID"]);
-            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(this, patientID);
-            editPatientWindow.Owner = this;
-            if (editPatientWindow.ShowDialog() == true)
-            {
-                LoadPatients();
-            }
-        }
-
-        private void btnDeletePatient_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgPatients.SelectedItems == null || dgPatients.SelectedItems.Count == 0)
-            {
-                MessageBox.Show("Выберите хотя бы одного пациента для удаления.");
-                return;
-            }
-
-            if (MessageBox.Show("Вы уверены, что хотите удалить выбранных пациентов?",
-                                "Подтверждение", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    using (SqlTransaction tran = con.BeginTransaction())
-                    {
-                        foreach (var selectedItem in dgPatients.SelectedItems)
-                        {
-                            if (selectedItem is DataRowView row)
-                            {
-                                int patientID = Convert.ToInt32(row["PatientID"]);
-
-                                string deleteAppointments = @"DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
-                                using (SqlCommand cmdApp = new SqlCommand(deleteAppointments, con, tran))
-                                {
-                                    cmdApp.Parameters.AddWithValue("@PatientID", patientID);
-                                    cmdApp.ExecuteNonQuery();
-                                }
-
-                                string deleteDescriptions = @"DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
-                                using (SqlCommand cmdDesc = new SqlCommand(deleteDescriptions, con, tran))
-                                {
-                                    cmdDesc.Parameters.AddWithValue("@PatientID", patientID);
-                                    cmdDesc.ExecuteNonQuery();
-                                }
-
-                                string deleteAssignments = @"DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                                using (SqlCommand cmdAssign = new SqlCommand(deleteAssignments, con, tran))
-                                {
-                                    cmdAssign.Parameters.AddWithValue("@PatientID", patientID);
-                                    cmdAssign.ExecuteNonQuery();
-                                }
-
-                                string deletePatient = @"DELETE FROM Patients WHERE PatientID = @PatientID";
-                                using (SqlCommand cmdPat = new SqlCommand(deletePatient, con, tran))
-                                {
-                                    cmdPat.Parameters.AddWithValue("@PatientID", patientID);
-                                    cmdPat.ExecuteNonQuery();
-                                }
-                            }
-                        }
-                        tran.Commit();
-                    }
-                }
-                MessageBox.Show("Выбранные пациенты удалены.");
-                LoadPatients();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка при удалении пациентов: " + ex.Message);
-            }
-        }
 
         private void btnAssignDoctors_Click(object sender, RoutedEventArgs e)
         {
@@ -546,7 +216,6 @@ namespace VrachDubRosh
             if (addDoctorWindow.ShowDialog() == true)
             {
                 LoadDoctors();
-                LoadDoctorsForComboBox();
             }
         }
 
@@ -564,7 +233,6 @@ namespace VrachDubRosh
             if (editDoctorWindow.ShowDialog() == true)
             {
                 LoadDoctors();
-                LoadDoctorsForComboBox();
             }
         }
 
@@ -616,13 +284,6 @@ namespace VrachDubRosh
                                     cmdAssign.ExecuteNonQuery();
                                 }
 
-                                string deleteDoctorDiagnoses = @"DELETE FROM DoctorDiagnoses WHERE DoctorID = @DoctorID";
-                                using (SqlCommand cmdDocDiag = new SqlCommand(deleteDoctorDiagnoses, con, tran))
-                                {
-                                    cmdDocDiag.Parameters.AddWithValue("@DoctorID", doctorID);
-                                    cmdDocDiag.ExecuteNonQuery();
-                                }
-
                                 string deleteProcedures = @"DELETE FROM Procedures WHERE DoctorID = @DoctorID";
                                 using (SqlCommand cmdProcs = new SqlCommand(deleteProcedures, con, tran))
                                 {
@@ -643,7 +304,6 @@ namespace VrachDubRosh
                 }
                 MessageBox.Show("Выбранные врачи удалены.");
                 LoadDoctors();
-                LoadDoctorsForComboBox();
             }
             catch (Exception ex)
             {

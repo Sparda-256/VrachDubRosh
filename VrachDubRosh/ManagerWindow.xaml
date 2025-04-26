@@ -499,7 +499,6 @@
                                   MouseDoubleClick="dgPatients_MouseDoubleClick"
                                   SelectionChanged="dgPatients_SelectionChanged">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Дата рождения" 
                                                     Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
@@ -551,7 +550,6 @@
                                   MouseDoubleClick="dgAccompanying_MouseDoubleClick"
                                   SelectionChanged="dgAccompanying_SelectionChanged">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding AccompanyingPersonID}" Width="50"/>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="ФИО пациента" Binding="{Binding PatientName}" Width="*"/>
                                 <DataGridTextColumn Header="Отношение" Binding="{Binding Relationship}" Width="150"/>

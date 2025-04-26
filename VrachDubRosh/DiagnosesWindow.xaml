@@ -143,7 +143,6 @@
                       IsReadOnly="True" Margin="0,0,0,15" 
                       SelectionChanged="dgDiagnoses_SelectionChanged">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding DiagnosisID}" Width="60"/>
                     <DataGridTextColumn Header="Диагноз" Binding="{Binding DiagnosisName}" Width="*"/>
                     <DataGridTextColumn Header="Вероятность %" Binding="{Binding PercentageOfDiagnosis}" Width="100"/>
                     <DataGridTextColumn Header="Врач" Binding="{Binding DoctorName}" Width="180"/>

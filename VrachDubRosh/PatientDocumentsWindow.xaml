@@ -163,7 +163,6 @@
                       SelectionChanged="dgDocuments_SelectionChanged"
                       Margin="0,0,0,15">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding DocumentTypeID}" Width="40"/>
                     <DataGridTextColumn Header="Наименование документа" Binding="{Binding DocumentName}" Width="*"/>
                     <DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="170"/>
                     <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="120"/>

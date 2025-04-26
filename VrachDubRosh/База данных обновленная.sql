@@ -57,28 +57,6 @@ CREATE TABLE PatientDescriptions (
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
 );
 
--- Создание таблицы для симптомов
-CREATE TABLE Symptoms (
-    SymptomID INT IDENTITY PRIMARY KEY,
-    SymptomName NVARCHAR(100)
-);
-
--- Создание таблицы для наводящих вопросов
-CREATE TABLE FollowUpQuestions (
-    QuestionID INT IDENTITY PRIMARY KEY,
-    SymptomID INT,
-    Question NVARCHAR(255),
-    FOREIGN KEY (SymptomID) REFERENCES Symptoms(SymptomID)
-);
-
--- Создание таблицы для ответов на наводящие вопросы
-CREATE TABLE Answers (
-    AnswerID INT IDENTITY PRIMARY KEY,
-    QuestionID INT,
-    Answer NVARCHAR(255),
-    FOREIGN KEY (QuestionID) REFERENCES FollowUpQuestions(QuestionID)
-);
-
 -- Создание таблицы для диагнозов
 CREATE TABLE Diagnoses (
     DiagnosisID INT IDENTITY PRIMARY KEY,
@@ -92,57 +70,6 @@ CREATE TABLE PatientDiagnoses (
     PercentageOfDiagnosis INT NULL,
     PRIMARY KEY (PatientID, DiagnosisID),
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
-    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
-);
-
--- Связь между ответами и диагнозами
-CREATE TABLE AnswerDiagnoses (
-    AnswerID INT,
-    DiagnosisID INT,
-    FOREIGN KEY (AnswerID) REFERENCES Answers(AnswerID),
-    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
-);
-
--- Связь между врачами и диагнозами
-CREATE TABLE DoctorDiagnoses (
-    DoctorID INT,
-    DiagnosisID INT,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
-    FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
-);
-
--- Создание таблицы для новых пациентов
-CREATE TABLE NewPatients (
-    NewPatientID INT IDENTITY PRIMARY KEY,
-    FullName NVARCHAR(100),
-    DateOfBirth DATE,
-    Gender NVARCHAR(10),
-    PredictedDoctorID INT NULL,
-    FOREIGN KEY (PredictedDoctorID) REFERENCES Doctors(DoctorID)
-);
-
--- Таблица для хранения симптомов пациентов
-CREATE TABLE NewPatientSymptoms (
-    NewPatientID INT,
-    SymptomID INT,
-    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
-    FOREIGN KEY (SymptomID) REFERENCES Symptoms(SymptomID)
-);
-
--- Таблица для хранения ответов пациентов
-CREATE TABLE NewPatientAnswers (
-    NewPatientID INT,
-    AnswerID INT,
-    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
-    FOREIGN KEY (AnswerID) REFERENCES Answers(AnswerID)
-);
-
--- Таблица для хранения диагнозов пациентов
-CREATE TABLE NewPatientDiagnoses (
-    NewPatientID INT,
-    DiagnosisID INT,
-    PercentageOfDiagnosis INT,
-    FOREIGN KEY (NewPatientID) REFERENCES NewPatients(NewPatientID),
     FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
 );
 
@@ -256,6 +183,118 @@ CREATE TABLE Accommodations (
     CONSTRAINT UQ_RoomBed UNIQUE (RoomID, BedNumber, CheckOutDate)
 );
 
+-- Заполнение таблицы корпусов
+INSERT INTO Buildings (BuildingNumber, TotalRooms, Description) VALUES
+(2, 20, 'Корпус 2'),
+(5, 20, 'Корпус 5'),
+(6, 20, 'Корпус 6');
+
+-- Заполнение таблицы комнат
+-- Скрипт для генерации комнат для всех корпусов
+DECLARE @BuildingID INT = 1;
+WHILE @BuildingID <= 3
+BEGIN
+    DECLARE @RoomCounter INT = 1;
+    WHILE @RoomCounter <= 10
+    BEGIN
+        -- Добавляем комнату А для текущего номера
+        INSERT INTO Rooms (BuildingID, RoomNumber) 
+        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'А');
+        
+        -- Добавляем комнату Б для текущего номера
+        INSERT INTO Rooms (BuildingID, RoomNumber) 
+        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'Б');
+        
+        SET @RoomCounter = @RoomCounter + 1;
+    END
+    
+    SET @BuildingID = @BuildingID + 1;
+END;
+
+INSERT INTO ChiefDoctors(FullName, Password)
+VALUES
+('admin', 'admin'),
+('Admin', 'Admin'),
+('Админ', 'Админ'),
+('2', '2'),
+('админ', 'админ');
+
+-- Заполнение таблицы врачей
+INSERT INTO Doctors (FullName, Specialty, OfficeNumber, Password, WorkExperience)
+VALUES
+('Иванов Иван Иванович', 'Терапевт', '101', '1', 15),
+('Петрова Мария Сергеевна', 'Педиатр', '102', '1', 8),
+('Сидоров Алексей Петрович', 'Физиотерапевт', '103', '1', 12),
+('Кузнецова Елена Александровна', 'Дерматолог', '104', '1', 14),
+('Смирнов Дмитрий Андреевич', 'Травматолог', '105', '1', 9),
+('Новикова Ольга Викторовна', 'Кардиолог', '106', '1', 18),
+('Морозов Сергей Николаевич', 'Невролог', '107', '1', 16),
+('Волкова Анна Игоревна', 'Реабилитолог', '108', '1', 7),
+('Соколов Максим Владимирович', 'Гинеколог', '109', '1', 13),
+('Лебедева Наталья Михайловна', 'Стоматолог', '110', '1', 10),
+('Козлов Андрей Юрьевич', 'Врач функциональной диагностики', '111', '1', 17),
+('Павлова Ирина Васильевна', 'Врач ультразвуковой диагностики', '112', '1', 11);
+
+-- Заполнение таблицы диагнозов
+INSERT INTO Diagnoses (DiagnosisName)
+VALUES
+-- Заболевания органов дыхания
+('Хронический бронхит'),
+('Бронхиальная астма'),
+('Хроническая обструктивная болезнь легких (ХОБЛ)'),
+('Пневмония в стадии реабилитации'),
+('Бронхоэктатическая болезнь'),
+('Плеврит в стадии реабилитации'),
+('Эмфизема легких'),
+
+-- Заболевания костно-мышечной системы
+('Остеохондроз позвоночника'),
+('Ревматоидный артрит'),
+('Остеоартрит'),
+('Периартрит'),
+('Подагра'),
+('Фибромиалгия'),
+('Сколиоз'),
+('Спондилит'),
+('Плечелопаточный периартрит'),
+
+-- Заболевания кожи и подкожной клетчатки
+('Псориаз'),
+('Экзема'),
+('Атопический дерматит'),
+('Крапивница'),
+('Акне (угревая болезнь)'),
+('Рожистое воспаление'),
+('Себорейный дерматит'),
+
+-- Заболевания периферической нервной системы
+('Полиневропатия'),
+('Радикулопатия'),
+('Невралгия тройничного нерва'),
+('Мононевропатия'),
+('Плексопатия'),
+('Туннельные синдромы'),
+('Постгерпетическая невралгия'),
+
+-- Заболевания эндокринной системы
+('Сахарный диабет 2 типа'),
+('Гипотиреоз'),
+('Тиреоидит'),
+('Ожирение'),
+('Метаболический синдром'),
+('Остеопороз'),
+('Тиреотоксикоз'),
+
+-- Заболевания сердечно-сосудистой системы
+('Гипертоническая болезнь'),
+('Ишемическая болезнь сердца'),
+('Кардиомиопатия'),
+('Хроническая сердечная недостаточность'),
+('Постинфарктный кардиосклероз'),
+('Атеросклероз сосудов'),
+('Варикозное расширение вен нижних конечностей'),
+('Нарушения ритма сердца');
+
 -- Заполнение таблицы типов документов
 INSERT INTO DocumentTypes (DocumentName, IsRequired, MinimumAge, MaximumAge, ForAccompanyingPerson)
 VALUES
@@ -285,38 +324,9 @@ VALUES
 ('Результат флюорографии', 1, 15, 200, 0),
 
 -- Документы для сопровождающих лиц
-('Документ, удостоверяющий личность', 1, 0, 200, 1),
 ('Полис ОМС', 1, 0, 200, 1),
 ('СНИЛС', 1, 0, 200, 1),
 ('Результат бактериологического посева кала на дизентерийную группу и сальмонеллёз', 1, 0, 200, 1),
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
-('Доверенность от законных представителей', 0, 0, 200, 1);
-
--- Заполнение таблицы корпусов
-INSERT INTO Buildings (BuildingNumber, TotalRooms, Description) VALUES
-(2, 20, 'Корпус 2'),
-(5, 20, 'Корпус 5'),
-(6, 20, 'Корпус 6');
-
--- Заполнение таблицы комнат
--- Скрипт для генерации комнат для всех корпусов
-DECLARE @BuildingID INT = 1;
-WHILE @BuildingID <= 3
-BEGIN
-    DECLARE @RoomCounter INT = 1;
-    WHILE @RoomCounter <= 10
-    BEGIN
-        -- Добавляем комнату А для текущего номера
-        INSERT INTO Rooms (BuildingID, RoomNumber) 
-        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'А');
-        
-        -- Добавляем комнату Б для текущего номера
-        INSERT INTO Rooms (BuildingID, RoomNumber) 
-        VALUES (@BuildingID, CAST(@RoomCounter AS NVARCHAR) + 'Б');
-        
-        SET @RoomCounter = @RoomCounter + 1;
-    END
-    
-    SET @BuildingID = @BuildingID + 1;
-END; 
+('Доверенность от законных представителей', 0, 0, 200, 1); 

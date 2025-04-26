@@ -481,70 +481,6 @@
 
             <!-- Основной контент: TabControl -->
             <TabControl Grid.Row="2" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <!-- Вкладка "Новые пациенты" -->
-                <TabItem Header="Новые пациенты">
-                    <Grid Margin="15">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <!-- Панель поиска -->
-                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
-                            <Label Content="Поиск:" VerticalAlignment="Center" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
-                            <TextBox x:Name="txtSearchNewPatients" Width="250" Margin="5,0,0,0" 
-                                     Style="{StaticResource RoundedTextBoxStyle}"
-                                     TextChanged="txtSearchNewPatients_TextChanged"/>
-                        </StackPanel>
-                        <!-- DataGrid для новых пациентов -->
-                        <DataGrid x:Name="dgNewPatients" Grid.Row="1" 
-                                  Style="{StaticResource ModernDataGridStyle}"
-                                  AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
-                                  MouseDoubleClick="dgNewPatients_MouseDoubleClick"
-                                  SelectionChanged="dgNewPatients_SelectionChanged">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding NewPatientID}" Width="50"/>
-                                <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
-                                <DataGridTextColumn Header="Дата рождения" 
-                                                    Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
-                                                    Width="120"/>
-                                <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                        <!-- Форма заполнения недостающих данных -->
-                        <Grid Grid.Row="2" Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Врач:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
-                            <ComboBox Grid.Column="1" x:Name="cbDoctors" Style="{StaticResource RoundedComboBoxStyle}" Margin="0,0,10,0"
-                                     SelectedValuePath="DoctorID">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding FullName}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <Label Grid.Column="2" Content="Дата записи:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
-                            <DatePicker Grid.Column="3" x:Name="dpRecordDate" Style="{StaticResource RoundedDatePickerStyle}" Margin="0,0,10,0"/>
-
-                            <Label Grid.Column="4" Content="Дата выписки:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
-                            <DatePicker Grid.Column="5" x:Name="dpDischargeDate" Style="{StaticResource RoundedDatePickerStyle}" Margin="0,0,10,0"/>
-
-                            <Button Grid.Column="6" Content="Назначить" Style="{StaticResource RoundedButtonStyle}" Padding="12,8"
-                                    Click="btnAssignPatient_Click"/>
-                        </Grid>
-                    </Grid>
-                </TabItem>
-
                 <!-- Вкладка "Пациенты" -->
                 <TabItem Header="Пациенты">
                     <Grid Margin="15">
@@ -567,7 +503,6 @@
                                   IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgPatients_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding PatientID}" Width="50"/>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Дата рождения" 
                                                     Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" Width="120"/>
@@ -580,14 +515,8 @@
                         </DataGrid>
                         <!-- Кнопки управления пациентами -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-                            <Button Content="Добавить" Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnAddPatient_Click"/>
-                            <Button Content="Редактировать" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnEditPatient_Click"/>
-                            <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnDeletePatient_Click"/>
                             <Button Content="Назначить врачу" Style="{StaticResource BlueButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnAssignDoctors_Click"/>
+                                    Click="btnAssignDoctors_Click" Background="#FF4CAF50"/>
                         </StackPanel>
                     </Grid>
                 </TabItem>
@@ -614,7 +543,6 @@
                                   IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgDoctors_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding DoctorID}" Width="50"/>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Специальность" Binding="{Binding Specialty}" Width="150"/>
                                 <DataGridTextColumn Header="Номер кабинета" Binding="{Binding OfficeNumber}" Width="100"/>

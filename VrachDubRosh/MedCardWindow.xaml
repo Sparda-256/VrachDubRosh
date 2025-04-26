@@ -469,7 +469,6 @@
                       SelectionChanged="dgProcedures_SelectionChanged"
                       MouseDoubleClick="dgProcedures_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding AppointmentID}" Width="50"/>
                     <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*"/>
                     <DataGridTextColumn Header="Дата и время" 
                                         Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}" 
