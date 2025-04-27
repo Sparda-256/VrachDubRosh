@@ -631,8 +631,6 @@
                         
                         <!-- Кнопки управления размещением -->
                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-                            <Button Content="Заселить" x:Name="btnCheckIn" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnCheckIn_Click"/>
                             <Button Content="Выселить" x:Name="btnCheckOut" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
                                     Click="btnCheckOut_Click"/>
                             <Button Content="Обновить" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"

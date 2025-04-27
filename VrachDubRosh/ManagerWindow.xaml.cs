@@ -453,7 +453,6 @@ namespace VrachDubRosh
                 selectedAccommodationID = -1;
                 
                 // Конфигурируем кнопки по умолчанию
-                btnCheckIn.IsEnabled = false;
                 btnCheckOut.IsEnabled = false;
             }
             catch (Exception ex)
@@ -504,33 +503,11 @@ namespace VrachDubRosh
             }
             
             // Включаем/выключаем кнопки в зависимости от выбора
-            // Если среди выбранных элементов есть хотя бы одно свободное место, разрешаем заселение
-            btnCheckIn.IsEnabled = hasSelectedFree && dgAccommodation.SelectedItems.Count == 1;
             
             // Если среди выбранных элементов есть хотя бы одно занятое место, разрешаем выселение
             btnCheckOut.IsEnabled = hasSelectedOccupied;
         }
-        
-        private void btnCheckIn_Click(object sender, RoutedEventArgs e)
-        {
-            // Заселение работает только с одним местом за раз
-            if (dgAccommodation.SelectedItems.Count != 1)
-            {
-                MessageBox.Show("Пожалуйста, выберите одно свободное место для заселения.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            AccommodationInfo selectedAccommodation = dgAccommodation.SelectedItem as AccommodationInfo;
-            if (selectedAccommodation == null || selectedAccommodation.Status != "Свободно")
-            {
-                MessageBox.Show("Выберите свободное место для заселения.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            // Здесь должен быть код для заселения пациента или сопровождающего
-            MessageBox.Show("Функциональность заселения будет реализована в будущем.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        
+                
         private void btnCheckOut_Click(object sender, RoutedEventArgs e)
         {
             if (dgAccommodation.SelectedItems.Count == 0)
