@@ -211,6 +211,19 @@ BEGIN
     SET @BuildingID = @BuildingID + 1;
 END;
 
+-- Создание таблицы для документов менеджера
+CREATE TABLE ManagerDocuments (
+    DocumentID INT IDENTITY(1,1) PRIMARY KEY,
+    DocumentName NVARCHAR(255) NOT NULL,
+    Category NVARCHAR(100) NOT NULL,
+    FileType NVARCHAR(50) NOT NULL,
+    FileSizeBytes BIGINT NOT NULL,
+    UploadDate DATETIME NOT NULL,
+    UploadedBy NVARCHAR(100) NOT NULL,
+    FilePath NVARCHAR(MAX) NOT NULL,
+    Description NVARCHAR(MAX) NULL
+);
+
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
 ('admin', 'admin'),

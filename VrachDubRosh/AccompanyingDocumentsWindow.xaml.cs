@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using System.Linq;
 
 namespace VrachDubRosh
 {
@@ -188,23 +189,68 @@ namespace VrachDubRosh
                 string selectedFilePath = openFileDialog.FileName;
                 string fileExtension = Path.GetExtension(selectedFilePath);
                 
-                // Создаем путь для сохранения копии файла в папке приложения
-                string documentsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documents", "Accompanying");
+                // Создаем имя для нового файла, включая тип документа
+                string safeDocumentName = documentName.Replace('/', '_').Replace('\\', '_');
+                string newFileName = $"{safeDocumentName}{fileExtension}";
                 
-                // Создаем папку, если она не существует
-                if (!Directory.Exists(documentsFolder))
+                // Базовая директория для документов сопровождающих
+                string baseDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documents", "Сопровождающие");
+                
+                // Создаем директорию для сопровождающего
+                string accompanyingFolder = Path.Combine(baseDirectory, accompanyingPersonName.Replace(' ', '_'));
+                Directory.CreateDirectory(accompanyingFolder);
+                
+                // Полный путь к новому файлу
+                string destinationPath = Path.Combine(accompanyingFolder, newFileName);
+                
+                // Проверяем, существует ли уже файл с таким именем
+                if (File.Exists(destinationPath))
                 {
-                    Directory.CreateDirectory(documentsFolder);
+                    // Если файл существует, добавляем порядковый номер
+                    int counter = 1;
+                    string fileNameWithoutExt = safeDocumentName;
+                    
+                    while (File.Exists(destinationPath))
+                    {
+                        newFileName = $"{fileNameWithoutExt}_{counter}{fileExtension}";
+                        destinationPath = Path.Combine(accompanyingFolder, newFileName);
+                        counter++;
+                    }
                 }
-                
-                // Создаем уникальное имя файла
-                string uniqueFileName = $"{accompanyingPersonID}_{selectedDocumentTypeID}_{DateTime.Now:yyyyMMdd_HHmmss}{fileExtension}";
-                string destinationPath = Path.Combine(documentsFolder, uniqueFileName);
                 
                 try
                 {
                     // Копируем файл
                     File.Copy(selectedFilePath, destinationPath, true);
+                    
+                    // Удаляем старый файл, если существует
+                    if (selectedDocumentID > 0)
+                    {
+                        string oldPath = "";
+                        
+                        using (SqlConnection con = new SqlConnection(connectionString))
+                        {
+                            con.Open();
+                            string query = "SELECT DocumentPath FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID";
+                            using (SqlCommand cmd = new SqlCommand(query, con))
+                            {
+                                cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
+                                oldPath = cmd.ExecuteScalar() as string;
+                            }
+                        }
+                        
+                        if (!string.IsNullOrEmpty(oldPath) && File.Exists(oldPath))
+                        {
+                            try
+                            {
+                                File.Delete(oldPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Не удалось удалить старый файл: {ex.Message}");
+                            }
+                        }
+                    }
                     
                     using (SqlConnection con = new SqlConnection(connectionString))
                     {
@@ -260,14 +306,14 @@ namespace VrachDubRosh
                         }
                     }
                     
-                    MessageBox.Show($"Документ '{documentName}' успешно загружен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Документ успешно загружен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                     
                     // Обновляем список документов
                     LoadDocuments();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка при загрузке документа: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Ошибка при загрузке документа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -280,36 +326,21 @@ namespace VrachDubRosh
                 return;
             }
             
+            DataRowView row = dgDocuments.SelectedItem as DataRowView;
+            if (row == null || row["DocumentPath"] == DBNull.Value) return;
+            
+            string documentPath = row["DocumentPath"].ToString();
+            
+            if (!File.Exists(documentPath))
+            {
+                MessageBox.Show("Файл документа не найден.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
             try
             {
-                string documentPath = "";
-                
-                // Получаем путь к файлу из базы данных
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-                    
-                    string query = "SELECT DocumentPath FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID";
-                    using (SqlCommand cmd = new SqlCommand(query, con))
-                    {
-                        cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
-                        object result = cmd.ExecuteScalar();
-                        if (result != null)
-                        {
-                            documentPath = result.ToString();
-                        }
-                    }
-                }
-                
-                if (!string.IsNullOrEmpty(documentPath) && File.Exists(documentPath))
-                {
-                    // Открываем файл в программе по умолчанию
-                    Process.Start(documentPath);
-                }
-                else
-                {
-                    MessageBox.Show("Файл документа не найден.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                // Открываем файл с помощью программы по умолчанию
+                Process.Start(new ProcessStartInfo(documentPath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
@@ -321,67 +352,71 @@ namespace VrachDubRosh
         {
             if (selectedDocumentID <= 0)
             {
-                MessageBox.Show("Выберите загруженный документ для удаления.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Пожалуйста, выберите загруженный документ для удаления.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             
-            // Запрос подтверждения
+            // Получаем информацию о документе
+            DataRowView row = dgDocuments.SelectedItem as DataRowView;
+            if (row == null) return;
+            
+            string documentName = row["DocumentName"].ToString();
+            string documentPath = row["DocumentPath"].ToString();
+            
+            // Подтверждение удаления
             MessageBoxResult result = MessageBox.Show(
-                "Вы действительно хотите удалить выбранный документ?",
+                $"Вы действительно хотите удалить документ '{documentName}'?",
                 "Подтверждение удаления",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
             
             if (result != MessageBoxResult.Yes)
-            {
                 return;
-            }
             
             try
             {
-                string documentPath = "";
+                // Удаляем файл, если он существует
+                if (File.Exists(documentPath))
+                {
+                    File.Delete(documentPath);
+                    
+                    // Проверяем, стала ли директория сопровождающего пустой, и удаляем её если да
+                    string accompanyingDir = Path.GetDirectoryName(documentPath);
+                    if (Directory.Exists(accompanyingDir) && !Directory.EnumerateFileSystemEntries(accompanyingDir).Any())
+                    {
+                        try
+                        {
+                            Directory.Delete(accompanyingDir);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Не удалось удалить пустую директорию сопровождающего: {ex.Message}");
+                        }
+                    }
+                }
                 
-                // Получаем путь к файлу и удаляем запись из базы данных
+                // Удаляем запись из базы данных
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     
-                    // Получаем путь к файлу
-                    string pathQuery = "SELECT DocumentPath FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID";
-                    using (SqlCommand cmd = new SqlCommand(pathQuery, con))
-                    {
-                        cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
-                        object result2 = cmd.ExecuteScalar();
-                        if (result2 != null)
-                        {
-                            documentPath = result2.ToString();
-                        }
-                    }
+                    string query = "DELETE FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID";
                     
-                    // Удаляем запись из базы данных
-                    string deleteQuery = "DELETE FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID";
-                    using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
+                    using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
                         cmd.ExecuteNonQuery();
                     }
                 }
                 
-                // Удаляем файл, если он существует
-                if (!string.IsNullOrEmpty(documentPath) && File.Exists(documentPath))
-                {
-                    File.Delete(documentPath);
-                }
+                MessageBox.Show("Документ успешно удален.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 
-                MessageBox.Show("Документ успешно удален.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
-                
-                // Сбрасываем выбранный ID и обновляем список
-                selectedDocumentID = -1;
+                // Обновляем список документов
                 LoadDocuments();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при удалении документа: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при удалении документа: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

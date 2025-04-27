@@ -7,6 +7,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using System.Linq;
 
 namespace VrachDubRosh
 {
@@ -164,6 +165,9 @@ namespace VrachDubRosh
             DataRowView row = dgDocuments.SelectedItem as DataRowView;
             if (row == null) return;
             
+            // Получаем название типа документа
+            string documentTypeName = row["DocumentName"].ToString();
+            
             // Проверяем, есть ли уже загруженный документ
             bool documentExists = row["DocumentID"] != DBNull.Value;
             
@@ -190,19 +194,36 @@ namespace VrachDubRosh
             {
                 string sourceFilePath = openFileDialog.FileName;
                 string fileName = Path.GetFileName(sourceFilePath);
+                string fileExtension = Path.GetExtension(sourceFilePath);
                 
-                // Создаем папку для хранения документов, если она не существует
-                string documentsFolder = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), 
-                    "VrachDubRosh", 
-                    "PatientDocuments", 
-                    patientID.ToString());
+                // Создаем имя для нового файла, включая тип документа
+                string safeDocumentName = documentTypeName.Replace('/', '_').Replace('\\', '_');
+                string newFileName = $"{safeDocumentName}{fileExtension}";
                 
-                Directory.CreateDirectory(documentsFolder);
+                // Базовая директория для документов пациентов
+                string baseDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documents", "Пациенты");
                 
-                // Генерируем уникальное имя файла
-                string uniqueFileName = $"{DateTime.Now:yyyyMMddHHmmss}_{fileName}";
-                string destinationPath = Path.Combine(documentsFolder, uniqueFileName);
+                // Создаем директорию для пациента (используем только имя)
+                string patientFolder = Path.Combine(baseDirectory, patientName.Replace(' ', '_'));
+                Directory.CreateDirectory(patientFolder);
+                
+                // Полный путь к новому файлу
+                string destinationPath = Path.Combine(patientFolder, newFileName);
+                
+                // Проверяем, существует ли уже файл с таким именем
+                if (File.Exists(destinationPath))
+                {
+                    // Если файл существует, добавляем порядковый номер
+                    int counter = 1;
+                    string fileNameWithoutExt = safeDocumentName;
+                    
+                    while (File.Exists(destinationPath))
+                    {
+                        newFileName = $"{fileNameWithoutExt}_{counter}{fileExtension}";
+                        destinationPath = Path.Combine(patientFolder, newFileName);
+                        counter++;
+                    }
+                }
                 
                 try
                 {
@@ -215,6 +236,20 @@ namespace VrachDubRosh
                         
                         if (documentExists)
                         {
+                            // Удаляем старый файл, если он существует
+                            string oldFilePath = row["DocumentPath"].ToString();
+                            if (File.Exists(oldFilePath))
+                            {
+                                try
+                                {
+                                    File.Delete(oldFilePath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Не удалось удалить старый файл: {ex.Message}");
+                                }
+                            }
+                            
                             // Обновляем существующий документ
                             string updateQuery = @"
                                 UPDATE PatientDocuments SET 
@@ -248,6 +283,8 @@ namespace VrachDubRosh
                     }
                     
                     MessageBox.Show("Документ успешно загружен.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                    
+                    // Обновляем список документов
                     LoadDocuments();
                 }
                 catch (Exception ex)
@@ -295,41 +332,61 @@ namespace VrachDubRosh
                 return;
             }
             
-            MessageBoxResult result = MessageBox.Show(
-                "Вы уверены, что хотите удалить выбранный документ?", 
-                "Подтверждение", 
-                MessageBoxButton.YesNo, 
-                MessageBoxImage.Warning);
-            
-            if (result != MessageBoxResult.Yes)
-                return;
-            
+            // Получаем информацию о документе
             DataRowView row = dgDocuments.SelectedItem as DataRowView;
-            if (row == null || row["DocumentPath"] == DBNull.Value) return;
+            if (row == null) return;
             
+            string documentName = row["DocumentName"].ToString();
             string documentPath = row["DocumentPath"].ToString();
+            
+            // Подтверждение удаления
+            if (MessageBox.Show($"Вы действительно хотите удалить документ \"{documentName}\"?", 
+                               "Подтверждение удаления", 
+                               MessageBoxButton.YesNo, 
+                               MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
             
             try
             {
+                // Удаляем файл, если он существует
+                if (File.Exists(documentPath))
+                {
+                    File.Delete(documentPath);
+                    
+                    // Проверяем, стала ли директория пациента пустой, и удаляем её если да
+                    string patientDir = Path.GetDirectoryName(documentPath);
+                    if (Directory.Exists(patientDir) && !Directory.EnumerateFileSystemEntries(patientDir).Any())
+                    {
+                        try
+                        {
+                            Directory.Delete(patientDir);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Не удалось удалить пустую директорию пациента: {ex.Message}");
+                        }
+                    }
+                }
+                
+                // Удаляем запись из базы данных
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     
-                    string deleteQuery = "DELETE FROM PatientDocuments WHERE DocumentID = @DocumentID";
-                    using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
+                    string query = "DELETE FROM PatientDocuments WHERE DocumentID = @DocumentID";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
                         cmd.ExecuteNonQuery();
                     }
                 }
                 
-                // Пытаемся удалить файл
-                if (File.Exists(documentPath))
-                {
-                    File.Delete(documentPath);
-                }
-                
                 MessageBox.Show("Документ успешно удален.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                
+                // Обновляем список документов
                 LoadDocuments();
             }
             catch (Exception ex)

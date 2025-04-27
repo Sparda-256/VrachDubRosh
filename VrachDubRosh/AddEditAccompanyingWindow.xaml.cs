@@ -392,8 +392,22 @@ namespace VrachDubRosh
                 }
                 
                 // Создаем уникальное имя файла
-                string uniqueFileName = $"poa_{DateTime.Now:yyyyMMdd_HHmmss}{fileExtension}";
+                string uniqueFileName = $"poa{fileExtension}";
                 powerOfAttorneyPath = Path.Combine(documentsFolder, uniqueFileName);
+                
+                // Проверяем, существует ли уже файл с таким именем
+                if (File.Exists(powerOfAttorneyPath))
+                {
+                    // Если файл существует, добавляем порядковый номер
+                    int counter = 1;
+                    
+                    while (File.Exists(powerOfAttorneyPath))
+                    {
+                        uniqueFileName = $"poa_{counter}{fileExtension}";
+                        powerOfAttorneyPath = Path.Combine(documentsFolder, uniqueFileName);
+                        counter++;
+                    }
+                }
                 
                 try
                 {
