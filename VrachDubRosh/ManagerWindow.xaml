@@ -465,10 +465,17 @@
                           Unchecked="ThemeToggle_Unchecked"
                           x:Name="themeToggle"
                           ToolTip="Переключить тему"/>
-                <Button Content="Выход" 
-                        Style="{StaticResource RedButtonStyle}"
+                <Button Style="{StaticResource RedButtonStyle}"
                         Margin="5" Padding="12,8"
-                        Click="ExitButton_Click"/>
+                        Click="ExitButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,3H5C3.89,3 3,3.89 3,5V9H5V5H19V19H5V15H3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M10.08,15.58L11.5,17L16.5,12L11.5,7L10.08,8.41L12.67,11H3V13H12.67L10.08,15.58Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Выход" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
 
             <!-- Основной контент: TabControl -->
@@ -513,14 +520,46 @@
                         
                         <!-- Кнопки управления пациентами -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-                            <Button Content="Добавить" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnAddPatient_Click"/>
-                            <Button Content="Редактировать" Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnEditPatient_Click"/>
-                            <Button Content="Документы" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnManageDocuments_Click"/>
-                            <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnDeletePatient_Click"/>
+                            <Button Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnAddPatient_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M15,14C12.33,14 7,15.33 7,18V20H23V18C23,15.33 17.67,14 15,14M6,10V7H4V10H1V12H4V15H6V12H9V10M15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Добавить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnEditPatient_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M16.84,2.73C16.45,2.73 16.07,2.88 15.77,3.17L13.65,5.29L18.95,10.6L21.07,8.5C21.67,7.89 21.67,6.94 21.07,6.36L17.9,3.17C17.6,2.88 17.22,2.73 16.84,2.73M12.94,6L4.84,14.11L7.4,14.39L7.58,16.68L9.86,16.85L10.15,19.41L18.25,11.3M4.25,15.04L2.5,21.73L9.2,19.94L8.96,17.78L6.65,17.61L6.47,15.29"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Редактировать" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnManageDocuments_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Документы" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnDeletePatient_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Удалить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </TabItem>
@@ -559,14 +598,46 @@
                         
                         <!-- Кнопки управления сопровождающими -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-                            <Button Content="Добавить" Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnAddAccompanying_Click"/>
-                            <Button Content="Редактировать" Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnEditAccompanying_Click"/>
-                            <Button Content="Документы" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnManageAccompanyingDocuments_Click"/>
-                            <Button Content="Удалить" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnDeleteAccompanying_Click"/>
+                            <Button Style="{StaticResource GreenButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnAddAccompanying_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M15,14C12.33,14 7,15.33 7,18V20H23V18C23,15.33 17.67,14 15,14M6,10V7H4V10H1V12H4V15H6V12H9V10M15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Добавить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource RoundedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnEditAccompanying_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M16.84,2.73C16.45,2.73 16.07,2.88 15.77,3.17L13.65,5.29L18.95,10.6L21.07,8.5C21.67,7.89 21.67,6.94 21.07,6.36L17.9,3.17C17.6,2.88 17.22,2.73 16.84,2.73M12.94,6L4.84,14.11L7.4,14.39L7.58,16.68L9.86,16.85L10.15,19.41L18.25,11.3M4.25,15.04L2.5,21.73L9.2,19.94L8.96,17.78L6.65,17.61L6.47,15.29"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Редактировать" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnManageAccompanyingDocuments_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M14,17H7V15H14M17,13H7V11H17M17,9H7V7H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Документы" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnDeleteAccompanying_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Удалить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </TabItem>
@@ -631,10 +702,26 @@
                         
                         <!-- Кнопки управления размещением -->
                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0">
-                            <Button Content="Выселить" x:Name="btnCheckOut" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnCheckOut_Click"/>
-                            <Button Content="Обновить" Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
-                                    Click="btnRefreshAccommodation_Click"/>
+                            <Button x:Name="btnCheckOut" Style="{StaticResource RedButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnCheckOut_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M15,14C17.67,14 23,15.33 23,18V20H7V18C7,15.33 12.33,14 15,14M15,12A4,4 0 0,1 11,8A4,4 0 0,1 15,4A4,4 0 0,1 19,8A4,4 0 0,1 15,12M5,9.59L7.12,7.46L8.54,8.88L6.41,11L8.54,13.12L7.12,14.54L5,12.41L2.88,14.54L1.46,13.12L3.59,11L1.46,8.88L2.88,7.46L5,9.59Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Выселить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource GrayButtonStyle}" Margin="5,0" Padding="12,8"
+                                    Click="btnRefreshAccommodation_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Обновить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </TabItem>

@@ -172,22 +172,50 @@
 
             <!-- Кнопки управления -->
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Загрузить" 
-                        Style="{StaticResource GreenButtonStyle}" 
+                <Button Style="{StaticResource GreenButtonStyle}" 
                         Width="140" Height="40" Margin="0,0,15,0"
-                        Click="btnUpload_Click"/>
-                <Button Content="Просмотреть" 
-                        Style="{StaticResource RoundedButtonStyle}" 
+                        Click="btnUpload_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Загрузить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource RoundedButtonStyle}" 
                         Width="140" Height="40" Margin="0,0,15,0"
-                        Click="btnView_Click"/>
-                <Button Content="Удалить" 
-                        Style="{StaticResource RedButtonStyle}" 
+                        Click="btnView_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Просмотреть" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource RedButtonStyle}" 
                         Width="120" Height="40" Margin="0,0,15,0"
-                        Click="btnDelete_Click"/>
-                <Button Content="Закрыть" 
-                        Style="{StaticResource RoundedButtonStyle}" 
+                        Click="btnDelete_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Удалить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource RoundedButtonStyle}" 
                         Width="120" Height="40"
-                        Click="btnClose_Click"/>
+                        Click="btnClose_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Закрыть" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
     </Viewbox>

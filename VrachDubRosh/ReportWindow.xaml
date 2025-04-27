@@ -490,11 +490,19 @@
                           ToolTip="Переключить тему"/>
 
                 <!-- Кнопка выхода -->
-                <Button Grid.Column="2" Content="Выход" 
+                <Button Grid.Column="2" 
                     Style="{StaticResource RedButtonStyle}"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
                     Width="100" Height="40"
-                    Click="ExitButton_Click"/>
+                    Click="ExitButton_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,3H5C3.89,3 3,3.89 3,5V9H5V5H19V19H5V15H3V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M10.08,15.58L11.5,17L16.5,12L11.5,7L10.08,8.41L12.67,11H3V13H12.67L10.08,15.58Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Выход" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
             <!-- Основное содержимое -->
@@ -510,10 +518,25 @@
                             <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                             <DatePicker x:Name="dpEnd_All" Width="120" Margin="5,0"
                                         Style="{StaticResource RoundedDatePickerStyle}"/>
-                            <Button Content="Показать" Click="btnShowAll_Click" Margin="15,0,5,0" 
-                                    Style="{StaticResource BlueButtonStyle}" Width="100"/>
-                            <Button Content="Экспорт в Excel" Click="btnExportAll_Click" Margin="5,0,0,0" 
-                                    Style="{StaticResource RoundedButtonStyle}" Width="120"/>
+                            <Button Click="btnShowAll_Click" Margin="15,0,5,0" 
+                                    Style="{StaticResource BlueButtonStyle}" Width="50">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M15.5,12C18,12 20,14 20,16.5C20,17.38 19.75,18.21 19.31,18.9L22.39,22L21,23.39L17.88,20.32C17.19,20.75 16.37,21 15.5,21C13,21 11,19 11,16.5C11,14 13,12 15.5,12M15.5,14A2.5,2.5 0 0,0 13,16.5A2.5,2.5 0 0,0 15.5,19A2.5,2.5 0 0,0 18,16.5A2.5,2.5 0 0,0 15.5,14M10,4A4,4 0 0,1 14,8C14,8.91 13.69,9.75 13.18,10.43C12.32,10.75 11.55,11.26 10.91,11.9L10,12A4,4 0 0,1 6,8A4,4 0 0,1 10,4M2,20V18C2,15.88 5.31,14.14 9.5,14C9.18,14.78 9,15.62 9,16.5C9,17.79 9.38,19 10,20H2Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="btnExportAll_Click" Margin="5,0,0,0" 
+                                    Style="{StaticResource RoundedButtonStyle}" Width="90">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="18" Height="18" 
+                                          Data="M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Excel" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                         <!-- DataGrid с данными -->
                         <DataGrid x:Name="dgReportAll" 
@@ -570,10 +593,25 @@
                                 <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Doctor" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <Button Content="Показать" Click="btnShowDoctor_Click" Margin="15,0,5,0" 
-                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportDoctor_Click" Margin="5,0,0,0" 
-                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
+                                <Button Click="btnShowDoctor_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="50">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M15.5,12C18,12 20,14 20,16.5C20,17.38 19.75,18.21 19.31,18.9L22.39,22L21,23.39L17.88,20.32C17.19,20.75 16.37,21 15.5,21C13,21 11,19 11,16.5C11,14 13,12 15.5,12M15.5,14A2.5,2.5 0 0,0 13,16.5A2.5,2.5 0 0,0 15.5,19A2.5,2.5 0 0,0 18,16.5A2.5,2.5 0 0,0 15.5,14M10,4A4,4 0 0,1 14,8C14,8.91 13.69,9.75 13.18,10.43C12.32,10.75 11.55,11.26 10.91,11.9L10,12A4,4 0 0,1 6,8A4,4 0 0,1 10,4M2,20V18C2,15.88 5.31,14.14 9.5,14C9.18,14.78 9,15.62 9,16.5C9,17.79 9.38,19 10,20H2Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="btnExportDoctor_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="90">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Excel" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Grid>
                         <!-- DataGrid с данными -->
@@ -629,10 +667,25 @@
                                 <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Patient" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <Button Content="Показать" Click="btnShowPatient_Click" Margin="15,0,5,0" 
-                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportPatient_Click" Margin="5,0,0,0" 
-                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
+                                <Button Click="btnShowPatient_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="50">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M15.5,12C18,12 20,14 20,16.5C20,17.38 19.75,18.21 19.31,18.9L22.39,22L21,23.39L17.88,20.32C17.19,20.75 16.37,21 15.5,21C13,21 11,19 11,16.5C11,14 13,12 15.5,12M15.5,14A2.5,2.5 0 0,0 13,16.5A2.5,2.5 0 0,0 15.5,19A2.5,2.5 0 0,0 18,16.5A2.5,2.5 0 0,0 15.5,14M10,4A4,4 0 0,1 14,8C14,8.91 13.69,9.75 13.18,10.43C12.32,10.75 11.55,11.26 10.91,11.9L10,12A4,4 0 0,1 6,8A4,4 0 0,1 10,4M2,20V18C2,15.88 5.31,14.14 9.5,14C9.18,14.78 9,15.62 9,16.5C9,17.79 9.38,19 10,20H2Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="btnExportPatient_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="90">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Excel" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Grid>
                         <!-- DataGrid с данными -->
@@ -688,10 +741,25 @@
                                 <TextBlock Text="Конец:" VerticalAlignment="Center" Margin="15,0,5,0" Foreground="{DynamicResource SubtitleBrush}" FontSize="14"/>
                                 <DatePicker x:Name="dpEnd_Procedure" Width="120" Margin="5,0"
                                             Style="{StaticResource RoundedDatePickerStyle}"/>
-                                <Button Content="Показать" Click="btnShowProcedure_Click" Margin="15,0,5,0" 
-                                        Style="{StaticResource BlueButtonStyle}" Width="100"/>
-                                <Button Content="Экспорт в Excel" Click="btnExportProcedure_Click" Margin="5,0,0,0" 
-                                        Style="{StaticResource RoundedButtonStyle}" Width="120"/>
+                                <Button Click="btnShowProcedure_Click" Margin="15,0,5,0" 
+                                        Style="{StaticResource BlueButtonStyle}" Width="50">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M15.5,12C18,12 20,14 20,16.5C20,17.38 19.75,18.21 19.31,18.9L22.39,22L21,23.39L17.88,20.32C17.19,20.75 16.37,21 15.5,21C13,21 11,19 11,16.5C11,14 13,12 15.5,12M15.5,14A2.5,2.5 0 0,0 13,16.5A2.5,2.5 0 0,0 15.5,19A2.5,2.5 0 0,0 18,16.5A2.5,2.5 0 0,0 15.5,14M10,4A4,4 0 0,1 14,8C14,8.91 13.69,9.75 13.18,10.43C12.32,10.75 11.55,11.26 10.91,11.9L10,12A4,4 0 0,1 6,8A4,4 0 0,1 10,4M2,20V18C2,15.88 5.31,14.14 9.5,14C9.18,14.78 9,15.62 9,16.5C9,17.79 9.38,19 10,20H2Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="btnExportProcedure_Click" Margin="5,0,0,0" 
+                                        Style="{StaticResource RoundedButtonStyle}" Width="90">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="18" Height="18" 
+                                              Data="M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6M6,4H13V9H18V20H6V4M8,12V14H16V12H8M8,16V18H13V16H8Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Excel" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Grid>
                         <!-- DataGrid с данными -->

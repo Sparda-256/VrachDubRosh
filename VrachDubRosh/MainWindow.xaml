@@ -263,13 +263,20 @@
 
             <!-- Кнопка входа -->
             <Button Grid.Row="8" 
-                    Content="Войти в систему" 
                     Style="{StaticResource RoundedButtonStyle}"
                     Width="240" Height="46" 
                     FontSize="16"
                     HorizontalAlignment="Center"
                     Margin="0,0,0,25"
-                    Click="LoginButton_Click"/>
+                    Click="LoginButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="20" Height="20" 
+                          Data="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14M12,2A6,6 0 0,0 6,8A6,6 0 0,0 12,14A6,6 0 0,0 18,8A6,6 0 0,0 12,2Z"
+                          Fill="White"
+                          Stretch="Uniform"/>
+                    <TextBlock Text="Войти в систему" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </Button>
 
             <!-- Нижняя надпись -->
             <TextBlock Grid.Row="9" 
