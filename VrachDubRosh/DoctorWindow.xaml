@@ -548,7 +548,7 @@
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Дата рождения" 
                                                     Binding="{Binding DateOfBirth, StringFormat={}{0:dd.MM.yyyy}}" 
-                                                    Width="120"/>
+                                                    Width="140"/>
                                 <DataGridTextColumn Header="Пол" Binding="{Binding Gender}" Width="80"/>
                                 <DataGridTextColumn Header="Дата записи" 
                                                     Binding="{Binding RecordDate, StringFormat={}{0:dd.MM.yyyy}}" 
@@ -718,7 +718,7 @@
                                   MouseDoubleClick="dgProcedures_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Наименование" Binding="{Binding ProcedureName}" Width="*"/>
-                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding Duration}" Width="150"/>
+                                <DataGridTextColumn Header="Длительность (мин)" Binding="{Binding Duration}" Width="170"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
