@@ -185,6 +185,28 @@ namespace VrachDubRosh
             assignmentWindow.ShowDialog();
         }
 
+        private void btnCreateDischargeDocument_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgPatients.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите пациента для создания выписного эпикриза.", "Выбор пациента", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            DataRowView row = dgPatients.SelectedItem as DataRowView;
+            int patientID = Convert.ToInt32(row["PatientID"]);
+            string patientName = row["FullName"].ToString();
+
+            // Получаем имя главврача (пользователя) из настроек или из текущей сессии
+            // В данном примере используем фиксированное значение
+            string chiefDoctorName = "Администратор";
+            
+            // Открываем окно создания выписного эпикриза
+            DischargeDocumentWindow dischargeWindow = new DischargeDocumentWindow(patientID, patientName, chiefDoctorName);
+            dischargeWindow.Owner = this;
+            dischargeWindow.ShowDialog();
+        }
+
         private void btnOpenReports_Click(object sender, RoutedEventArgs e)
         {
             ReportWindow reportWindow = new ReportWindow();

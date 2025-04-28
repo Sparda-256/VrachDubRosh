@@ -341,4 +341,18 @@ VALUES
 ('Результат бактериологического посева кала на дизентерийную группу и сальмонеллёз', 1, 0, 200, 1),
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
-('Доверенность от законных представителей', 0, 0, 200, 1); 
+('Доверенность от законных представителей', 0, 0, 200, 1);
+
+-- Таблица для выписных эпикризов
+CREATE TABLE DischargeDocuments (
+    DischargeID INT IDENTITY PRIMARY KEY,
+    PatientID INT NOT NULL,
+    Complaints NVARCHAR(MAX),
+    DiseaseHistory NVARCHAR(MAX),
+    InitialCondition NVARCHAR(MAX),
+    RehabilitationGoal NVARCHAR(MAX),
+    GoalAchieved BIT,
+    Recommendations NVARCHAR(MAX),
+    LastUpdated DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
+); 
