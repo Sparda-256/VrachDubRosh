@@ -20,6 +20,7 @@ namespace VrachDubRosh
         private int patientAge;
         private int selectedDocumentTypeID = -1;
         private int selectedDocumentID = -1;
+        private List<DataRowView> selectedRows = new List<DataRowView>();
         
         public PatientDocumentsWindow(int patientID, string patientName, DateTime? dateOfBirth)
         {
@@ -133,17 +134,35 @@ namespace VrachDubRosh
         
         private void dgDocuments_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (dgDocuments.SelectedItem is DataRowView row)
+            selectedRows.Clear();
+            
+            if (dgDocuments.SelectedItems.Count == 1)
             {
-                selectedDocumentTypeID = Convert.ToInt32(row["DocumentTypeID"]);
-                
-                if (row["DocumentID"] != DBNull.Value)
+                DataRowView row = dgDocuments.SelectedItem as DataRowView;
+                if (row != null)
                 {
-                    selectedDocumentID = Convert.ToInt32(row["DocumentID"]);
+                    selectedDocumentTypeID = Convert.ToInt32(row["DocumentTypeID"]);
+                    
+                    if (row["DocumentID"] != DBNull.Value)
+                    {
+                        selectedDocumentID = Convert.ToInt32(row["DocumentID"]);
+                    }
+                    else
+                    {
+                        selectedDocumentID = -1;
+                    }
+                    
+                    selectedRows.Add(row);
                 }
-                else
+            }
+            else if (dgDocuments.SelectedItems.Count > 1)
+            {
+                selectedDocumentTypeID = -1;
+                selectedDocumentID = -1;
+                
+                foreach (DataRowView row in dgDocuments.SelectedItems)
                 {
-                    selectedDocumentID = -1;
+                    selectedRows.Add(row);
                 }
             }
             else
@@ -296,14 +315,20 @@ namespace VrachDubRosh
         
         private void btnView_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedDocumentID <= 0)
+            if (dgDocuments.SelectedItems.Count != 1)
             {
-                MessageBox.Show("Выберите загруженный документ для просмотра.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Выберите один документ для просмотра.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             
             DataRowView row = dgDocuments.SelectedItem as DataRowView;
             if (row == null || row["DocumentPath"] == DBNull.Value) return;
+            
+            if (row["DocumentID"] == DBNull.Value)
+            {
+                MessageBox.Show("Документ не загружен. Его невозможно просмотреть.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             
             string documentPath = row["DocumentPath"].ToString();
             
@@ -326,21 +351,34 @@ namespace VrachDubRosh
         
         private void btnDelete_Click(object sender, RoutedEventArgs e)
         {
-            if (selectedDocumentID <= 0)
+            if (dgDocuments.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите загруженный документ для удаления.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Пожалуйста, выберите документы для удаления.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             
-            // Получаем информацию о документе
-            DataRowView row = dgDocuments.SelectedItem as DataRowView;
-            if (row == null) return;
+            // Проверяем, все ли выбранные документы загружены
+            List<DataRowView> rowsToDelete = new List<DataRowView>();
+            foreach (DataRowView row in dgDocuments.SelectedItems)
+            {
+                if (row["DocumentID"] != DBNull.Value)
+                {
+                    rowsToDelete.Add(row);
+                }
+            }
             
-            string documentName = row["DocumentName"].ToString();
-            string documentPath = row["DocumentPath"].ToString();
+            if (rowsToDelete.Count == 0)
+            {
+                MessageBox.Show("Среди выбранных документов нет загруженных.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             
             // Подтверждение удаления
-            if (MessageBox.Show($"Вы действительно хотите удалить документ \"{documentName}\"?", 
+            string confirmMessage = rowsToDelete.Count == 1 
+                ? $"Вы действительно хотите удалить документ '{rowsToDelete[0]["DocumentName"]}'?"
+                : $"Вы действительно хотите удалить {rowsToDelete.Count} выбранных документов?";
+            
+            if (MessageBox.Show(confirmMessage, 
                                "Подтверждение удаления", 
                                MessageBoxButton.YesNo, 
                                MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -348,50 +386,75 @@ namespace VrachDubRosh
                 return;
             }
             
+            int successCount = 0;
+            
             try
             {
-                // Удаляем файл, если он существует
-                if (File.Exists(documentPath))
-                {
-                    File.Delete(documentPath);
-                    
-                    // Проверяем, стала ли директория пациента пустой, и удаляем её если да
-                    string patientDir = Path.GetDirectoryName(documentPath);
-                    if (Directory.Exists(patientDir) && !Directory.EnumerateFileSystemEntries(patientDir).Any())
-                    {
-                        try
-                        {
-                            Directory.Delete(patientDir);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Не удалось удалить пустую директорию пациента: {ex.Message}");
-                        }
-                    }
-                }
-                
-                // Удаляем запись из базы данных
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     
-                    string query = "DELETE FROM PatientDocuments WHERE DocumentID = @DocumentID";
-                    
-                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    foreach (DataRowView row in rowsToDelete)
                     {
-                        cmd.Parameters.AddWithValue("@DocumentID", selectedDocumentID);
-                        cmd.ExecuteNonQuery();
+                        int documentID = Convert.ToInt32(row["DocumentID"]);
+                        string documentPath = row["DocumentPath"].ToString();
+                        
+                        // Удаляем файл, если он существует
+                        if (File.Exists(documentPath))
+                        {
+                            try
+                            {
+                                File.Delete(documentPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Не удалось удалить файл {documentPath}: {ex.Message}");
+                            }
+                        }
+                        
+                        // Удаляем запись из базы данных
+                        string query = "DELETE FROM PatientDocuments WHERE DocumentID = @DocumentID";
+                        
+                        using (SqlCommand cmd = new SqlCommand(query, con))
+                        {
+                            cmd.Parameters.AddWithValue("@DocumentID", documentID);
+                            cmd.ExecuteNonQuery();
+                            successCount++;
+                        }
                     }
                 }
                 
-                MessageBox.Show("Документ успешно удален.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Проверяем, стала ли директория пациента пустой, и удаляем её если да
+                string patientDir = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, 
+                    "Documents", 
+                    "Пациенты", 
+                    patientName.Replace(' ', '_'));
+                
+                if (Directory.Exists(patientDir) && !Directory.EnumerateFileSystemEntries(patientDir).Any())
+                {
+                    try
+                    {
+                        Directory.Delete(patientDir);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Не удалось удалить пустую директорию пациента: {ex.Message}");
+                    }
+                }
+                
+                string message = successCount == 1 
+                    ? "Документ успешно удален." 
+                    : $"{successCount} документов успешно удалено.";
+                
+                MessageBox.Show(message, "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 
                 // Обновляем список документов
                 LoadDocuments();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при удалении документа: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Ошибка при удалении документов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         

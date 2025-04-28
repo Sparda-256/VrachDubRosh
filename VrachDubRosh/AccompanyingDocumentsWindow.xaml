@@ -159,7 +159,7 @@
                       Style="{StaticResource ModernDataGridStyle}" 
                       AutoGenerateColumns="False"
                       IsReadOnly="True" 
-                      SelectionMode="Single"
+                      SelectionMode="Extended"
                       SelectionChanged="dgDocuments_SelectionChanged"
                       Margin="0,0,0,15">
                 <DataGrid.Columns>
