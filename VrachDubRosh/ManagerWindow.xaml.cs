@@ -15,6 +15,8 @@ using WinForms = System.Windows.Forms;
 using MessageBox = System.Windows.MessageBox;
 using Button = System.Windows.Controls.Button;
 using Application = System.Windows.Application;
+using System.Globalization;
+using System.Windows.Media;
 
 namespace VrachDubRosh
 {
@@ -61,6 +63,50 @@ namespace VrachDubRosh
         public string UploadedBy { get; set; }
         public string FilePath { get; set; }
         public byte[] FileData { get; set; }
+    }
+
+    public class DocumentStatusToIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string status = value as string;
+            if (status == "Все документы загружены")
+            {
+                // Галочка
+                return "M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z";
+            }
+            else
+            {
+                // Крестик
+                return "M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z";
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class DocumentStatusToColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string status = value as string;
+            if (status == "Все документы загружены")
+            {
+                return new SolidColorBrush(Colors.Green);
+            }
+            else
+            {
+                return new SolidColorBrush(Colors.Red);
+            }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public partial class ManagerWindow : Window
@@ -126,19 +172,39 @@ namespace VrachDubRosh
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (SqlConnection connection = new SqlConnection(connectionString))
                 {
-                    con.Open();
-                    string query = "SELECT PatientID, FullName, DateOfBirth, Gender, RecordDate, DischargeDate FROM Patients";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    connection.Open();
+                    string query = @"
+                        SELECT p.*, 
+                            CASE 
+                                WHEN EXISTS (
+                                    SELECT 1 
+                                    FROM DocumentTypes dt 
+                                    WHERE dt.IsRequired = 1 
+                                    AND dt.ForAccompanyingPerson = 0
+                                    AND (dt.MinimumAge IS NULL OR DATEDIFF(YEAR, p.DateOfBirth, GETDATE()) >= dt.MinimumAge)
+                                    AND (dt.MaximumAge IS NULL OR DATEDIFF(YEAR, p.DateOfBirth, GETDATE()) <= dt.MaximumAge)
+                                    AND NOT EXISTS (
+                                        SELECT 1 
+                                        FROM PatientDocuments pd 
+                                        WHERE pd.PatientID = p.PatientID 
+                                        AND pd.DocumentTypeID = dt.DocumentTypeID
+                                    )
+                                ) THEN 'Не все документы загружены'
+                                ELSE 'Все документы загружены'
+                            END as DocumentsStatus
+                        FROM Patients p";
+                    SqlCommand command = new SqlCommand(query, connection);
+                    SqlDataAdapter adapter = new SqlDataAdapter(command);
                     dtPatients = new DataTable();
-                    da.Fill(dtPatients);
+                    adapter.Fill(dtPatients);
                     dgPatients.ItemsSource = dtPatients.DefaultView;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка загрузки пациентов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при загрузке пациентов: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
@@ -146,24 +212,38 @@ namespace VrachDubRosh
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (SqlConnection connection = new SqlConnection(connectionString))
                 {
-                    con.Open();
+                    connection.Open();
                     string query = @"
-                        SELECT ap.AccompanyingPersonID, ap.FullName, ap.DateOfBirth, 
-                               p.FullName AS PatientName, ap.Relationship, ap.HasPowerOfAttorney, 
-                               ap.PatientID
+                        SELECT ap.*, p.FullName as PatientName,
+                            CASE 
+                                WHEN EXISTS (
+                                    SELECT 1 
+                                    FROM DocumentTypes dt 
+                                    WHERE dt.IsRequired = 1 
+                                    AND dt.ForAccompanyingPerson = 1
+                                    AND NOT EXISTS (
+                                        SELECT 1 
+                                        FROM AccompanyingPersonDocuments apd 
+                                        WHERE apd.AccompanyingPersonID = ap.AccompanyingPersonID 
+                                        AND apd.DocumentTypeID = dt.DocumentTypeID
+                                    )
+                                ) THEN 'Не все документы загружены'
+                                ELSE 'Все документы загружены'
+                            END as DocumentsStatus
                         FROM AccompanyingPersons ap
                         JOIN Patients p ON ap.PatientID = p.PatientID";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    SqlCommand command = new SqlCommand(query, connection);
+                    SqlDataAdapter adapter = new SqlDataAdapter(command);
                     dtAccompanying = new DataTable();
-                    da.Fill(dtAccompanying);
+                    adapter.Fill(dtAccompanying);
                     dgAccompanying.ItemsSource = dtAccompanying.DefaultView;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка загрузки сопровождающих лиц: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при загрузке сопровождающих: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         
