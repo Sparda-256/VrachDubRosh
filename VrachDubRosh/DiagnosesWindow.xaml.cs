@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
 using System.Windows.Controls;
+using System.Linq;
 
 namespace VrachDubRosh
 {
@@ -13,6 +14,7 @@ namespace VrachDubRosh
         private int _patientID;
         private string _patientName;
         private DataRowView _selectedDiagnosis;
+        private List<DataRowView> _selectedDiagnoses = new List<DataRowView>();
 
         public DiagnosesWindow(int patientID, string patientName)
         {
@@ -67,14 +69,12 @@ namespace VrachDubRosh
                 {
                     con.Open();
                     string query = @"SELECT pd.PatientID, pd.DiagnosisID, d.DiagnosisName, 
-                                    pd.PercentageOfDiagnosis,
                                     doc.FullName as DoctorName
                                     FROM PatientDiagnoses pd
                                     INNER JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
                                     LEFT JOIN DoctorDiagnoses dd ON d.DiagnosisID = dd.DiagnosisID
                                     LEFT JOIN Doctors doc ON dd.DoctorID = doc.DoctorID
-                                    WHERE pd.PatientID = @PatientID
-                                    ORDER BY pd.PercentageOfDiagnosis DESC";
+                                    WHERE pd.PatientID = @PatientID";
                     
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
@@ -85,7 +85,7 @@ namespace VrachDubRosh
                     // Очищаем детали диагноза
                     ClearDiagnosisDetails();
                     
-                    // Отключаем кнопки редактирования и удаления
+                    // Отключаем кнопки, так как пока ничего не выбрано
                     btnEditDiagnosis.IsEnabled = false;
                     btnDeleteDiagnosis.IsEnabled = false;
                 }
@@ -103,11 +103,10 @@ namespace VrachDubRosh
         {
             tbDiagnosisName.Text = "";
             tbDoctorName.Text = "";
-            tbPercentage.Text = "";
             
-            // Отключаем кнопки редактирования и удаления
+            // Отключаем кнопку редактирования
             btnEditDiagnosis.IsEnabled = false;
-            btnDeleteDiagnosis.IsEnabled = false;
+            // Кнопка удаления управляется отдельно в зависимости от выделенных строк
         }
 
         /// <summary>
@@ -115,7 +114,19 @@ namespace VrachDubRosh
         /// </summary>
         private void dgDiagnoses_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (dgDiagnoses.SelectedItem != null)
+            _selectedDiagnoses.Clear();
+            
+            // Собираем все выбранные диагнозы
+            foreach (DataRowView item in dgDiagnoses.SelectedItems)
+            {
+                _selectedDiagnoses.Add(item);
+            }
+            
+            // Активируем кнопку удаления, если есть выбранные диагнозы
+            btnDeleteDiagnosis.IsEnabled = _selectedDiagnoses.Count > 0;
+            
+            // Для одиночного выбора - показываем детали и разрешаем редактирование
+            if (dgDiagnoses.SelectedItems.Count == 1)
             {
                 _selectedDiagnosis = dgDiagnoses.SelectedItem as DataRowView;
                 if (_selectedDiagnosis != null)
@@ -127,21 +138,16 @@ namespace VrachDubRosh
                         ? _selectedDiagnosis["DoctorName"].ToString() 
                         : "Не определен";
                     
-                    var percentage = _selectedDiagnosis["PercentageOfDiagnosis"];
-                    tbPercentage.Text = percentage != DBNull.Value 
-                        ? percentage.ToString() + "%" 
-                        : "Не указан";
-                    
-                    // Активируем кнопки редактирования и удаления
+                    // Активируем кнопку редактирования
                     btnEditDiagnosis.IsEnabled = true;
-                    btnDeleteDiagnosis.IsEnabled = true;
                 }
             }
             else
             {
-                ClearDiagnosisDetails();
+                // Очищаем детали при множественном выборе
+                tbDiagnosisName.Text = "";
+                tbDoctorName.Text = "";
                 btnEditDiagnosis.IsEnabled = false;
-                btnDeleteDiagnosis.IsEnabled = false;
             }
         }
 
@@ -186,11 +192,21 @@ namespace VrachDubRosh
         /// </summary>
         private void btnDeleteDiagnosis_Click(object sender, RoutedEventArgs e)
         {
-            if (_selectedDiagnosis != null)
+            if (_selectedDiagnoses.Count > 0)
             {
+                string confirmMessage;
+                if (_selectedDiagnoses.Count == 1)
+                {
+                    confirmMessage = $"Вы действительно хотите удалить диагноз \"{_selectedDiagnoses[0]["DiagnosisName"]}\" у пациента {_patientName}?";
+                }
+                else
+                {
+                    confirmMessage = $"Вы действительно хотите удалить {_selectedDiagnoses.Count} выбранных диагнозов у пациента {_patientName}?";
+                }
+                
                 // Запрашиваем подтверждение на удаление
                 MessageBoxResult result = MessageBox.Show(
-                    $"Вы действительно хотите удалить диагноз \"{_selectedDiagnosis["DiagnosisName"]}\" у пациента {_patientName}?",
+                    confirmMessage,
                     "Подтверждение удаления",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
@@ -199,35 +215,45 @@ namespace VrachDubRosh
                 {
                     try
                     {
-                        int diagnosisID = Convert.ToInt32(_selectedDiagnosis["DiagnosisID"]);
+                        int deletedCount = 0;
                         
                         using (SqlConnection con = new SqlConnection(connectionString))
                         {
                             con.Open();
-                            string query = "DELETE FROM PatientDiagnoses WHERE PatientID = @PatientID AND DiagnosisID = @DiagnosisID";
                             
-                            using (SqlCommand cmd = new SqlCommand(query, con))
+                            foreach (DataRowView diagnosis in _selectedDiagnoses)
                             {
-                                cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                                cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
+                                int diagnosisID = Convert.ToInt32(diagnosis["DiagnosisID"]);
+                                string query = "DELETE FROM PatientDiagnoses WHERE PatientID = @PatientID AND DiagnosisID = @DiagnosisID";
                                 
-                                int rowsAffected = cmd.ExecuteNonQuery();
-                                if (rowsAffected > 0)
+                                using (SqlCommand cmd = new SqlCommand(query, con))
                                 {
-                                    MessageBox.Show("Диагноз успешно удален", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
-                                    // Перезагружаем список диагнозов
-                                    LoadDiagnoses();
+                                    cmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                    cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
+                                    
+                                    deletedCount += cmd.ExecuteNonQuery();
                                 }
-                                else
-                                {
-                                    MessageBox.Show("Не удалось удалить диагноз", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                                }
+                            }
+                            
+                            if (deletedCount > 0)
+                            {
+                                string successMessage = deletedCount == 1 
+                                    ? "Диагноз успешно удален" 
+                                    : $"Успешно удалено {deletedCount} диагнозов";
+                                    
+                                MessageBox.Show(successMessage, "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                                // Перезагружаем список диагнозов
+                                LoadDiagnoses();
+                            }
+                            else
+                            {
+                                MessageBox.Show("Не удалось удалить диагнозы", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Ошибка при удалении диагноза: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show("Ошибка при удалении диагнозов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }

@@ -141,10 +141,10 @@
                       Style="{StaticResource ModernDataGridStyle}"
                       AutoGenerateColumns="False" 
                       IsReadOnly="True" Margin="0,0,0,15" 
-                      SelectionChanged="dgDiagnoses_SelectionChanged">
+                      SelectionChanged="dgDiagnoses_SelectionChanged"
+                      SelectionMode="Extended">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Диагноз" Binding="{Binding DiagnosisName}" Width="*"/>
-                    <DataGridTextColumn Header="Вероятность %" Binding="{Binding PercentageOfDiagnosis}" Width="100"/>
                     <DataGridTextColumn Header="Врач" Binding="{Binding DoctorName}" Width="180"/>
                 </DataGrid.Columns>
             </DataGrid>
@@ -170,14 +170,7 @@
                                    FontWeight="SemiBold" Margin="0,0,5,5"
                                    Foreground="{DynamicResource SubtitleBrush}"/>
                         <TextBlock x:Name="tbDiagnosisName" Grid.Column="1" Grid.Row="0" 
-                                   Text="" Margin="0,0,20,5"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                        
-                        <TextBlock Grid.Column="2" Grid.Row="0" Text="Вероятность: " 
-                                   FontWeight="SemiBold" Margin="0,0,5,5"
-                                   Foreground="{DynamicResource SubtitleBrush}"/>
-                        <TextBlock x:Name="tbPercentage" Grid.Column="3" Grid.Row="0" 
-                                   Text="" Margin="0,0,0,5"
+                                   Text="" Margin="0,0,20,5" Grid.ColumnSpan="3"
                                    Foreground="{DynamicResource ForegroundBrush}"/>
                         
                         <TextBlock Grid.Column="0" Grid.Row="1" Text="Врач: " 

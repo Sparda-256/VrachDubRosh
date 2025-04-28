@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -31,9 +30,6 @@ namespace VrachDubRosh
             
             tbPatientInfo.Text = $"Добавление диагноза для пациента: {patientName}";
             Title = "Добавление диагноза";
-            
-            // Установка значения по умолчанию для процента
-            txtPercentage.Text = "50";
             
             // Загружаем список диагнозов
             LoadDiagnoses();
@@ -92,16 +88,6 @@ namespace VrachDubRosh
             ResourceDictionary resourceDict = new ResourceDictionary();
             resourceDict.Source = new Uri("/Themes/DarkTheme.xaml", UriKind.Relative);
             Application.Current.Resources.MergedDictionaries[0] = resourceDict;
-        }
-
-        /// <summary>
-        /// Проверяет, что в поле вероятности вводятся только числа
-        /// </summary>
-        private void txtPercentage_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            // Только цифры
-            Regex regex = new Regex("[^0-9]+");
-            e.Handled = regex.IsMatch(e.Text);
         }
 
         /// <summary>
@@ -167,7 +153,7 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = @"SELECT pd.DiagnosisID, pd.PercentageOfDiagnosis
+                    string query = @"SELECT pd.DiagnosisID
                                      FROM PatientDiagnoses pd
                                      WHERE pd.PatientID = @PatientID AND pd.DiagnosisID = @DiagnosisID";
                     
@@ -188,12 +174,6 @@ namespace VrachDubRosh
                                         break;
                                     }
                                 }
-                                
-                                // Устанавливаем процент
-                                int percentage = reader["PercentageOfDiagnosis"] != DBNull.Value 
-                                    ? Convert.ToInt32(reader["PercentageOfDiagnosis"]) 
-                                    : 50;
-                                txtPercentage.Text = percentage.ToString();
                             }
                             else
                             {
@@ -222,19 +202,6 @@ namespace VrachDubRosh
                 return;
             }
             
-            if (string.IsNullOrWhiteSpace(txtPercentage.Text))
-            {
-                MessageBox.Show("Укажите значение вероятности", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            
-            // Проверяем корректность процента
-            if (!int.TryParse(txtPercentage.Text, out int percentage) || percentage < 0 || percentage > 100)
-            {
-                MessageBox.Show("Вероятность должна быть числом от 0 до 100", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
@@ -249,15 +216,13 @@ namespace VrachDubRosh
                     {
                         // Обновляем существующий диагноз
                         string query = @"UPDATE PatientDiagnoses 
-                                         SET DiagnosisID = @DiagnosisID, 
-                                             PercentageOfDiagnosis = @PercentageOfDiagnosis 
+                                         SET DiagnosisID = @DiagnosisID
                                          WHERE PatientID = @PatientID AND DiagnosisID = @OldDiagnosisID";
                         
                         cmd = new SqlCommand(query, con);
                         cmd.Parameters.AddWithValue("@OldDiagnosisID", _diagnosisID.Value);
                         cmd.Parameters.AddWithValue("@PatientID", _patientID);
                         cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                        cmd.Parameters.AddWithValue("@PercentageOfDiagnosis", percentage);
                     }
                     else
                     {
@@ -280,14 +245,13 @@ namespace VrachDubRosh
                         
                         // Добавляем новый диагноз
                         string query = @"INSERT INTO PatientDiagnoses 
-                                         (PatientID, DiagnosisID, PercentageOfDiagnosis) 
+                                         (PatientID, DiagnosisID) 
                                          VALUES 
-                                         (@PatientID, @DiagnosisID, @PercentageOfDiagnosis)";
+                                         (@PatientID, @DiagnosisID)";
                         
                         cmd = new SqlCommand(query, con);
                         cmd.Parameters.AddWithValue("@PatientID", _patientID);
                         cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                        cmd.Parameters.AddWithValue("@PercentageOfDiagnosis", percentage);
                     }
                     
                     cmd.ExecuteNonQuery();

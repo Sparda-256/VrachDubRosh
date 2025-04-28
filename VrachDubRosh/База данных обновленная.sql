@@ -67,7 +67,6 @@ CREATE TABLE Diagnoses (
 CREATE TABLE PatientDiagnoses (
     PatientID INT NOT NULL,
     DiagnosisID INT NOT NULL,
-    PercentageOfDiagnosis INT NULL,
     PRIMARY KEY (PatientID, DiagnosisID),
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
     FOREIGN KEY (DiagnosisID) REFERENCES Diagnoses(DiagnosisID)
