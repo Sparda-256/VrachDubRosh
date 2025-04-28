@@ -224,7 +224,7 @@
                 <TextBlock Text="Санаторий Дубовая Роща" 
                            FontSize="22" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" 
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Система управления пациентами" 
+                <TextBlock Text="Система управления санатория" 
                            FontSize="16" Foreground="{DynamicResource SubtitleBrush}" 
                            HorizontalAlignment="Center" Margin="0,5,0,0"/>
             </StackPanel>
