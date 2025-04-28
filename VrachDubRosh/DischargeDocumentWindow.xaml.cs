@@ -24,7 +24,8 @@ namespace VrachDubRosh
         private int patientID;
         private string patientName;
         private string chiefDoctorName;
-        
+        private List<string> doctorsList;
+
         // Constructor for creating/editing a discharge document
         public DischargeDocumentWindow(int patientID, string patientName, string chiefDoctorName)
         {
@@ -122,39 +123,36 @@ namespace VrachDubRosh
                     {
                         txtDiagnoses.Text = "с: Нет установленных диагнозов";
                     }
-                    
+
+                    doctorsList = new List<string>();
                     // Get doctors assigned to the patient
                     string doctorsQuery = @"
                         SELECT d.FullName, d.Specialty
                         FROM PatientDoctorAssignments pda
                         JOIN Doctors d ON pda.DoctorID = d.DoctorID
                         WHERE pda.PatientID = @PatientID";
-                    
-                    List<string> doctors = new List<string>();
-                    
                     using (SqlCommand command = new SqlCommand(doctorsQuery, connection))
                     {
                         command.Parameters.AddWithValue("@PatientID", patientID);
-                        
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
                                 string doctorName = reader["FullName"].ToString();
                                 string specialty = reader["Specialty"].ToString();
-                                doctors.Add($"{doctorName} ({specialty})");
+                                doctorsList.Add($"{doctorName} ({specialty})");
                             }
                         }
                     }
-                    
-                    // Format doctors
-                    if (doctors.Count > 0)
+
+                    // Привязка списка к ItemsControl
+                    if (doctorsList.Count > 0)
                     {
-                        txtDoctors.Text = string.Join(", ", doctors);
+                        lstDoctors.ItemsSource = doctorsList;
                     }
                     else
                     {
-                        txtDoctors.Text = "Не назначены";
+                        lstDoctors.ItemsSource = new List<string> { "Не назначены" };
                     }
                 }
             }
@@ -296,14 +294,6 @@ namespace VrachDubRosh
                                        $"Документ сохранен здесь: {filePath}", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
-                else
-                {
-                    if (MessageBox.Show("Не удалось создать Word-документ. Хотите открыть простой предпросмотр?", 
-                                      "Ошибка создания документа", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                    {
-                        ShowSimplePreview();
-                    }
-                }
             }
             catch (Exception ex)
             {
@@ -365,14 +355,31 @@ namespace VrachDubRosh
                 rtf.Append(@"\b Общее состояние при поступлении:\b0\par ");
                 rtf.Append(EscapeRtf(txtInitialCondition.Text));
                 rtf.Append(@"\par");
-                
+
                 // Врачи
-                rtf.Append(@"\b В составе мультидисциплинарной команды консультирован специалистами:\b0\par ");
-                rtf.Append(EscapeRtf(txtDoctors.Text));
-                rtf.Append(@"\par");
-                
-                // Цель реабилитации
-                rtf.Append(@"\b Цель реабилитации:\b0\par ");
+                rtf.Append(@"\b В составе мультидисциплинарной команды консультирован специалистами:\b0\par");
+                if (doctorsList.Count > 0)
+                {
+                    foreach (string doctor in doctorsList)
+                    {
+                        rtf.Append(@"\li300 "); // Левый отступ 300 твипов
+                        rtf.Append(EscapeRtf(doctor));
+                        rtf.Append(@"\par");
+                    }
+                    // Сброс отступа после списка
+                    rtf.Append(@"\li0 ");
+                }
+                else
+                {
+                    rtf.Append(@"\li300 Не назначены\par");
+                    rtf.Append(@"\li0 ");
+                }
+
+                // После списка специалистов добавляем:
+                rtf.Append(@"\pard"); // Сбрасываем все форматирования абзаца
+
+                // Затем продолжаем с обычным форматированием:
+                rtf.Append(@"\ql\b Цель реабилитации:\b0\par ");
                 rtf.Append(EscapeRtf(txtRehabilitationGoal.Text));
                 rtf.Append(@"\par");
                 
@@ -440,203 +447,6 @@ namespace VrachDubRosh
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-        }
-        
-        private void ShowSimplePreview()
-        {
-            try
-            {
-                // Создаем простое окно предпросмотра
-                System.Windows.Window previewWindow = new System.Windows.Window
-                {
-                    Title = "Предпросмотр выписного эпикриза",
-                    Width = 800,
-                    Height = 600,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = this
-                };
-
-                // Создаем скроллвьювер для контента
-                ScrollViewer scrollViewer = new ScrollViewer
-                {
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                    Margin = new Thickness(20)
-                };
-
-                // Создаем флоудокумент для отображения содержимого
-                FlowDocument document = new FlowDocument
-                {
-                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-                    FontSize = 12
-                };
-
-                // Добавляем заголовок
-                WinParagraph titlePara = new WinParagraph(new Run("ВЫПИСНОЙ ЭПИКРИЗ"))
-                {
-                    FontSize = 18,
-                    FontWeight = FontWeights.Bold,
-                    TextAlignment = TextAlignment.Center
-                };
-                document.Blocks.Add(titlePara);
-
-                // Добавляем информацию о пациенте
-                WinParagraph patientPara = new WinParagraph(new Run(txtPatientInfo.Text))
-                {
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(patientPara);
-
-                // Добавляем сведения о пребывании
-                document.Blocks.Add(new WinParagraph(new Run(txtStayInfo.Text)));
-                document.Blocks.Add(new WinParagraph(new Run(txtDiagnoses.Text)));
-
-                // Добавляем жалобы
-                WinParagraph complaintsTitlePara = new WinParagraph(new Run("Поступил с жалобами на:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(complaintsTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtComplaints.Text)));
-
-                // Добавляем анамнез
-                WinParagraph historyTitlePara = new WinParagraph(new Run("Из анамнеза заболевания:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(historyTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtDiseaseHistory.Text)));
-
-                // Добавляем состояние при поступлении
-                WinParagraph conditionTitlePara = new WinParagraph(new Run("Общее состояние при поступлении:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(conditionTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtInitialCondition.Text)));
-
-                // Добавляем информацию о врачах
-                WinParagraph doctorsTitlePara = new WinParagraph(new Run("В составе мультидисциплинарной команды консультирован специалистами:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(doctorsTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtDoctors.Text)));
-
-                // Добавляем цель реабилитации
-                WinParagraph goalTitlePara = new WinParagraph(new Run("Цель реабилитации:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(goalTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtRehabilitationGoal.Text)));
-
-                // Добавляем информацию о достижении цели
-                string goalAchievedText = cmbGoalAchieved.SelectedIndex == 0 
-                    ? "Цель реабилитации достигнута. Лечение закончено"
-                    : "Цель реабилитации не достигнута";
-                WinParagraph goalAchievedPara = new WinParagraph(new Run(goalAchievedText))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(goalAchievedPara);
-
-                // Добавляем рекомендации
-                WinParagraph recommendationsTitlePara = new WinParagraph(new Run("Рекомендации:"))
-                {
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                document.Blocks.Add(recommendationsTitlePara);
-                document.Blocks.Add(new WinParagraph(new Run(txtRecommendations.Text)));
-
-                // Добавляем подпись
-                WinParagraph chiefDoctorPara = new WinParagraph(new Run(txtChiefDoctor.Text.Replace("Главный врач: ", "")))
-                {
-                    FontWeight = FontWeights.Bold,
-                    TextAlignment = TextAlignment.Right,
-                    Margin = new Thickness(0, 30, 0, 0)
-                };
-                document.Blocks.Add(chiefDoctorPara);
-
-                WinParagraph stampPara = new WinParagraph(new Run("М.П."))
-                {
-                    FontStyle = FontStyles.Italic,
-                    TextAlignment = TextAlignment.Right
-                };
-                document.Blocks.Add(stampPara);
-
-                // Добавляем кнопку печати
-                Button printButton = new Button
-                {
-                    Content = "Печать",
-                    Padding = new Thickness(15, 8, 15, 8),
-                    Margin = new Thickness(0, 10, 0, 0),
-                    HorizontalAlignment = HorizontalAlignment.Right
-                };
-                printButton.Click += (s, e) =>
-                {
-                    PrintDialog printDialog = new PrintDialog();
-                    if (printDialog.ShowDialog() == true)
-                    {
-                        // Создаем копию документа для печати
-                        FlowDocument printDoc = new FlowDocument();
-                        
-                        // Копируем содержимое, используя корректный способ копирования блоков
-                        foreach (var block in document.Blocks)
-                        {
-                            if (block is WinParagraph paragraph)
-                            {
-                                WinParagraph newParagraph = new WinParagraph();
-                                TextRange originalRange = new TextRange(paragraph.ContentStart, paragraph.ContentEnd);
-                                TextRange newRange = new TextRange(newParagraph.ContentStart, newParagraph.ContentEnd);
-                                
-                                newRange.Text = originalRange.Text;
-                                newParagraph.FontWeight = paragraph.FontWeight;
-                                newParagraph.FontSize = paragraph.FontSize;
-                                newParagraph.FontStyle = paragraph.FontStyle;
-                                newParagraph.TextAlignment = paragraph.TextAlignment;
-                                newParagraph.Margin = paragraph.Margin;
-                                
-                                printDoc.Blocks.Add(newParagraph);
-                            }
-                        }
-                        
-                        // Настраиваем размер страницы для печати
-                        printDoc.PagePadding = new Thickness(50);
-                        printDoc.ColumnWidth = printDialog.PrintableAreaWidth;
-                        IDocumentPaginatorSource paginatorSource = printDoc;
-                        printDialog.PrintDocument(paginatorSource.DocumentPaginator, "Выписной эпикриз");
-                    }
-                };
-
-                // Создаем компоновку для содержимого и кнопки
-                DockPanel dockPanel = new DockPanel();
-                
-                // Создаем DocumentViewer для просмотра документа
-                FlowDocumentReader reader = new FlowDocumentReader
-                {
-                    Document = document,
-                    ViewingMode = FlowDocumentReaderViewingMode.Scroll
-                };
-                
-                DockPanel.SetDock(printButton, Dock.Bottom);
-                dockPanel.Children.Add(printButton);
-                dockPanel.Children.Add(reader);
-
-                previewWindow.Content = dockPanel;
-                previewWindow.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при отображении предпросмотра: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
     }
 } 

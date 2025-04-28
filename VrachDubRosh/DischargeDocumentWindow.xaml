@@ -165,9 +165,15 @@
                 <!-- Консультанты -->
                 <StackPanel Margin="0,0,0,15">
                     <TextBlock Text="В составе мультидисциплинарной команды консультирован специалистами:" 
-                               FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
-                    <TextBlock x:Name="txtDoctors" Text="Нет данных" Margin="0,5,0,0" 
-                               Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+               FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap"/>
+                    <ItemsControl x:Name="lstDoctors" Margin="20,5,0,0" 
+                  Foreground="{DynamicResource ForegroundBrush}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
 
                 <!-- Цель реабилитации -->
