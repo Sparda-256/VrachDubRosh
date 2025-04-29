@@ -223,6 +223,24 @@ CREATE TABLE ManagerDocuments (
     Description NVARCHAR(MAX) NULL
 );
 
+-- Таблица для выписных эпикризов
+CREATE TABLE DischargeDocuments (
+    DischargeID INT IDENTITY PRIMARY KEY,
+    PatientID INT NOT NULL,
+    Complaints NVARCHAR(MAX),
+    DiseaseHistory NVARCHAR(MAX),
+    InitialCondition NVARCHAR(MAX),
+    RehabilitationGoal NVARCHAR(MAX),
+    GoalAchieved BIT,
+    Recommendations NVARCHAR(MAX),
+    LastUpdated DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
+); 
+
+INSERT INTO Managers(FullName, Password)
+VALUES
+('3', '3');
+
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
 ('admin', 'admin'),
@@ -342,17 +360,3 @@ VALUES
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
 ('Доверенность от законных представителей', 0, 0, 200, 1);
-
--- Таблица для выписных эпикризов
-CREATE TABLE DischargeDocuments (
-    DischargeID INT IDENTITY PRIMARY KEY,
-    PatientID INT NOT NULL,
-    Complaints NVARCHAR(MAX),
-    DiseaseHistory NVARCHAR(MAX),
-    InitialCondition NVARCHAR(MAX),
-    RehabilitationGoal NVARCHAR(MAX),
-    GoalAchieved BIT,
-    Recommendations NVARCHAR(MAX),
-    LastUpdated DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
-); 
