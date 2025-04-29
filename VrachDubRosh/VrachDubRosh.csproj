@@ -172,6 +172,9 @@
     <Compile Include="UploadDocumentWindow.xaml.cs">
       <DependentUpon>UploadDocumentWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="WeeklyScheduleWindow.xaml.cs">
+      <DependentUpon>WeeklyScheduleWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="AccompanyingDocumentsWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -271,6 +274,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="UploadDocumentWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="WeeklyScheduleWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -360,3 +360,29 @@ VALUES
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
 ('Доверенность от законных представителей', 0, 0, 200, 1);
+
+-- Таблица для регулярных назначений процедур (недельный график)
+CREATE TABLE WeeklyScheduleAppointments (
+    ScheduleID INT IDENTITY PRIMARY KEY,
+    PatientID INT NOT NULL,
+    DoctorID INT NOT NULL,
+    ProcedureID INT NOT NULL,
+    DayOfWeek INT NOT NULL, -- 1 = Понедельник, 2 = Вторник, и т.д.
+    AppointmentTime TIME NOT NULL, -- Время назначения
+    StartDate DATE NOT NULL, -- Дата начала повторений
+    EndDate DATE NOT NULL, -- Дата окончания повторений
+    IsActive BIT DEFAULT 1, -- Активно ли расписание
+    CreatedDateTime DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
+    FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
+);
+
+-- Таблица для экземпляров процедур, созданных на основе недельного графика
+CREATE TABLE ScheduleGeneratedAppointments (
+    GeneratedAppointmentID INT IDENTITY PRIMARY KEY,
+    ScheduleID INT NOT NULL,
+    AppointmentID INT NOT NULL, -- ID в таблице ProcedureAppointments
+    FOREIGN KEY (ScheduleID) REFERENCES WeeklyScheduleAppointments(ScheduleID),
+    FOREIGN KEY (AppointmentID) REFERENCES ProcedureAppointments(AppointmentID)
+);

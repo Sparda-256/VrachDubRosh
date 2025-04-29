@@ -1,0 +1,579 @@
+<Window x:Class="VrachDubRosh.WeeklyScheduleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Недельный график процедур" Height="550" Width="900"
+        Background="{DynamicResource BackgroundBrush}"
+        Icon="/icodubrosh.png"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        BorderThickness="0"
+        WindowStyle="SingleBorderWindow">
+    <Window.Resources>
+        <!-- Кнопка стандартная -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Красная кнопка -->
+        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#F44336"/>
+            <Setter Property="MinWidth" Value="80"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D32F2F"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Синяя кнопка -->
+        <Style x:Key="BlueButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#2196F3"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1976D2"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#0D47A1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Серая кнопка -->
+        <Style x:Key="GrayButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundedButtonStyle}">
+            <Setter Property="Background" Value="#757575"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#616161"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#424242"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Текстовое поле -->
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="false"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          Background="Transparent" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DatePicker стиль -->
+        <Style x:Key="RoundedDatePickerStyle" TargetType="DatePicker">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Border CornerRadius="6" Background="{TemplateBinding Background}" 
+                        BorderBrush="{TemplateBinding BorderBrush}" 
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox" 
+                                         Grid.Column="0" 
+                                         Focusable="True"
+                                         HorizontalContentAlignment="Left"
+                                         VerticalContentAlignment="Center"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
+                                         Margin="8,0"
+                                         Foreground="{DynamicResource ForegroundBrush}"
+                                         Background="Transparent"
+                                         BorderThickness="0"/>
+                                <Button x:Name="PART_Button" 
+                              Grid.Column="1"
+                              Focusable="False"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Margin="0,0,8,0"
+                              Width="20"
+                              Height="20"
+                              Background="Transparent"
+                              BorderThickness="0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Grid Background="Transparent">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                    <Button.Content>
+                                        <Path Fill="{DynamicResource SubtitleBrush}" Data="M 0,0 L 0,12 12,12 12,0 Z M 1,1 L 1,3 11,3 11,1 Z M 1,4 L 1,11 11,11 11,4 Z M 3,6 L 5,6 5,8 3,8 Z M 6,6 L 8,6 8,8 6,8 Z M 9,6 L 11,6 11,8 9,8 Z M 3,9 L 5,9 5,11 3,11 Z M 6,9 L 8,9 8,11 6,11 Z M 9,9 L 11,9 11,11 9,11 Z"/>
+                                    </Button.Content>
+                                </Button>
+                                <Popup x:Name="PART_Popup" 
+                             StaysOpen="False"
+                             AllowsTransparency="True"
+                             PopupAnimation="Slide"
+                             PlacementTarget="{Binding ElementName=PART_Button}"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox стиль -->
+        <Style x:Key="RoundedComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" 
+                              ClickMode="Press" 
+                              Focusable="false"
+                              IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                              IsHitTestVisible="True">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="templateRoot" CornerRadius="6" 
+                                        Background="{DynamicResource InputBackgroundBrush}" 
+                                        BorderBrush="{DynamicResource BorderBrush}" 
+                                        BorderThickness="1"
+                                        SnapsToDevicePixels="true">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Leave empty for content presenter -->
+                                                <Path Grid.Column="1" 
+                                            Width="10" Height="6" 
+                                            Margin="0,0,8,0"
+                                            Fill="{DynamicResource SubtitleBrush}"
+                                            Data="M 0 0 L 4 4 L 8 0 Z"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="true">
+                                                <Setter Property="BorderBrush" TargetName="templateRoot" Value="{DynamicResource BorderHoverBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!-- Content presenter for selected item -->
+                            <ContentPresenter x:Name="ContentSite" 
+                                  Content="{TemplateBinding SelectionBoxItem}" 
+                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                  IsHitTestVisible="False"
+                                  Margin="8,0,30,0"
+                                  VerticalAlignment="Center"/>
+                            <Popup Name="Popup" 
+                         Placement="Bottom"
+                         IsOpen="{TemplateBinding IsDropDownOpen}"
+                         Focusable="False" 
+                         AllowsTransparency="True"
+                         PopupAnimation="Slide">
+                                <Grid Name="DropDown" 
+                          SnapsToDevicePixels="True"
+                          MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                          MinWidth="{TemplateBinding ActualWidth}">
+                                    <Border CornerRadius="0,0,6,6" 
+                                 Background="{DynamicResource InputBackgroundBrush}" 
+                                 BorderBrush="{DynamicResource BorderBrush}" 
+                                 BorderThickness="1">
+                                        <ScrollViewer SnapsToDevicePixels="True">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid стиль -->
+        <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="RowHeight" Value="36"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+        </Style>
+
+        <!-- Заголовок DataGrid ячейки -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Стиль для ячеек DataGrid -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Label style -->
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="{DynamicResource SubtitleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- CheckBox style -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource SubtitleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,5"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <TextBlock Grid.Row="0" 
+                   Text="Недельный график процедур" 
+                   FontSize="20" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,15"
+                   Foreground="{DynamicResource ForegroundBrush}"/>
+
+        <!-- Форма для создания недельного графика -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Строка 1 -->
+            <Label Grid.Row="0" Grid.Column="0" Content="Пациент:" Margin="0,0,10,10"/>
+            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cbPatients" 
+                      Style="{StaticResource RoundedComboBoxStyle}" 
+                      Margin="0,0,10,10"
+                      SelectedValuePath="PatientID">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding FullName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Label Grid.Row="0" Grid.Column="2" Content="Процедура:" Margin="10,0,10,10"/>
+            <ComboBox Grid.Row="0" Grid.Column="3" x:Name="cbProcedures" 
+                      Style="{StaticResource RoundedComboBoxStyle}" 
+                      Margin="0,0,0,10"
+                      SelectedValuePath="ProcedureID">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayText}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Строка 2 -->
+            <Label Grid.Row="1" Grid.Column="0" Content="Дата начала:" Margin="0,0,10,10"/>
+            <DatePicker Grid.Row="1" Grid.Column="1" x:Name="dpStartDate" 
+                        Style="{StaticResource RoundedDatePickerStyle}" 
+                        Margin="0,0,10,10"/>
+
+            <Label Grid.Row="1" Grid.Column="2" Content="Дата окончания:" Margin="10,0,10,10"/>
+            <DatePicker Grid.Row="1" Grid.Column="3" x:Name="dpEndDate" 
+                        Style="{StaticResource RoundedDatePickerStyle}" 
+                        Margin="0,0,0,10"/>
+
+            <!-- Строка 3 - Дни недели -->
+            <Label Grid.Row="2" Grid.Column="0" Content="Дни недели:" Margin="0,0,10,5" VerticalAlignment="Top"/>
+            <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox x:Name="chkMonday" Content="Понедельник" Margin="0,5,40,5"/>
+                    <CheckBox x:Name="chkTuesday" Content="Вторник" Margin="0,5,40,5"/>
+                    <CheckBox x:Name="chkWednesday" Content="Среда" Margin="0,5,40,5"/>
+                    <CheckBox x:Name="chkThursday" Content="Четверг" Margin="0,5,40,5"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox x:Name="chkFriday" Content="Пятница" Margin="0,5,40,5"/>
+                    <CheckBox x:Name="chkSaturday" Content="Суббота" Margin="0,5,40,5"/>
+                    <CheckBox x:Name="chkSunday" Content="Воскресенье" Margin="0,5,40,5"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Строка 4 - Время -->
+            <Label Grid.Row="3" Grid.Column="0" Content="Время:" Margin="0,0,10,15"/>
+            <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0" Content="Пн:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="1" x:Name="tbMondayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkMonday, Path=IsChecked}"/>
+
+                <Label Grid.Column="2" Content="Вт:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="3" x:Name="tbTuesdayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkTuesday, Path=IsChecked}"/>
+
+                <Label Grid.Column="4" Content="Ср:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="5" x:Name="tbWednesdayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkWednesday, Path=IsChecked}"/>
+
+                <Label Grid.Column="6" Content="Чт:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="7" x:Name="tbThursdayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,0,0"
+                         IsEnabled="{Binding ElementName=chkThursday, Path=IsChecked}"/>
+            </Grid>
+
+            <!-- Строка 5 - Время (продолжение) -->
+            <Label Grid.Row="4" Grid.Column="0" Content="" Visibility="Hidden"/>
+            <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0" Content="Пт:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="1" x:Name="tbFridayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkFriday, Path=IsChecked}"/>
+
+                <Label Grid.Column="2" Content="Сб:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="3" x:Name="tbSaturdayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkSaturday, Path=IsChecked}"/>
+
+                <Label Grid.Column="4" Content="Вс:" Margin="0,0,5,0"/>
+                <TextBox Grid.Column="5" x:Name="tbSundayTime" 
+                         Style="{StaticResource RoundedTextBoxStyle}" 
+                         Margin="0,0,10,0"
+                         IsEnabled="{Binding ElementName=chkSunday, Path=IsChecked}"/>
+            </Grid>
+        </Grid>
+
+        <!-- DataGrid для отображения существующих графиков -->
+        <DataGrid Grid.Row="2" x:Name="dgSchedules" 
+                  Style="{StaticResource ModernDataGridStyle}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True" 
+                  SelectionMode="Single" 
+                  Margin="0,0,0,15"
+                  MouseDoubleClick="dgSchedules_MouseDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
+                <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*"/>
+                <DataGridTextColumn Header="День недели" Binding="{Binding DayOfWeekName}" Width="110"/>
+                <DataGridTextColumn Header="Время" Binding="{Binding AppointmentTimeStr}" Width="70"/>
+                <DataGridTextColumn Header="С" Binding="{Binding StartDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
+                <DataGridTextColumn Header="По" Binding="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
+                <DataGridCheckBoxColumn Header="Активен" Binding="{Binding IsActive}" Width="70"/>
+                <DataGridTemplateColumn Header="Действия" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Style="{StaticResource BlueButtonStyle}" 
+                                        Padding="8,4" 
+                                        Margin="0,0,5,0"
+                                        Click="btnEditSchedule_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="16" Height="16" 
+                                              Data="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Изменить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource RedButtonStyle}" 
+                                        Padding="8,4" 
+                                        Click="btnDeleteSchedule_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Width="16" Height="16" 
+                                              Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
+                                              Fill="White"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Удалить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White" FontSize="12"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Кнопки внизу -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="btnAddSchedule" 
+                    Style="{StaticResource RoundedButtonStyle}"
+                    Margin="0,0,10,0" 
+                    Click="btnAddSchedule_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="18" Height="18" 
+                          Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
+                          Fill="White"
+                          Stretch="Uniform"/>
+                    <TextBlock Text="Создать график" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="btnRefresh" 
+                    Style="{StaticResource BlueButtonStyle}" 
+                    Margin="0,0,10,0"
+                    Click="btnRefresh_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="18" Height="18" 
+                          Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                          Fill="White"
+                          Stretch="Uniform"/>
+                    <TextBlock Text="Обновить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="btnClose" 
+                    Style="{StaticResource GrayButtonStyle}" 
+                    Click="btnClose_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Path Width="18" Height="18" 
+                          Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+                          Fill="White"
+                          Stretch="Uniform"/>
+                    <TextBlock Text="Закрыть" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window> 

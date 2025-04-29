@@ -41,6 +41,10 @@ namespace VrachDubRosh
             LoadProceduresForAssignment();
             UpdateAppointmentsStatus();
 
+            // Автоматически устанавливаем галочку "Скрыть завершённые и отменённые"
+            chkHideCompleted.IsChecked = true;
+            ApplyAppointmentsFilter(); // Применяем фильтр
+
             // Проверяем текущую тему приложения
             ResourceDictionary currentDict = Application.Current.Resources.MergedDictionaries[0];
             if (currentDict.Source.ToString().Contains("DarkTheme"))
@@ -793,6 +797,18 @@ namespace VrachDubRosh
             loginWindow.Show();
             // Закрываем текущее окно
             this.Close();
+        }
+
+        private void btnWeeklySchedule_Click(object sender, RoutedEventArgs e)
+        {
+            WeeklyScheduleWindow weeklyScheduleWindow = new WeeklyScheduleWindow(_doctorID);
+            weeklyScheduleWindow.Owner = this;
+            if (weeklyScheduleWindow.ShowDialog() == true)
+            {
+                // Обновляем список назначений после закрытия окна недельного графика
+                UpdateAppointmentsStatus();
+                LoadDoctorAppointments();
+            }
         }
     }
 }
