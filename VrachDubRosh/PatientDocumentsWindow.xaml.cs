@@ -60,7 +60,7 @@ namespace VrachDubRosh
                     
                     // Получаем список типов документов, соответствующих возрасту пациента
                     string query = @"
-                        SELECT dt.DocumentTypeID, dt.DocumentName, dt.Description, dt.IsRequired, dt.ValidityDays,
+                        SELECT dt.DocumentTypeID, dt.DocumentName, dt.IsRequired,
                                pd.DocumentID, pd.DocumentPath, pd.UploadDate,
                                CASE 
                                    WHEN pd.DocumentID IS NULL THEN 'Не загружен'

@@ -51,7 +51,6 @@ namespace VrachDubRosh
                     SELECT 
                         dt.DocumentTypeID,
                         dt.DocumentName,
-                        dt.Description,
                         dt.IsRequired,
                         CASE 
                             WHEN apd.DocumentID IS NOT NULL THEN 'Загружен'
