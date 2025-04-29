@@ -168,7 +168,7 @@ namespace VrachDubRosh
 
         #region Загрузка данных
         
-        private void LoadPatients()
+        public void LoadPatients()
         {
             try
             {
@@ -208,7 +208,7 @@ namespace VrachDubRosh
             }
         }
         
-        private void LoadAccompanyingPersons()
+        public void LoadAccompanyingPersons()
         {
             try
             {

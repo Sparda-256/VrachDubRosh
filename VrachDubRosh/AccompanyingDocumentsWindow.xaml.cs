@@ -36,6 +36,18 @@ namespace VrachDubRosh
             
             // Загружаем документы
             LoadDocuments();
+            
+            // Добавляем обработчик события закрытия окна
+            this.Closed += AccompanyingDocumentsWindow_Closed;
+        }
+        
+        private void AccompanyingDocumentsWindow_Closed(object sender, EventArgs e)
+        {
+            // Обновляем список сопровождающих в родительском окне
+            if (Owner is ManagerWindow managerWindow)
+            {
+                managerWindow.LoadAccompanyingPersons();
+            }
         }
 
         private void LoadDocuments()

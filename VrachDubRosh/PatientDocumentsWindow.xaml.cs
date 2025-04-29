@@ -48,6 +48,18 @@ namespace VrachDubRosh
             
             // Загружаем список документов
             LoadDocuments();
+            
+            // Добавляем обработчик события закрытия окна
+            this.Closed += PatientDocumentsWindow_Closed;
+        }
+        
+        private void PatientDocumentsWindow_Closed(object sender, EventArgs e)
+        {
+            // Обновляем список пациентов в родительском окне
+            if (Owner is ManagerWindow managerWindow)
+            {
+                managerWindow.LoadPatients();
+            }
         }
         
         private void LoadDocuments()
