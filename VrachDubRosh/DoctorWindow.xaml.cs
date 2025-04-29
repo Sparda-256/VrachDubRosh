@@ -575,33 +575,65 @@ namespace VrachDubRosh
 
         private void btnCancelAppointment_Click(object sender, RoutedEventArgs e)
         {
-            if (dgAppointments.SelectedItem == null)
+            if (dgAppointments.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите назначение для отмены.");
+                MessageBox.Show("Выберите назначения для отмены.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            DataRowView row = dgAppointments.SelectedItem as DataRowView;
-            int appointmentID = Convert.ToInt32(row["AppointmentID"]);
+            // Подтверждение отмены
+            string message = dgAppointments.SelectedItems.Count == 1
+                ? "Вы уверены, что хотите отменить выбранное назначение?"
+                : $"Вы уверены, что хотите отменить {dgAppointments.SelectedItems.Count} выбранных назначений?";
+            
+            if (MessageBox.Show(message, "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            int successCount = 0;
+            
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string updateQuery = "UPDATE ProcedureAppointments SET Status = 'Отменена' WHERE AppointmentID = @AppointmentID";
-                    using (SqlCommand cmd = new SqlCommand(updateQuery, con))
+                    
+                    foreach (DataRowView row in dgAppointments.SelectedItems)
                     {
-                        cmd.Parameters.AddWithValue("@AppointmentID", appointmentID);
-                        cmd.ExecuteNonQuery();
+                        int appointmentID = Convert.ToInt32(row["AppointmentID"]);
+                        string status = row["Status"].ToString();
+                        
+                        // Проверяем, что назначение можно отменить (не завершено)
+                        if (status != "Завершена")
+                        {
+                            string updateQuery = "UPDATE ProcedureAppointments SET Status = 'Отменена' WHERE AppointmentID = @AppointmentID";
+                            using (SqlCommand cmd = new SqlCommand(updateQuery, con))
+                            {
+                                cmd.Parameters.AddWithValue("@AppointmentID", appointmentID);
+                                cmd.ExecuteNonQuery();
+                                successCount++;
+                            }
+                        }
                     }
                 }
-                MessageBox.Show("Назначение отменено.");
+                
+                string resultMessage = successCount == 1
+                    ? "Назначение успешно отменено."
+                    : $"Успешно отменено назначений: {successCount}";
+                
+                if (successCount < dgAppointments.SelectedItems.Count)
+                {
+                    resultMessage += "\nНекоторые назначения не могут быть отменены (уже завершены).";
+                }
+                
+                MessageBox.Show(resultMessage, "Результат", MessageBoxButton.OK, MessageBoxImage.Information);
                 UpdateAppointmentsStatus();
                 LoadDoctorAppointments();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при отмене назначения: " + ex.Message);
+                MessageBox.Show("Ошибка при отмене назначений: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

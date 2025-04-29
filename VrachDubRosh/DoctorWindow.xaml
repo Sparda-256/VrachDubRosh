@@ -635,7 +635,7 @@
                         <DataGrid x:Name="dgAppointments" Grid.Row="2" 
                                   Style="{StaticResource ModernDataGridStyle}"
                                   AutoGenerateColumns="False" 
-                                  IsReadOnly="True" SelectionMode="Single" Margin="0,0,0,15"
+                                  IsReadOnly="True" SelectionMode="Extended" Margin="0,0,0,15"
                                   MouseDoubleClick="dgAppointments_MouseDoubleClick">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
@@ -644,27 +644,6 @@
                                                     Binding="{Binding AppointmentDateTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}" 
                                                     Width="150"/>
                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="100"/>
-                                <DataGridTemplateColumn Header="Действия" Width="120">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button 
-                                                Style="{StaticResource RedButtonStyle}"
-                                                Padding="8,4" 
-                                                HorizontalAlignment="Stretch" 
-                                                VerticalAlignment="Center"
-                                                MinWidth="80"
-                                                Click="btnCancelAppointment_Click">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Path Width="16" Height="16" 
-                                                          Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-                                                          Fill="White"
-                                                          Stretch="Uniform"/>
-                                                    <TextBlock Text="Отменить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White" FontSize="12"/>
-                                                </StackPanel>
-                                            </Button>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -674,13 +653,26 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <CheckBox Grid.Column="0" x:Name="chkHideCompleted" Content="Скрыть завершённые и отменённые" Margin="5"
                                       FontSize="14" VerticalAlignment="Center"
                                       Checked="chkHideCompleted_Checked" Unchecked="chkHideCompleted_Checked"/>
 
-                            <Button Grid.Column="1" Style="{StaticResource BlueButtonStyle}" 
+                            <Button Grid.Column="1" Style="{StaticResource RedButtonStyle}" 
+                                    Margin="0,0,10,0"
+                                    Click="btnCancelAppointment_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Width="16" Height="16" 
+                                          Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+                                          Fill="White"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="Отменить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Grid.Column="2" Style="{StaticResource BlueButtonStyle}" 
                                     Margin="0,0,10,0"
                                     Click="btnWeeklySchedule_Click">
                                 <StackPanel Orientation="Horizontal">
@@ -692,7 +684,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <Button Grid.Column="2" Style="{StaticResource BlueButtonStyle}" 
+                            <Button Grid.Column="3" Style="{StaticResource BlueButtonStyle}" 
                                     Click="btnUpdateAppointmentsStatus_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Width="18" Height="18" 
