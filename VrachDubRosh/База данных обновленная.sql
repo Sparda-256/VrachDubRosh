@@ -81,22 +81,6 @@ CREATE TABLE Procedures (
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
 );
 
--- Таблица повторяющихся процедур
-CREATE TABLE RecurringProcedureSchedules (
-    RecurringScheduleID INT IDENTITY PRIMARY KEY,
-    PatientID INT NOT NULL,
-    DoctorID INT NOT NULL,
-    ProcedureID INT NOT NULL,
-    DayOfWeek INT NOT NULL, -- 1 = Понедельник, 2 = Вторник и т.д.
-    TimeOfDay TIME NOT NULL,
-    StartDate DATE NOT NULL,
-    EndDate DATE NOT NULL,
-    IsActive BIT DEFAULT 1,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
-    FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
-);
-
 -- Создание таблицы для назначений процедур
 CREATE TABLE ProcedureAppointments (
     AppointmentID INT IDENTITY PRIMARY KEY,
@@ -106,11 +90,9 @@ CREATE TABLE ProcedureAppointments (
     AppointmentDateTime DATETIME,
     Status NVARCHAR(50),
     Description NVARCHAR(1000) NULL,
-    RecurringScheduleID INT NULL, -- Ссылка на повторяющееся расписание, если есть
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
-    FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID),
-    FOREIGN KEY (RecurringScheduleID) REFERENCES RecurringProcedureSchedules(RecurringScheduleID)
+    FOREIGN KEY (ProcedureID) REFERENCES Procedures(ProcedureID)
 );
 
 -- Таблица для типов документов
@@ -378,59 +360,3 @@ VALUES
 ('Результат флюорографии или заключение фтизиатра', 1, 0, 200, 1),
 ('Анализ крови на RW', 1, 0, 200, 1),
 ('Доверенность от законных представителей', 0, 0, 200, 1);
-
--- Хранимая процедура для генерации назначений на основе повторяющегося расписания
-CREATE PROCEDURE GenerateAppointmentsFromRecurringSchedules
-    @StartDate DATE,
-    @EndDate DATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Временная таблица для хранения дат
-    DECLARE @Dates TABLE (DateValue DATE);
-    
-    -- Заполняем временную таблицу датами от @StartDate до @EndDate
-    DECLARE @CurrentDate DATE = @StartDate;
-    WHILE @CurrentDate <= @EndDate
-    BEGIN
-        INSERT INTO @Dates (DateValue) VALUES (@CurrentDate);
-        SET @CurrentDate = DATEADD(DAY, 1, @CurrentDate);
-    END;
-    
-    -- Создаём назначения на основе повторяющихся расписаний
-    INSERT INTO ProcedureAppointments (
-        PatientID,
-        DoctorID,
-        ProcedureID,
-        AppointmentDateTime,
-        Status,
-        RecurringScheduleID
-    )
-    SELECT
-        rs.PatientID,
-        rs.DoctorID,
-        rs.ProcedureID,
-        CAST(d.DateValue AS DATETIME) + CAST(rs.TimeOfDay AS DATETIME),
-        'Назначена',
-        rs.RecurringScheduleID
-    FROM
-        RecurringProcedureSchedules rs
-    CROSS JOIN
-        @Dates d
-    WHERE
-        rs.IsActive = 1 AND
-        d.DateValue BETWEEN rs.StartDate AND rs.EndDate AND
-        DATEPART(WEEKDAY, d.DateValue) = rs.DayOfWeek AND
-        -- Проверяем, что такого назначения ещё нет в базе
-        NOT EXISTS (
-            SELECT 1 
-            FROM ProcedureAppointments pa 
-            WHERE 
-                pa.PatientID = rs.PatientID AND
-                pa.DoctorID = rs.DoctorID AND
-                pa.ProcedureID = rs.ProcedureID AND
-                CAST(pa.AppointmentDateTime AS DATE) = d.DateValue AND
-                CAST(pa.AppointmentDateTime AS TIME) = rs.TimeOfDay
-        );
-END;
