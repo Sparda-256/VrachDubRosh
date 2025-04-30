@@ -56,7 +56,7 @@ namespace VrachDubRosh
 
             // Настраиваем и запускаем таймер
             _refreshTimer = new DispatcherTimer();
-            _refreshTimer.Interval = TimeSpan.FromSeconds(3); // например, каждые 30 секунд
+            _refreshTimer.Interval = TimeSpan.FromSeconds(60); // например, каждые 60 секунд
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
         }
