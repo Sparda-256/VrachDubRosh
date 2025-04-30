@@ -129,7 +129,7 @@ namespace VrachDubRosh
                                    WHEN ws.DayOfWeek = 6 THEN 'Суббота'
                                    WHEN ws.DayOfWeek = 7 THEN 'Воскресенье'
                                END AS DayOfWeekName,
-                               FORMAT(ws.AppointmentTime, 'HH:mm') AS AppointmentTimeStr
+                               CONVERT(VARCHAR(5), ws.AppointmentTime, 108) AS AppointmentTimeStr
                         FROM WeeklyScheduleAppointments ws
                         INNER JOIN Patients p ON ws.PatientID = p.PatientID
                         INNER JOIN Procedures pr ON ws.ProcedureID = pr.ProcedureID
@@ -374,7 +374,28 @@ namespace VrachDubRosh
             tbSundayTime.Text = string.Empty;
 
             _scheduleID = 0;
-            btnAddSchedule.Content = "Создать график";
+            
+            // Создаем StackPanel с иконкой и текстом для кнопки создания
+            StackPanel sp = new StackPanel();
+            sp.Orientation = Orientation.Horizontal;
+            
+            Path p = new Path();
+            p.Data = Geometry.Parse("M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z");
+            p.Fill = System.Windows.Media.Brushes.White;
+            p.Width = 18;
+            p.Height = 18;
+            p.Stretch = Stretch.Uniform;
+            
+            TextBlock tb = new TextBlock();
+            tb.Text = "Создать график";
+            tb.VerticalAlignment = VerticalAlignment.Center;
+            tb.Foreground = System.Windows.Media.Brushes.White;
+            tb.Margin = new Thickness(5, 0, 0, 0);
+            
+            sp.Children.Add(p);
+            sp.Children.Add(tb);
+            
+            btnAddSchedule.Content = sp;
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -446,15 +467,9 @@ namespace VrachDubRosh
             SetDayChecked(dayOfWeek, true);
             SetTimeForDay(dayOfWeek, timeStr);
 
-            // Меняем текст кнопки
-            btnAddSchedule.Content = "Обновить график";
-            
-            // Обновляем текст надписи о действии
-            TextBlock tb = new TextBlock();
-            tb.Text = "Обновить график";
-            tb.VerticalAlignment = VerticalAlignment.Center;
-            tb.Foreground = System.Windows.Media.Brushes.White;
-            tb.Margin = new Thickness(5, 0, 0, 0);
+            // Создаем StackPanel с иконкой и текстом для кнопки обновления
+            StackPanel sp = new StackPanel();
+            sp.Orientation = Orientation.Horizontal;
             
             Path p = new Path();
             p.Data = Geometry.Parse("M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z");
@@ -463,8 +478,12 @@ namespace VrachDubRosh
             p.Height = 18;
             p.Stretch = Stretch.Uniform;
             
-            StackPanel sp = new StackPanel();
-            sp.Orientation = Orientation.Horizontal;
+            TextBlock tb = new TextBlock();
+            tb.Text = "Обновить график";
+            tb.VerticalAlignment = VerticalAlignment.Center;
+            tb.Foreground = System.Windows.Media.Brushes.White;
+            tb.Margin = new Thickness(5, 0, 0, 0);
+            
             sp.Children.Add(p);
             sp.Children.Add(tb);
             

@@ -7,6 +7,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         BorderThickness="0"
+        MinWidth="800" MinHeight="500"
         WindowStyle="SingleBorderWindow">
     <Window.Resources>
         <!-- Кнопка стандартная -->
@@ -332,248 +333,256 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <!-- Заголовок -->
-        <TextBlock Grid.Row="0" 
-                   Text="Недельный график процедур" 
-                   FontSize="20" 
-                   FontWeight="Bold" 
-                   Margin="0,0,0,15"
-                   Foreground="{DynamicResource ForegroundBrush}"/>
-
-        <!-- Форма для создания недельного графика -->
-        <Grid Grid.Row="1" Margin="0,0,0,15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+    <Viewbox Stretch="Uniform">
+        <Grid Width="900" Height="550" Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Строка 1 -->
-            <Label Grid.Row="0" Grid.Column="0" Content="Пациент:" Margin="0,0,10,10"/>
-            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cbPatients" 
-                      Style="{StaticResource RoundedComboBoxStyle}" 
-                      Margin="0,0,10,10"
-                      SelectedValuePath="PatientID">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding FullName}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <!-- Заголовок -->
+            <TextBlock Grid.Row="0" 
+                       Text="Недельный график процедур" 
+                       FontSize="20" 
+                       FontWeight="Bold" 
+                       Margin="0,0,0,15"
+                       Foreground="{DynamicResource ForegroundBrush}"/>
 
-            <Label Grid.Row="0" Grid.Column="2" Content="Процедура:" Margin="10,0,10,10"/>
-            <ComboBox Grid.Row="0" Grid.Column="3" x:Name="cbProcedures" 
-                      Style="{StaticResource RoundedComboBoxStyle}" 
-                      Margin="0,0,0,10"
-                      SelectedValuePath="ProcedureID">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding DisplayText}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-
-            <!-- Строка 2 -->
-            <Label Grid.Row="1" Grid.Column="0" Content="Дата начала:" Margin="0,0,10,10"/>
-            <DatePicker Grid.Row="1" Grid.Column="1" x:Name="dpStartDate" 
-                        Style="{StaticResource RoundedDatePickerStyle}" 
-                        Margin="0,0,10,10"/>
-
-            <Label Grid.Row="1" Grid.Column="2" Content="Дата окончания:" Margin="10,0,10,10"/>
-            <DatePicker Grid.Row="1" Grid.Column="3" x:Name="dpEndDate" 
-                        Style="{StaticResource RoundedDatePickerStyle}" 
-                        Margin="0,0,0,10"/>
-
-            <!-- Строка 3 - Дни недели -->
-            <Label Grid.Row="2" Grid.Column="0" Content="Дни недели:" Margin="0,0,10,5" VerticalAlignment="Top"/>
-            <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,0,0,10">
-                <StackPanel Orientation="Horizontal">
-                    <CheckBox x:Name="chkMonday" Content="Понедельник" Margin="0,5,40,5"/>
-                    <CheckBox x:Name="chkTuesday" Content="Вторник" Margin="0,5,40,5"/>
-                    <CheckBox x:Name="chkWednesday" Content="Среда" Margin="0,5,40,5"/>
-                    <CheckBox x:Name="chkThursday" Content="Четверг" Margin="0,5,40,5"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <CheckBox x:Name="chkFriday" Content="Пятница" Margin="0,5,40,5"/>
-                    <CheckBox x:Name="chkSaturday" Content="Суббота" Margin="0,5,40,5"/>
-                    <CheckBox x:Name="chkSunday" Content="Воскресенье" Margin="0,5,40,5"/>
-                </StackPanel>
-            </StackPanel>
-
-            <!-- Строка 4 - Время -->
-            <Label Grid.Row="3" Grid.Column="0" Content="Время:" Margin="0,0,10,15"/>
-            <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,15">
+            <!-- Форма для создания недельного графика -->
+            <Grid Grid.Row="1" Margin="0,0,0,15">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*" MinWidth="200"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*" MinWidth="200"/>
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <Label Grid.Column="0" Content="Пн:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="1" x:Name="tbMondayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkMonday, Path=IsChecked}"/>
-
-                <Label Grid.Column="2" Content="Вт:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="3" x:Name="tbTuesdayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkTuesday, Path=IsChecked}"/>
-
-                <Label Grid.Column="4" Content="Ср:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="5" x:Name="tbWednesdayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkWednesday, Path=IsChecked}"/>
-
-                <Label Grid.Column="6" Content="Чт:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="7" x:Name="tbThursdayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,0,0"
-                         IsEnabled="{Binding ElementName=chkThursday, Path=IsChecked}"/>
-            </Grid>
-
-            <!-- Строка 5 - Время (продолжение) -->
-            <Label Grid.Row="4" Grid.Column="0" Content="" Visibility="Hidden"/>
-            <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <Label Grid.Column="0" Content="Пт:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="1" x:Name="tbFridayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkFriday, Path=IsChecked}"/>
-
-                <Label Grid.Column="2" Content="Сб:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="3" x:Name="tbSaturdayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkSaturday, Path=IsChecked}"/>
-
-                <Label Grid.Column="4" Content="Вс:" Margin="0,0,5,0"/>
-                <TextBox Grid.Column="5" x:Name="tbSundayTime" 
-                         Style="{StaticResource RoundedTextBoxStyle}" 
-                         Margin="0,0,10,0"
-                         IsEnabled="{Binding ElementName=chkSunday, Path=IsChecked}"/>
-            </Grid>
-        </Grid>
-
-        <!-- DataGrid для отображения существующих графиков -->
-        <DataGrid Grid.Row="2" x:Name="dgSchedules" 
-                  Style="{StaticResource ModernDataGridStyle}"
-                  AutoGenerateColumns="False" 
-                  IsReadOnly="True" 
-                  SelectionMode="Single" 
-                  Margin="0,0,0,15"
-                  MouseDoubleClick="dgSchedules_MouseDoubleClick">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*"/>
-                <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*"/>
-                <DataGridTextColumn Header="День недели" Binding="{Binding DayOfWeekName}" Width="110"/>
-                <DataGridTextColumn Header="Время" Binding="{Binding AppointmentTimeStr}" Width="70"/>
-                <DataGridTextColumn Header="С" Binding="{Binding StartDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
-                <DataGridTextColumn Header="По" Binding="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
-                <DataGridCheckBoxColumn Header="Активен" Binding="{Binding IsActive}" Width="70"/>
-                <DataGridTemplateColumn Header="Действия" Width="Auto">
-                    <DataGridTemplateColumn.CellTemplate>
+                <!-- Строка 1 -->
+                <Label Grid.Row="0" Grid.Column="0" Content="Пациент:" Margin="0,0,10,10"/>
+                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cbPatients" 
+                          Style="{StaticResource RoundedComboBoxStyle}" 
+                          Margin="0,0,10,10"
+                          SelectedValuePath="PatientID">
+                    <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Style="{StaticResource BlueButtonStyle}" 
-                                        Padding="8,4" 
-                                        Margin="0,0,5,0"
-                                        Click="btnEditSchedule_Click">
-                                    <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding FullName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Label Grid.Row="0" Grid.Column="2" Content="Процедура:" Margin="10,0,10,10"/>
+                <ComboBox Grid.Row="0" Grid.Column="3" x:Name="cbProcedures" 
+                          Style="{StaticResource RoundedComboBoxStyle}" 
+                          Margin="0,0,0,10"
+                          SelectedValuePath="ProcedureID">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayText}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <!-- Строка 2 -->
+                <Label Grid.Row="1" Grid.Column="0" Content="Дата начала:" Margin="0,0,10,10"/>
+                <DatePicker Grid.Row="1" Grid.Column="1" x:Name="dpStartDate" 
+                            Style="{StaticResource RoundedDatePickerStyle}" 
+                            Margin="0,0,10,10"/>
+
+                <Label Grid.Row="1" Grid.Column="2" Content="Дата окончания:" Margin="10,0,10,10"/>
+                <DatePicker Grid.Row="1" Grid.Column="3" x:Name="dpEndDate" 
+                            Style="{StaticResource RoundedDatePickerStyle}" 
+                            Margin="0,0,0,10"/>
+
+                <!-- Строка 3 - Дни недели -->
+                <Label Grid.Row="2" Grid.Column="0" Content="Дни недели:" Margin="0,0,10,5" VerticalAlignment="Top"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox x:Name="chkMonday" Content="Понедельник" Margin="0,5,40,5"/>
+                        <CheckBox x:Name="chkTuesday" Content="Вторник" Margin="0,5,40,5"/>
+                        <CheckBox x:Name="chkWednesday" Content="Среда" Margin="0,5,40,5"/>
+                        <CheckBox x:Name="chkThursday" Content="Четверг" Margin="0,5,40,5"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox x:Name="chkFriday" Content="Пятница" Margin="0,5,40,5"/>
+                        <CheckBox x:Name="chkSaturday" Content="Суббота" Margin="0,5,40,5"/>
+                        <CheckBox x:Name="chkSunday" Content="Воскресенье" Margin="0,5,40,5"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Строка 4 - Время -->
+                <Label Grid.Row="3" Grid.Column="0" Content="Время:" Margin="0,0,10,15"/>
+                <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.Column="0" Content="Пн:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="1" x:Name="tbMondayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkMonday, Path=IsChecked}"/>
+
+                    <Label Grid.Column="2" Content="Вт:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="3" x:Name="tbTuesdayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkTuesday, Path=IsChecked}"/>
+
+                    <Label Grid.Column="4" Content="Ср:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="5" x:Name="tbWednesdayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkWednesday, Path=IsChecked}"/>
+
+                    <Label Grid.Column="6" Content="Чт:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="7" x:Name="tbThursdayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,0,0"
+                             IsEnabled="{Binding ElementName=chkThursday, Path=IsChecked}"/>
+                </Grid>
+
+                <!-- Строка 5 - Время (продолжение) -->
+                <Label Grid.Row="4" Grid.Column="0" Content="" Visibility="Hidden"/>
+                <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" MinWidth="80"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.Column="0" Content="Пт:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="1" x:Name="tbFridayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkFriday, Path=IsChecked}"/>
+
+                    <Label Grid.Column="2" Content="Сб:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="3" x:Name="tbSaturdayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkSaturday, Path=IsChecked}"/>
+
+                    <Label Grid.Column="4" Content="Вс:" Margin="0,0,5,0"/>
+                    <TextBox Grid.Column="5" x:Name="tbSundayTime" 
+                             Style="{StaticResource RoundedTextBoxStyle}" 
+                             Margin="0,0,10,0"
+                             IsEnabled="{Binding ElementName=chkSunday, Path=IsChecked}"/>
+                </Grid>
+            </Grid>
+
+            <!-- DataGrid для отображения существующих графиков -->
+            <DataGrid Grid.Row="2" x:Name="dgSchedules" 
+                      Style="{StaticResource ModernDataGridStyle}"
+                      AutoGenerateColumns="False" 
+                      IsReadOnly="True" 
+                      SelectionMode="Single" 
+                      Margin="0,0,0,15"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      MinHeight="100"
+                      RowHeight="50"
+                      MouseDoubleClick="dgSchedules_MouseDoubleClick">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Пациент" Binding="{Binding PatientName}" Width="*" MinWidth="120"/>
+                    <DataGridTextColumn Header="Процедура" Binding="{Binding ProcedureName}" Width="*" MinWidth="120"/>
+                    <DataGridTextColumn Header="День недели" Binding="{Binding DayOfWeekName}" Width="110"/>
+                    <DataGridTextColumn Header="Время" Binding="{Binding AppointmentTimeStr}" Width="70"/>
+                    <DataGridTextColumn Header="С" Binding="{Binding StartDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
+                    <DataGridTextColumn Header="По" Binding="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
+                    <DataGridTemplateColumn Header="Действия" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Button Style="{StaticResource BlueButtonStyle}" 
+                                            Padding="6,6" 
+                                            Margin="0,0,6,0"
+                                            Width="32" Height="32"
+                                            ToolTip="Изменить"
+                                            Click="btnEditSchedule_Click">
                                         <Path Width="16" Height="16" 
                                               Data="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"
                                               Fill="White"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Изменить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource RedButtonStyle}" 
-                                        Padding="8,4" 
-                                        Click="btnDeleteSchedule_Click">
-                                    <StackPanel Orientation="Horizontal">
+                                    </Button>
+                                    <Button Style="{StaticResource RedButtonStyle}" 
+                                            Padding="6,6"
+                                            Width="32" Height="32"
+                                            MinWidth="32"
+                                            MaxWidth="32"
+                                            ToolTip="Удалить"
+                                            Click="btnDeleteSchedule_Click">
                                         <Path Width="16" Height="16" 
                                               Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
                                               Fill="White"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Удалить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White" FontSize="12"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
 
-        <!-- Кнопки внизу -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="btnAddSchedule" 
-                    Style="{StaticResource RoundedButtonStyle}"
-                    Margin="0,0,10,0" 
-                    Click="btnAddSchedule_Click">
-                <StackPanel Orientation="Horizontal">
-                    <Path Width="18" Height="18" 
-                          Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
-                          Fill="White"
-                          Stretch="Uniform"/>
-                    <TextBlock Text="Создать график" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
-                </StackPanel>
-            </Button>
-            <Button x:Name="btnRefresh" 
-                    Style="{StaticResource BlueButtonStyle}" 
-                    Margin="0,0,10,0"
-                    Click="btnRefresh_Click">
-                <StackPanel Orientation="Horizontal">
-                    <Path Width="18" Height="18" 
-                          Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
-                          Fill="White"
-                          Stretch="Uniform"/>
-                    <TextBlock Text="Обновить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
-                </StackPanel>
-            </Button>
-            <Button x:Name="btnClose" 
-                    Style="{StaticResource GrayButtonStyle}" 
-                    Click="btnClose_Click">
-                <StackPanel Orientation="Horizontal">
-                    <Path Width="18" Height="18" 
-                          Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-                          Fill="White"
-                          Stretch="Uniform"/>
-                    <TextBlock Text="Закрыть" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
-                </StackPanel>
-            </Button>
-        </StackPanel>
-    </Grid>
+            <!-- Кнопки внизу -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnAddSchedule" 
+                        Style="{StaticResource RoundedButtonStyle}"
+                        Margin="0,0,10,0" 
+                        MinWidth="150"
+                        Click="btnAddSchedule_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Создать график" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="btnRefresh" 
+                        Style="{StaticResource BlueButtonStyle}" 
+                        Margin="0,0,10,0"
+                        MinWidth="120"
+                        Click="btnRefresh_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Обновить" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="btnClose" 
+                        Style="{StaticResource GrayButtonStyle}"
+                        MinWidth="100"
+                        Click="btnClose_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Width="18" Height="18" 
+                              Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+                              Fill="White"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="Закрыть" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Viewbox>
 </Window> 
