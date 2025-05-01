@@ -618,16 +618,7 @@ namespace VrachDubRosh
                     }
                 }
                 
-                string resultMessage = successCount == 1
-                    ? "Назначение успешно отменено."
-                    : $"Успешно отменено назначений: {successCount}";
-                
-                if (successCount < dgAppointments.SelectedItems.Count)
-                {
-                    resultMessage += "\nНекоторые назначения не могут быть отменены (уже завершены).";
-                }
-                
-                MessageBox.Show(resultMessage, "Результат", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Обновляем статусы и данные таблицы
                 UpdateAppointmentsStatus();
                 LoadDoctorAppointments();
             }

@@ -575,6 +575,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="ФИО" Binding="{Binding FullName}" Width="*"/>
                                 <DataGridTextColumn Header="Специальность" Binding="{Binding Specialty}" Width="150"/>
+                                <DataGridTextColumn Header="Общее наименование" Binding="{Binding GeneralName}" Width="150"/>
                                 <DataGridTextColumn Header="Номер кабинета" Binding="{Binding OfficeNumber}" Width="100"/>
                                 <DataGridTextColumn Header="Стаж" Binding="{Binding WorkExperience}" Width="80"/>
                             </DataGrid.Columns>

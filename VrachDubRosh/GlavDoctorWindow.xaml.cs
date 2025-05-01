@@ -153,7 +153,7 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT DoctorID, FullName, Specialty, OfficeNumber, WorkExperience FROM Doctors";
+                    string query = "SELECT DoctorID, FullName, Specialty, OfficeNumber, WorkExperience, GeneralName FROM Doctors";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     dtDoctors = new DataTable();
                     da.Fill(dtDoctors);

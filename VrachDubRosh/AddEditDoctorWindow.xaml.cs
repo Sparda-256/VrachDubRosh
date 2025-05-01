@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace VrachDubRosh
 {
@@ -54,7 +56,7 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = "SELECT FullName, Specialty, OfficeNumber, Password, WorkExperience FROM Doctors WHERE DoctorID = @DoctorID";
+                    string query = "SELECT FullName, Specialty, OfficeNumber, Password, WorkExperience, GeneralName FROM Doctors WHERE DoctorID = @DoctorID";
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@DoctorID", doctorID.Value);
@@ -67,6 +69,7 @@ namespace VrachDubRosh
                                 txtOfficeNumber.Text = reader["OfficeNumber"].ToString();
                                 txtPassword.Password = reader["Password"].ToString();
                                 txtWorkExperience.Text = reader["WorkExperience"].ToString();
+                                txtGeneralName.Text = reader["GeneralName"].ToString();
                             }
                         }
                     }
@@ -86,7 +89,7 @@ namespace VrachDubRosh
                 string.IsNullOrWhiteSpace(txtPassword.Password) ||
                 string.IsNullOrWhiteSpace(txtWorkExperience.Text))
             {
-                MessageBox.Show("Пожалуйста, заполните все поля.");
+                MessageBox.Show("Пожалуйста, заполните все обязательные поля.");
                 return;
             }
 
@@ -96,6 +99,9 @@ namespace VrachDubRosh
                 return;
             }
 
+            // Получаем значение общего наименования (может быть пустым)
+            string generalName = txtGeneralName.Text.Trim();
+
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
@@ -104,8 +110,8 @@ namespace VrachDubRosh
                     if (doctorID == null)
                     {
                         // Добавление врача
-                        string insertQuery = @"INSERT INTO Doctors (FullName, Specialty, OfficeNumber, Password, WorkExperience)
-                                               VALUES (@FullName, @Specialty, @OfficeNumber, @Password, @WorkExperience)";
+                        string insertQuery = @"INSERT INTO Doctors (FullName, Specialty, OfficeNumber, Password, WorkExperience, GeneralName)
+                                               VALUES (@FullName, @Specialty, @OfficeNumber, @Password, @WorkExperience, @GeneralName)";
                         using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                         {
                             cmd.Parameters.AddWithValue("@FullName", txtFullName.Text.Trim());
@@ -113,6 +119,7 @@ namespace VrachDubRosh
                             cmd.Parameters.AddWithValue("@OfficeNumber", txtOfficeNumber.Text.Trim());
                             cmd.Parameters.AddWithValue("@Password", txtPassword.Password.Trim());
                             cmd.Parameters.AddWithValue("@WorkExperience", workExp);
+                            cmd.Parameters.AddWithValue("@GeneralName", generalName);
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -121,7 +128,7 @@ namespace VrachDubRosh
                         // Редактирование врача
                         string updateQuery = @"UPDATE Doctors 
                                                SET FullName = @FullName, Specialty = @Specialty, OfficeNumber = @OfficeNumber, 
-                                                   Password = @Password, WorkExperience = @WorkExperience
+                                                   Password = @Password, WorkExperience = @WorkExperience, GeneralName = @GeneralName
                                                WHERE DoctorID = @DoctorID";
                         using (SqlCommand cmd = new SqlCommand(updateQuery, con))
                         {
@@ -130,6 +137,7 @@ namespace VrachDubRosh
                             cmd.Parameters.AddWithValue("@OfficeNumber", txtOfficeNumber.Text.Trim());
                             cmd.Parameters.AddWithValue("@Password", txtPassword.Password.Trim());
                             cmd.Parameters.AddWithValue("@WorkExperience", workExp);
+                            cmd.Parameters.AddWithValue("@GeneralName", generalName);
                             cmd.Parameters.AddWithValue("@DoctorID", doctorID.Value);
                             cmd.ExecuteNonQuery();
                         }
