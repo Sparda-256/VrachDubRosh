@@ -145,7 +145,6 @@
                       SelectionMode="Extended">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Диагноз" Binding="{Binding DiagnosisName}" Width="*"/>
-                    <DataGridTextColumn Header="Врач" Binding="{Binding DoctorName}" Width="180"/>
                 </DataGrid.Columns>
             </DataGrid>
             
@@ -158,11 +157,8 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
@@ -170,14 +166,7 @@
                                    FontWeight="SemiBold" Margin="0,0,5,5"
                                    Foreground="{DynamicResource SubtitleBrush}"/>
                         <TextBlock x:Name="tbDiagnosisName" Grid.Column="1" Grid.Row="0" 
-                                   Text="" Margin="0,0,20,5" Grid.ColumnSpan="3"
-                                   Foreground="{DynamicResource ForegroundBrush}"/>
-                        
-                        <TextBlock Grid.Column="0" Grid.Row="1" Text="Врач: " 
-                                   FontWeight="SemiBold" Margin="0,0,5,5"
-                                   Foreground="{DynamicResource SubtitleBrush}"/>
-                        <TextBlock x:Name="tbDoctorName" Grid.Column="1" Grid.Row="1" 
-                                   Text="" Margin="0,0,20,5" Grid.ColumnSpan="3"
+                                   Text="" Margin="0,0,20,5"
                                    Foreground="{DynamicResource ForegroundBrush}"/>
                     </Grid>
                 </Grid>

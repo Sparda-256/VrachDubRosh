@@ -390,6 +390,37 @@ CREATE TABLE ScheduleGeneratedAppointments (
     FOREIGN KEY (AppointmentID) REFERENCES ProcedureAppointments(AppointmentID)
 );
 
+-- Таблица для медикаментов пациентов (заполняет главврач)
+CREATE TABLE PatientMedications (
+    MedicationID INT IDENTITY PRIMARY KEY,
+    PatientID INT NOT NULL,
+    MedicationName NVARCHAR(200) NOT NULL,
+    Dosage NVARCHAR(100),
+    Instructions NVARCHAR(500),
+    PrescribedDate DATETIME DEFAULT GETDATE(),
+    PrescribedBy INT, -- Ссылка на ChiefDoctorID
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (PrescribedBy) REFERENCES ChiefDoctors(ChiefDoctorID)
+);
+
+-- Таблица для антропометрических измерений
+CREATE TABLE PatientMeasurements (
+    MeasurementID INT IDENTITY PRIMARY KEY,
+    PatientID INT NOT NULL,
+    MeasurementType NVARCHAR(50) NOT NULL, -- 'При поступлении', 'В процессе лечения', 'При выписке'
+    Height DECIMAL(5,2), -- Рост в см
+    Weight DECIMAL(5,2), -- Вес в кг
+    BloodPressure NVARCHAR(20), -- Кровяное давление (например, '120/80')
+    MeasurementDate DATETIME DEFAULT GETDATE(),
+    MeasuredBy INT, -- Ссылка на ChiefDoctorID
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
+    FOREIGN KEY (MeasuredBy) REFERENCES ChiefDoctors(ChiefDoctorID)
+);
+
+-- Модифицируем таблицу PatientDiagnoses для добавления типа диагноза (основной/сопутствующий)
+ALTER TABLE PatientDiagnoses
+ADD DiagnosisType NVARCHAR(20) DEFAULT 'Сопутствующий'; -- 'Основной' или 'Сопутствующий'
+
 GO
 
 -- Хранимая процедура для генерации назначений из недельного графика

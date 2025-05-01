@@ -15,13 +15,76 @@ namespace VrachDubRosh
         private string _patientName;
         private DataRowView _selectedDiagnosis;
         private List<DataRowView> _selectedDiagnoses = new List<DataRowView>();
+        private bool _isSelectionMode = false;
+
+        // Событие, которое будет вызываться при выборе диагноза
+        public event Action<int, string> DiagnosisSelected;
 
         public DiagnosesWindow(int patientID, string patientName)
         {
             InitializeComponent();
             _patientID = patientID;
             _patientName = patientName;
+            _isSelectionMode = false;
             tbPatientInfo.Text = $"Диагнозы пациента: {patientName}";
+            
+            LoadDiagnoses();
+            
+            this.Loaded += DiagnosesWindow_Loaded;
+        }
+
+        /// <summary>
+        /// Конструктор с дополнительным параметром для режима выбора диагноза
+        /// </summary>
+        /// <param name="patientID">ID пациента</param>
+        /// <param name="patientName">Имя пациента</param>
+        /// <param name="isSelectionMode">Режим выбора диагноза</param>
+        public DiagnosesWindow(int patientID, string patientName, bool isSelectionMode)
+        {
+            InitializeComponent();
+            _patientID = patientID;
+            _patientName = patientName;
+            _isSelectionMode = isSelectionMode;
+            
+            if (isSelectionMode)
+            {
+                tbPatientInfo.Text = $"Выберите диагноз для пациента: {patientName}";
+                // Изменяем заголовок окна
+                this.Title = "Выбор диагноза";
+                
+                // Скрываем стандартные кнопки управления, они не нужны в режиме выбора
+                // Ищем кнопки по имени или через поиск в визуальном дереве
+                UIElement addButton = FindButtonByContent("Добавить диагноз");
+                UIElement editButton = btnEditDiagnosis; // У этой кнопки есть x:Name
+                UIElement deleteButton = btnDeleteDiagnosis; // У этой кнопки есть x:Name
+                
+                if (addButton != null) addButton.Visibility = Visibility.Collapsed;
+                if (editButton != null) editButton.Visibility = Visibility.Collapsed;
+                if (deleteButton != null) deleteButton.Visibility = Visibility.Collapsed;
+                
+                // Добавляем кнопку выбора диагноза
+                Button btnSelect = new Button
+                {
+                    Content = "Выбрать диагноз",
+                    Margin = new Thickness(5),
+                    Padding = new Thickness(10, 5, 10, 5),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Style = FindResource("BlueButtonStyle") as Style
+                };
+                btnSelect.Click += BtnSelect_Click;
+                
+                // Добавляем кнопку в контейнер кнопок
+                // Находим родительский элемент (StackPanel) существующих кнопок
+                StackPanel buttonPanel = FindButtonPanel();
+                if (buttonPanel != null)
+                {
+                    buttonPanel.Children.Insert(0, btnSelect);
+                }
+            }
+            else
+            {
+                tbPatientInfo.Text = $"Диагнозы пациента: {patientName}";
+            }
             
             LoadDiagnoses();
             
@@ -68,12 +131,9 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = @"SELECT pd.PatientID, pd.DiagnosisID, d.DiagnosisName, 
-                                    doc.FullName as DoctorName
+                    string query = @"SELECT pd.PatientID, pd.DiagnosisID, d.DiagnosisName
                                     FROM PatientDiagnoses pd
                                     INNER JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
-                                    LEFT JOIN DoctorDiagnoses dd ON d.DiagnosisID = dd.DiagnosisID
-                                    LEFT JOIN Doctors doc ON dd.DoctorID = doc.DoctorID
                                     WHERE pd.PatientID = @PatientID";
                     
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
@@ -102,7 +162,6 @@ namespace VrachDubRosh
         private void ClearDiagnosisDetails()
         {
             tbDiagnosisName.Text = "";
-            tbDoctorName.Text = "";
             
             // Отключаем кнопку редактирования
             btnEditDiagnosis.IsEnabled = false;
@@ -134,10 +193,6 @@ namespace VrachDubRosh
                     // Заполняем детали диагноза
                     tbDiagnosisName.Text = _selectedDiagnosis["DiagnosisName"].ToString();
                     
-                    tbDoctorName.Text = _selectedDiagnosis["DoctorName"] != DBNull.Value 
-                        ? _selectedDiagnosis["DoctorName"].ToString() 
-                        : "Не определен";
-                    
                     // Активируем кнопку редактирования
                     btnEditDiagnosis.IsEnabled = true;
                 }
@@ -146,7 +201,6 @@ namespace VrachDubRosh
             {
                 // Очищаем детали при множественном выборе
                 tbDiagnosisName.Text = "";
-                tbDoctorName.Text = "";
                 btnEditDiagnosis.IsEnabled = false;
             }
         }
@@ -265,6 +319,76 @@ namespace VrachDubRosh
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+        }
+
+        /// <summary>
+        /// Обработчик нажатия на кнопку "Выбрать диагноз"
+        /// </summary>
+        private void BtnSelect_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedDiagnosis != null)
+            {
+                // Получаем ID и название выбранного диагноза
+                int diagnosisID = Convert.ToInt32(_selectedDiagnosis["DiagnosisID"]);
+                string diagnosisName = _selectedDiagnosis["DiagnosisName"].ToString();
+                
+                // Вызываем событие с ID и названием диагноза
+                DiagnosisSelected?.Invoke(diagnosisID, diagnosisName);
+                
+                // Закрываем окно
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("Пожалуйста, выберите диагноз из списка", "Не выбран диагноз", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Находит StackPanel, который содержит кнопки
+        /// </summary>
+        private StackPanel FindButtonPanel()
+        {
+            // Ищем StackPanel в третьей строке грида
+            Grid mainGrid = this.Content as Grid;
+            if (mainGrid != null && mainGrid.Children.Count > 0)
+            {
+                var viewbox = mainGrid.Children[0] as Viewbox;
+                if (viewbox != null && viewbox.Child != null)
+                {
+                    var grid = viewbox.Child as Grid;
+                    if (grid != null)
+                    {
+                        foreach (UIElement child in grid.Children)
+                        {
+                            if (child is StackPanel panel && Grid.GetRow(child) == 3)
+                            {
+                                return panel;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// Находит кнопку по содержимому
+        /// </summary>
+        private UIElement FindButtonByContent(string content)
+        {
+            StackPanel buttonPanel = FindButtonPanel();
+            if (buttonPanel != null)
+            {
+                foreach (UIElement element in buttonPanel.Children)
+                {
+                    if (element is Button button && button.Content.ToString() == content)
+                    {
+                        return button;
+                    }
+                }
+            }
+            return null;
         }
     }
 } 

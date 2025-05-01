@@ -17,14 +17,26 @@ namespace VrachDubRosh
         private DataTable dtPatients;
         private DataTable dtDoctors;
         
+        // ID главного врача
+        private int _chiefDoctorID;
+        
         // Флаг для отслеживания текущей темы
         public bool isDarkTheme = false;
+        
+        // Свойство для доступа к ID главного врача
+        public int ChiefDoctorID 
+        { 
+            get { return _chiefDoctorID; } 
+        }
 
         public GlavDoctorWindow()
         {
             InitializeComponent();
             WindowState = WindowState.Maximized;
             Loaded += GlavDoctorWindow_Loaded;
+            
+            // Получаем ID текущего главврача из базы данных при инициализации
+            LoadChiefDoctorID();
         }
 
         private void GlavDoctorWindow_Loaded(object sender, RoutedEventArgs e)
@@ -339,6 +351,42 @@ namespace VrachDubRosh
             MainWindow loginWindow = new MainWindow();
             loginWindow.Show();
             this.Close();
+        }
+
+        /// <summary>
+        /// Загружает ID главного врача из базы данных
+        /// </summary>
+        private void LoadChiefDoctorID()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT TOP 1 ChiefDoctorID FROM ChiefDoctors";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            _chiefDoctorID = Convert.ToInt32(result);
+                        }
+                        else
+                        {
+                            // Если в базе нет записей о главном враче, можно установить значение по умолчанию или показать сообщение
+                            _chiefDoctorID = 1; // Значение по умолчанию
+                            MessageBox.Show("Не удалось получить ID главного врача из базы данных. Установлено значение по умолчанию.", 
+                                "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при получении ID главного врача: " + ex.Message, 
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _chiefDoctorID = 1; // Значение по умолчанию в случае ошибки
+            }
         }
     }
 }
