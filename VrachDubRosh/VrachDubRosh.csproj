@@ -144,9 +144,6 @@
     <Compile Include="AddProcedureDescriptionWindow.xaml.cs">
       <DependentUpon>AddProcedureDescriptionWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DiagnosesWindow.xaml.cs">
-      <DependentUpon>DiagnosesWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DischargeDocumentWindow.xaml.cs">
       <DependentUpon>DischargeDocumentWindow.xaml</DependentUpon>
     </Compile>
@@ -206,10 +203,6 @@
     <Page Include="AddProcedureDescriptionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DiagnosesWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
     </Page>
     <Page Include="DischargeDocumentWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

@@ -26,8 +26,7 @@ namespace VrachDubRosh
         private string _accommodation;
 
         // Данные для отображения
-        private DataTable _mainDiagnoses;
-        private DataTable _secondaryDiagnoses;
+        private DataTable _diagnoses;
         private DataTable _measurements;
         private DataTable _medications;
         private Dictionary<string, DataTable> _doctorProcedures = new Dictionary<string, DataTable>();
@@ -151,36 +150,110 @@ namespace VrachDubRosh
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    // Загружаем основные диагнозы
-                    string mainQuery = @"
+                    // Загружаем все диагнозы
+                    string query = @"
                         SELECT d.DiagnosisName
                         FROM PatientDiagnoses pd
                         JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
-                        WHERE pd.PatientID = @PatientID AND pd.DiagnosisType = 'Основной'";
+                        WHERE pd.PatientID = @PatientID";
 
-                    SqlDataAdapter mainAdapter = new SqlDataAdapter(mainQuery, con);
-                    mainAdapter.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
-                    _mainDiagnoses = new DataTable();
-                    mainAdapter.Fill(_mainDiagnoses);
-                    dgMainDiagnoses.ItemsSource = _mainDiagnoses.DefaultView;
-
-                    // Загружаем сопутствующие диагнозы
-                    string secQuery = @"
-                        SELECT d.DiagnosisName
-                        FROM PatientDiagnoses pd
-                        JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
-                        WHERE pd.PatientID = @PatientID AND (pd.DiagnosisType = 'Сопутствующий' OR pd.DiagnosisType IS NULL)";
-
-                    SqlDataAdapter secAdapter = new SqlDataAdapter(secQuery, con);
-                    secAdapter.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
-                    _secondaryDiagnoses = new DataTable();
-                    secAdapter.Fill(_secondaryDiagnoses);
-                    dgSecondaryDiagnoses.ItemsSource = _secondaryDiagnoses.DefaultView;
+                    SqlDataAdapter adapter = new SqlDataAdapter(query, con);
+                    adapter.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
+                    _diagnoses = new DataTable();
+                    adapter.Fill(_diagnoses);
+                    dgDiagnoses.ItemsSource = _diagnoses.DefaultView;
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка при загрузке диагнозов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void btnAddDiagnosis_Click(object sender, RoutedEventArgs e)
+        {
+            // Напрямую открываем окно добавления диагноза
+            AddEditDiagnosisWindow addDiagnosisWindow = new AddEditDiagnosisWindow(_patientID, _patientName);
+            addDiagnosisWindow.Owner = this;
+            bool? result = addDiagnosisWindow.ShowDialog();
+            
+            if (result == true)
+            {
+                // Перезагружаем список диагнозов
+                LoadDiagnoses();
+            }
+        }
+
+        private void btnRemoveDiagnosis_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDiagnoses.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Выберите диагноз(ы) для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            List<string> selectedDiagnoses = new List<string>();
+            foreach (DataRowView row in dgDiagnoses.SelectedItems)
+            {
+                selectedDiagnoses.Add(row["DiagnosisName"].ToString());
+            }
+
+            string diagnosesStr = selectedDiagnoses.Count == 1 
+                ? $"диагноз '{selectedDiagnoses[0]}'" 
+                : $"{selectedDiagnoses.Count} диагнозов";
+
+            if (MessageBox.Show($"Вы уверены, что хотите удалить {diagnosesStr}?", 
+                               "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    using (SqlConnection con = new SqlConnection(connectionString))
+                    {
+                        con.Open();
+                        using (SqlTransaction transaction = con.BeginTransaction())
+                        {
+                            try
+                            {
+                                foreach (string diagnosisName in selectedDiagnoses)
+                                {
+                                    int diagnosisID = GetDiagnosisID(diagnosisName);
+                                    if (diagnosisID > 0)
+                                    {
+                                        string query = @"
+                                            DELETE FROM PatientDiagnoses 
+                                            WHERE PatientID = @PatientID AND DiagnosisID = @DiagnosisID";
+                                        
+                                        using (SqlCommand cmd = new SqlCommand(query, con, transaction))
+                                        {
+                                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                            cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                    }
+                                }
+                                
+                                transaction.Commit();
+                                
+                                // Обновляем отображение диагнозов
+                                LoadDiagnoses();
+                                
+                                string successMessage = selectedDiagnoses.Count == 1
+                                    ? "Диагноз удален"
+                                    : "Диагнозы удалены";
+                                MessageBox.Show(successMessage, "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                            catch (Exception ex)
+                            {
+                                transaction.Rollback();
+                                throw ex;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Ошибка при удалении диагнозов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -199,19 +272,272 @@ namespace VrachDubRosh
                             BloodPressure,
                             MeasurementDate
                         FROM PatientMeasurements
-                        WHERE PatientID = @PatientID
-                        ORDER BY MeasurementDate DESC";
+                        WHERE PatientID = @PatientID";
 
-                    SqlDataAdapter adapter = new SqlDataAdapter(query, con);
-                    adapter.SelectCommand.Parameters.AddWithValue("@PatientID", _patientID);
-                    _measurements = new DataTable();
-                    adapter.Fill(_measurements);
-                    dgMeasurements.ItemsSource = _measurements.DefaultView;
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", _patientID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            // Сбрасываем текущие значения
+                            txtAdmissionHeight.Text = "";
+                            txtAdmissionWeight.Text = "";
+                            txtAdmissionBP.Text = "";
+                            dpAdmissionDate.SelectedDate = null;
+                            
+                            txtProcessHeight.Text = "";
+                            txtProcessWeight.Text = "";
+                            txtProcessBP.Text = "";
+                            dpProcessDate.SelectedDate = null;
+                            
+                            txtDischargeHeight.Text = "";
+                            txtDischargeWeight.Text = "";
+                            txtDischargeBP.Text = "";
+                            dpDischargeDate.SelectedDate = null;
+
+                            // Загружаем данные для каждого типа измерений
+                            while (reader.Read())
+                            {
+                                string measurementType = reader["MeasurementType"].ToString();
+                                decimal? height = reader["Height"] != DBNull.Value ? (decimal?)reader["Height"] : null;
+                                decimal? weight = reader["Weight"] != DBNull.Value ? (decimal?)reader["Weight"] : null;
+                                string bloodPressure = reader["BloodPressure"] != DBNull.Value ? reader["BloodPressure"].ToString() : "";
+                                DateTime? measurementDate = reader["MeasurementDate"] != DBNull.Value ? (DateTime?)reader["MeasurementDate"] : null;
+                                
+                                switch (measurementType)
+                                {
+                                    case "При поступлении":
+                                        txtAdmissionHeight.Text = height?.ToString() ?? "";
+                                        txtAdmissionWeight.Text = weight?.ToString() ?? "";
+                                        txtAdmissionBP.Text = bloodPressure;
+                                        dpAdmissionDate.SelectedDate = measurementDate;
+                                        break;
+                                        
+                                    case "В процессе лечения":
+                                        txtProcessHeight.Text = height?.ToString() ?? "";
+                                        txtProcessWeight.Text = weight?.ToString() ?? "";
+                                        txtProcessBP.Text = bloodPressure;
+                                        dpProcessDate.SelectedDate = measurementDate;
+                                        break;
+                                        
+                                    case "При выписке":
+                                        txtDischargeHeight.Text = height?.ToString() ?? "";
+                                        txtDischargeWeight.Text = weight?.ToString() ?? "";
+                                        txtDischargeBP.Text = bloodPressure;
+                                        dpDischargeDate.SelectedDate = measurementDate;
+                                        break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка при загрузке антропометрических данных: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveMeasurements()
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    
+                    // Массив типов измерений для обработки
+                    string[] measurementTypes = { "При поступлении", "В процессе лечения", "При выписке" };
+                    
+                    foreach (string measurementType in measurementTypes)
+                    {
+                        // Получаем значения из соответствующих полей в зависимости от типа
+                        string heightText = "";
+                        string weightText = "";
+                        string bloodPressure = "";
+                        DateTime? measurementDate = null;
+                        
+                        switch (measurementType)
+                        {
+                            case "При поступлении":
+                                heightText = txtAdmissionHeight.Text.Trim();
+                                weightText = txtAdmissionWeight.Text.Trim();
+                                bloodPressure = txtAdmissionBP.Text.Trim();
+                                measurementDate = dpAdmissionDate.SelectedDate;
+                                break;
+                                
+                            case "В процессе лечения":
+                                heightText = txtProcessHeight.Text.Trim();
+                                weightText = txtProcessWeight.Text.Trim();
+                                bloodPressure = txtProcessBP.Text.Trim();
+                                measurementDate = dpProcessDate.SelectedDate;
+                                break;
+                                
+                            case "При выписке":
+                                heightText = txtDischargeHeight.Text.Trim();
+                                weightText = txtDischargeWeight.Text.Trim();
+                                bloodPressure = txtDischargeBP.Text.Trim();
+                                measurementDate = dpDischargeDate.SelectedDate;
+                                break;
+                        }
+                        
+                        // Проверяем, есть ли данные для сохранения
+                        if (string.IsNullOrWhiteSpace(heightText) && 
+                            string.IsNullOrWhiteSpace(weightText) && 
+                            string.IsNullOrWhiteSpace(bloodPressure) &&
+                            !measurementDate.HasValue)
+                        {
+                            // Если все поля пустые, удаляем существующую запись для этого типа
+                            string deleteQuery = @"
+                                DELETE FROM PatientMeasurements 
+                                WHERE PatientID = @PatientID AND MeasurementType = @MeasurementType";
+                            
+                            using (SqlCommand deleteCmd = new SqlCommand(deleteQuery, con))
+                            {
+                                deleteCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                deleteCmd.Parameters.AddWithValue("@MeasurementType", measurementType);
+                                deleteCmd.ExecuteNonQuery();
+                            }
+                            
+                            continue;
+                        }
+                        
+                        // Если дата не выбрана, но есть другие данные, устанавливаем текущую дату
+                        if (!measurementDate.HasValue)
+                        {
+                            measurementDate = DateTime.Now;
+                        }
+                        
+                        // Преобразуем строковые значения в числовые
+                        decimal? height = null;
+                        decimal? weight = null;
+                        
+                        if (!string.IsNullOrWhiteSpace(heightText) && decimal.TryParse(heightText, out decimal parsedHeight))
+                        {
+                            height = parsedHeight;
+                        }
+                        
+                        if (!string.IsNullOrWhiteSpace(weightText) && decimal.TryParse(weightText, out decimal parsedWeight))
+                        {
+                            weight = parsedWeight;
+                        }
+                        
+                        // Проверяем, существует ли уже запись для этого типа
+                        string checkQuery = @"
+                            SELECT COUNT(*) 
+                            FROM PatientMeasurements 
+                            WHERE PatientID = @PatientID AND MeasurementType = @MeasurementType";
+                        
+                        bool recordExists = false;
+                        using (SqlCommand checkCmd = new SqlCommand(checkQuery, con))
+                        {
+                            checkCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                            checkCmd.Parameters.AddWithValue("@MeasurementType", measurementType);
+                            int count = Convert.ToInt32(checkCmd.ExecuteScalar());
+                            recordExists = count > 0;
+                        }
+                        
+                        if (recordExists)
+                        {
+                            // Обновляем существующую запись
+                            string updateQuery = @"
+                                UPDATE PatientMeasurements 
+                                SET Height = @Height,
+                                    Weight = @Weight,
+                                    BloodPressure = @BloodPressure,
+                                    MeasurementDate = @MeasurementDate
+                                WHERE PatientID = @PatientID AND MeasurementType = @MeasurementType";
+                            
+                            using (SqlCommand updateCmd = new SqlCommand(updateQuery, con))
+                            {
+                                updateCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                updateCmd.Parameters.AddWithValue("@MeasurementType", measurementType);
+                                updateCmd.Parameters.AddWithValue("@Height", height.HasValue ? (object)height.Value : DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@Weight", weight.HasValue ? (object)weight.Value : DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@BloodPressure", string.IsNullOrWhiteSpace(bloodPressure) ? DBNull.Value : (object)bloodPressure);
+                                updateCmd.Parameters.AddWithValue("@MeasurementDate", measurementDate.HasValue ? (object)measurementDate.Value : DBNull.Value);
+                                
+                                updateCmd.ExecuteNonQuery();
+                            }
+                        }
+                        else
+                        {
+                            // Создаем новую запись
+                            string insertQuery = @"
+                                INSERT INTO PatientMeasurements 
+                                    (PatientID, MeasurementType, Height, Weight, BloodPressure, MeasurementDate, MeasuredBy) 
+                                VALUES 
+                                    (@PatientID, @MeasurementType, @Height, @Weight, @BloodPressure, @MeasurementDate, @MeasuredBy)";
+                            
+                            using (SqlCommand insertCmd = new SqlCommand(insertQuery, con))
+                            {
+                                insertCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                insertCmd.Parameters.AddWithValue("@MeasurementType", measurementType);
+                                insertCmd.Parameters.AddWithValue("@Height", height.HasValue ? (object)height.Value : DBNull.Value);
+                                insertCmd.Parameters.AddWithValue("@Weight", weight.HasValue ? (object)weight.Value : DBNull.Value);
+                                insertCmd.Parameters.AddWithValue("@BloodPressure", string.IsNullOrWhiteSpace(bloodPressure) ? DBNull.Value : (object)bloodPressure);
+                                insertCmd.Parameters.AddWithValue("@MeasurementDate", measurementDate.HasValue ? (object)measurementDate.Value : DBNull.Value);
+                                
+                                // Получаем ID главврача (если пользователь - главврач)
+                                if (this.Owner is GlavDoctorWindow glavDoctorWindow && glavDoctorWindow.ChiefDoctorID > 0)
+                                {
+                                    insertCmd.Parameters.AddWithValue("@MeasuredBy", glavDoctorWindow.ChiefDoctorID);
+                                }
+                                else
+                                {
+                                    insertCmd.Parameters.AddWithValue("@MeasuredBy", DBNull.Value);
+                                }
+                                
+                                insertCmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                }
+                
+                // Перезагружаем данные для отображения обновленных дат
+                LoadMeasurements();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при сохранении антропометрических данных: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void btnSaveAll_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Сохраняем диагнозы
+                            SaveDiagnoses();
+                            
+                            // Сохраняем антропометрические данные
+                            SaveMeasurements();
+                            
+                            // Сохраняем медикаменты (они уже сохраняются в базе при добавлении/редактировании)
+                            
+                            // Фиксируем транзакцию
+                            transaction.Commit();
+                            
+                            MessageBox.Show("Все изменения успешно сохранены", "Сохранено", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw ex;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при сохранении данных: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -512,59 +838,34 @@ namespace VrachDubRosh
             doc.Blocks.Add(new Paragraph(new Run($"Тип размещения: {_stayType}")));
             doc.Blocks.Add(new Paragraph(new Run($"Проживание: {_accommodation}")));
             
+            // Диагнозы (добавлены на титульный лист)
+            Paragraph diagnosesHeader = new Paragraph(new Run("ДИАГНОЗЫ"))
+            {
+                Style = headerStyle,
+                Margin = new Thickness(0, 20, 0, 10)
+            };
+            doc.Blocks.Add(diagnosesHeader);
+            
+            // Получаем данные из источника DataGrid
+            DataView diagnosesView = dgDiagnoses.ItemsSource as DataView;
+            
+            if (diagnosesView != null && diagnosesView.Count > 0)
+            {
+                foreach (DataRowView row in diagnosesView)
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"• {row["DiagnosisName"]}")) { Style = textStyle });
+                }
+            }
+            else
+            {
+                doc.Blocks.Add(new Paragraph(new Run("Диагнозы не указаны")) { Style = textStyle });
+            }
+            
             // Добавляем разрыв страницы
             doc.Blocks.Add(new BlockUIContainer(new System.Windows.Controls.Border 
             { 
                 Height = 20 
             }));
-            doc.Blocks.Add(new Paragraph(new Run(" ")) { BreakPageBefore = true });
-            
-            // ===== Диагнозы =====
-            Paragraph diagnosesHeader = new Paragraph(new Run("ДИАГНОЗЫ"))
-            {
-                Style = headerStyle
-            };
-            doc.Blocks.Add(diagnosesHeader);
-            
-            // Основной диагноз
-            Paragraph mainDiagnosesSubheader = new Paragraph(new Run("а) Основной:"))
-            {
-                Style = subheaderStyle
-            };
-            doc.Blocks.Add(mainDiagnosesSubheader);
-            
-            if (_mainDiagnoses != null && _mainDiagnoses.Rows.Count > 0)
-            {
-                foreach (DataRow row in _mainDiagnoses.Rows)
-                {
-                    doc.Blocks.Add(new Paragraph(new Run($"• {row["DiagnosisName"]}")) { Style = textStyle });
-                }
-            }
-            else
-            {
-                doc.Blocks.Add(new Paragraph(new Run("Не указан")) { Style = textStyle });
-            }
-            
-            // Сопутствующий диагноз
-            Paragraph secondaryDiagnosesSubheader = new Paragraph(new Run("б) Сопутствующий:"))
-            {
-                Style = subheaderStyle
-            };
-            doc.Blocks.Add(secondaryDiagnosesSubheader);
-            
-            if (_secondaryDiagnoses != null && _secondaryDiagnoses.Rows.Count > 0)
-            {
-                foreach (DataRow row in _secondaryDiagnoses.Rows)
-                {
-                    doc.Blocks.Add(new Paragraph(new Run($"• {row["DiagnosisName"]}")) { Style = textStyle });
-                }
-            }
-            else
-            {
-                doc.Blocks.Add(new Paragraph(new Run("Не указан")) { Style = textStyle });
-            }
-            
-            // Добавляем разрыв страницы
             doc.Blocks.Add(new Paragraph(new Run(" ")) { BreakPageBefore = true });
             
             // ===== Процедуры по врачам =====
@@ -629,62 +930,114 @@ namespace VrachDubRosh
                 doc.Blocks.Add(new Paragraph(new Run(" ")) { BreakPageBefore = true });
             }
             
-            // ===== Антропометрические измерения =====
-            Paragraph measHeader = new Paragraph(new Run("АНТРОПОМЕТРИЧЕСКИЕ ИЗМЕРЕНИЯ"))
+            // Добавляем раздел с измерениями
+            Paragraph measurementsHeader = new Paragraph(new Run("АНТРОПОМЕТРИЧЕСКИЕ ИЗМЕРЕНИЯ"))
             {
-                Style = headerStyle
+                Style = headerStyle,
+                Margin = new Thickness(0, 20, 0, 10)
             };
-            doc.Blocks.Add(measHeader);
-            
-            if (_measurements != null && _measurements.Rows.Count > 0)
+            doc.Blocks.Add(measurementsHeader);
+
+            // При поступлении
+            if (!string.IsNullOrWhiteSpace(txtAdmissionHeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtAdmissionWeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtAdmissionBP.Text) ||
+                dpAdmissionDate.SelectedDate.HasValue)
             {
-                // Создаем таблицу с измерениями
-                Table measTable = new Table();
-                measTable.CellSpacing = 0;
-                measTable.BorderThickness = new Thickness(1);
-                measTable.BorderBrush = Brushes.Black;
-                
-                // Добавляем столбцы
-                measTable.Columns.Add(new TableColumn() { Width = new GridLength(2, GridUnitType.Star) });
-                measTable.Columns.Add(new TableColumn() { Width = new GridLength(1, GridUnitType.Star) });
-                measTable.Columns.Add(new TableColumn() { Width = new GridLength(1, GridUnitType.Star) });
-                measTable.Columns.Add(new TableColumn() { Width = new GridLength(1, GridUnitType.Star) });
-                measTable.Columns.Add(new TableColumn() { Width = new GridLength(1, GridUnitType.Star) });
-                
-                // Создаем заголовок таблицы
-                TableRowGroup mHeaderGroup = new TableRowGroup();
-                TableRow mHeaderRow = new TableRow();
-                mHeaderRow.Background = Brushes.LightGray;
-                mHeaderRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Тип измерения")))));
-                mHeaderRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Рост (см)")))));
-                mHeaderRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Вес (кг)")))));
-                mHeaderRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Давление")))));
-                mHeaderRow.Cells.Add(new TableCell(new Paragraph(new Bold(new Run("Дата")))));
-                mHeaderGroup.Rows.Add(mHeaderRow);
-                measTable.RowGroups.Add(mHeaderGroup);
-                
-                // Добавляем строки с данными
-                TableRowGroup mDataGroup = new TableRowGroup();
-                foreach (DataRow row in _measurements.Rows)
+                Paragraph admissionHeader = new Paragraph(new Run("При поступлении:"))
                 {
-                    TableRow dataRow = new TableRow();
-                    dataRow.Cells.Add(new TableCell(new Paragraph(new Run(row["MeasurementType"].ToString()))));
-                    dataRow.Cells.Add(new TableCell(new Paragraph(new Run(row["Height"].ToString()))));
-                    dataRow.Cells.Add(new TableCell(new Paragraph(new Run(row["Weight"].ToString()))));
-                    dataRow.Cells.Add(new TableCell(new Paragraph(new Run(row["BloodPressure"].ToString()))));
-                    
-                    DateTime dt = Convert.ToDateTime(row["MeasurementDate"]);
-                    dataRow.Cells.Add(new TableCell(new Paragraph(new Run(dt.ToString("dd.MM.yyyy")))));
-                    
-                    mDataGroup.Rows.Add(dataRow);
+                    Style = subheaderStyle,
+                    Margin = new Thickness(0, 10, 0, 5)
+                };
+                doc.Blocks.Add(admissionHeader);
+
+                if (!string.IsNullOrWhiteSpace(txtAdmissionHeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Рост: {txtAdmissionHeight.Text} см")) { Style = textStyle });
                 }
-                measTable.RowGroups.Add(mDataGroup);
                 
-                doc.Blocks.Add(measTable);
+                if (!string.IsNullOrWhiteSpace(txtAdmissionWeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Вес: {txtAdmissionWeight.Text} кг")) { Style = textStyle });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(txtAdmissionBP.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Давление: {txtAdmissionBP.Text}")) { Style = textStyle });
+                }
+                
+                if (dpAdmissionDate.SelectedDate.HasValue)
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Дата: {dpAdmissionDate.SelectedDate.Value.ToString("dd.MM.yyyy")}")) { Style = textStyle, Margin = new Thickness(0, 0, 0, 10) });
+                }
             }
-            else
+
+            // В процессе лечения
+            if (!string.IsNullOrWhiteSpace(txtProcessHeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtProcessWeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtProcessBP.Text) ||
+                dpProcessDate.SelectedDate.HasValue)
             {
-                doc.Blocks.Add(new Paragraph(new Run("Нет данных измерений")) { Style = textStyle });
+                Paragraph processHeader = new Paragraph(new Run("В процессе лечения:"))
+                {
+                    Style = subheaderStyle,
+                    Margin = new Thickness(0, 10, 0, 5)
+                };
+                doc.Blocks.Add(processHeader);
+
+                if (!string.IsNullOrWhiteSpace(txtProcessHeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Рост: {txtProcessHeight.Text} см")) { Style = textStyle });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(txtProcessWeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Вес: {txtProcessWeight.Text} кг")) { Style = textStyle });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(txtProcessBP.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Давление: {txtProcessBP.Text}")) { Style = textStyle });
+                }
+                
+                if (dpProcessDate.SelectedDate.HasValue)
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Дата: {dpProcessDate.SelectedDate.Value.ToString("dd.MM.yyyy")}")) { Style = textStyle, Margin = new Thickness(0, 0, 0, 10) });
+                }
+            }
+
+            // При выписке
+            if (!string.IsNullOrWhiteSpace(txtDischargeHeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtDischargeWeight.Text) || 
+                !string.IsNullOrWhiteSpace(txtDischargeBP.Text) ||
+                dpDischargeDate.SelectedDate.HasValue)
+            {
+                Paragraph dischargeHeader = new Paragraph(new Run("При выписке:"))
+                {
+                    Style = subheaderStyle,
+                    Margin = new Thickness(0, 10, 0, 5)
+                };
+                doc.Blocks.Add(dischargeHeader);
+
+                if (!string.IsNullOrWhiteSpace(txtDischargeHeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Рост: {txtDischargeHeight.Text} см")) { Style = textStyle });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(txtDischargeWeight.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Вес: {txtDischargeWeight.Text} кг")) { Style = textStyle });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(txtDischargeBP.Text))
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Давление: {txtDischargeBP.Text}")) { Style = textStyle });
+                }
+                
+                if (dpDischargeDate.SelectedDate.HasValue)
+                {
+                    doc.Blocks.Add(new Paragraph(new Run($"Дата: {dpDischargeDate.SelectedDate.Value.ToString("dd.MM.yyyy")}")) { Style = textStyle, Margin = new Thickness(0, 0, 0, 10) });
+                }
             }
             
             // ===== Медикаменты =====
@@ -745,174 +1098,6 @@ namespace VrachDubRosh
             return doc;
         }
 
-        private void btnAddMainDiagnosis_Click(object sender, RoutedEventArgs e)
-        {
-            // Открываем диалог выбора диагноза из справочника
-            DiagnosesWindow diagnosesWindow = new DiagnosesWindow(_patientID, _patientName, true);
-            diagnosesWindow.Owner = this;
-            diagnosesWindow.DiagnosisSelected += (diagnosisID, diagnosisName) => 
-            {
-                try
-                {
-                    // Добавляем основной диагноз пациенту
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        con.Open();
-                        string query = @"
-                            INSERT INTO PatientDiagnoses (PatientID, DiagnosisID, DiagnosisType)
-                            VALUES (@PatientID, @DiagnosisID, 'Основной')";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    
-                    // Обновляем отображение основных диагнозов
-                    LoadDiagnoses();
-                    MessageBox.Show("Основной диагноз добавлен", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при добавлении диагноза: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            };
-            diagnosesWindow.ShowDialog();
-        }
-
-        private void btnRemoveMainDiagnosis_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgMainDiagnoses.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите диагноз для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var selectedDiagnosis = dgMainDiagnoses.SelectedItem as DataRowView;
-            string diagnosisName = selectedDiagnosis["DiagnosisName"].ToString();
-
-            if (MessageBox.Show($"Вы уверены, что хотите удалить основной диагноз '{diagnosisName}'?", 
-                               "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    // Получаем ID диагноза
-                    int diagnosisID = GetDiagnosisID(diagnosisName);
-                    
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        con.Open();
-                        string query = @"
-                            DELETE FROM PatientDiagnoses 
-                            WHERE PatientID = @PatientID 
-                            AND DiagnosisID = @DiagnosisID
-                            AND DiagnosisType = 'Основной'";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    
-                    // Обновляем отображение основных диагнозов
-                    LoadDiagnoses();
-                    MessageBox.Show("Основной диагноз удален", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении диагноза: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void btnAddSecondaryDiagnosis_Click(object sender, RoutedEventArgs e)
-        {
-            // Открываем диалог выбора диагноза из справочника
-            DiagnosesWindow diagnosesWindow = new DiagnosesWindow(_patientID, _patientName, true);
-            diagnosesWindow.Owner = this;
-            diagnosesWindow.DiagnosisSelected += (diagnosisID, diagnosisName) => 
-            {
-                try
-                {
-                    // Добавляем сопутствующий диагноз пациенту
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        con.Open();
-                        string query = @"
-                            INSERT INTO PatientDiagnoses (PatientID, DiagnosisID, DiagnosisType)
-                            VALUES (@PatientID, @DiagnosisID, 'Сопутствующий')";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    
-                    // Обновляем отображение сопутствующих диагнозов
-                    LoadDiagnoses();
-                    MessageBox.Show("Сопутствующий диагноз добавлен", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при добавлении диагноза: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            };
-            diagnosesWindow.ShowDialog();
-        }
-
-        private void btnRemoveSecondaryDiagnosis_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgSecondaryDiagnoses.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите диагноз для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var selectedDiagnosis = dgSecondaryDiagnoses.SelectedItem as DataRowView;
-            string diagnosisName = selectedDiagnosis["DiagnosisName"].ToString();
-
-            if (MessageBox.Show($"Вы уверены, что хотите удалить сопутствующий диагноз '{diagnosisName}'?", 
-                               "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    // Получаем ID диагноза
-                    int diagnosisID = GetDiagnosisID(diagnosisName);
-                    
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        con.Open();
-                        string query = @"
-                            DELETE FROM PatientDiagnoses 
-                            WHERE PatientID = @PatientID 
-                            AND DiagnosisID = @DiagnosisID
-                            AND (DiagnosisType = 'Сопутствующий' OR DiagnosisType IS NULL)";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    
-                    // Обновляем отображение сопутствующих диагнозов
-                    LoadDiagnoses();
-                    MessageBox.Show("Сопутствующий диагноз удален", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении диагноза: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
         private int GetDiagnosisID(string diagnosisName)
         {
             int diagnosisID = -1;
@@ -944,568 +1129,57 @@ namespace VrachDubRosh
             return diagnosisID;
         }
 
-        private void btnSaveDiagnoses_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Изменения диагнозов сохранены", "Сохранено", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void btnAddMeasurement_Click(object sender, RoutedEventArgs e)
+        private void SaveDiagnoses()
         {
             try
             {
-                // Создаем и настраиваем окно для добавления антропометрических измерений
-                Window measurementWindow = new Window
-                {
-                    Title = "Добавление измерения",
-                    Width = 400,
-                    Height = 370,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = this,
-                    ResizeMode = ResizeMode.NoResize
-                };
-
-                // Создаем Grid для размещения элементов
-                Grid grid = new Grid { Margin = new Thickness(20) };
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                // Заголовок
-                TextBlock titleBlock = new TextBlock
-                {
-                    Text = "Добавление антропометрического измерения",
-                    FontSize = 16,
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 0, 0, 20),
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-                Grid.SetRow(titleBlock, 0);
-                Grid.SetColumnSpan(titleBlock, 2);
-
-                // Тип измерения
-                TextBlock typeLabel = new TextBlock
-                {
-                    Text = "Тип измерения:",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(typeLabel, 1);
-                Grid.SetColumn(typeLabel, 0);
-
-                ComboBox typeComboBox = new ComboBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30
-                };
-                typeComboBox.Items.Add("При поступлении");
-                typeComboBox.Items.Add("В процессе лечения");
-                typeComboBox.Items.Add("При выписке");
-                typeComboBox.SelectedIndex = 0;
-                Grid.SetRow(typeComboBox, 1);
-                Grid.SetColumn(typeComboBox, 1);
-
-                // Рост
-                TextBlock heightLabel = new TextBlock
-                {
-                    Text = "Рост (см):",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(heightLabel, 2);
-                Grid.SetColumn(heightLabel, 0);
-
-                TextBox heightTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30
-                };
-                Grid.SetRow(heightTextBox, 2);
-                Grid.SetColumn(heightTextBox, 1);
-
-                // Вес
-                TextBlock weightLabel = new TextBlock
-                {
-                    Text = "Вес (кг):",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(weightLabel, 3);
-                Grid.SetColumn(weightLabel, 0);
-
-                TextBox weightTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30
-                };
-                Grid.SetRow(weightTextBox, 3);
-                Grid.SetColumn(weightTextBox, 1);
-
-                // Кровяное давление
-                TextBlock bpLabel = new TextBlock
-                {
-                    Text = "Кровяное давление:",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(bpLabel, 4);
-                Grid.SetColumn(bpLabel, 0);
-
-                TextBox bpTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30,
-                    Text = "120/80"
-                };
-                Grid.SetRow(bpTextBox, 4);
-                Grid.SetColumn(bpTextBox, 1);
-
-                // Кнопки
-                StackPanel buttonPanel = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-
-                Button saveButton = new Button
-                {
-                    Content = "Сохранить",
-                    Width = 100,
-                    Height = 30,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    Style = (Style)FindResource("RoundedButtonStyle")
-                };
-                saveButton.Click += (s, args) =>
-                {
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(heightTextBox.Text) ||
-                            string.IsNullOrWhiteSpace(weightTextBox.Text) ||
-                            string.IsNullOrWhiteSpace(bpTextBox.Text))
-                        {
-                            MessageBox.Show("Пожалуйста, заполните все поля", "Предупреждение");
-                            return;
-                        }
-
-                        // Проверка ввода на корректность числовых значений
-                        if (!decimal.TryParse(heightTextBox.Text, out decimal height) ||
-                            !decimal.TryParse(weightTextBox.Text, out decimal weight))
-                        {
-                            MessageBox.Show("Пожалуйста, введите корректные числовые значения для роста и веса", "Ошибка");
-                            return;
-                        }
-
-                        // Получаем данные из формы
-                        string measurementType = typeComboBox.SelectedItem.ToString();
-                        string bloodPressure = bpTextBox.Text;
-
-                        // Сохраняем данные в базу
-                        using (SqlConnection con = new SqlConnection(connectionString))
-                        {
-                            con.Open();
-                            string query = @"
-                                INSERT INTO PatientMeasurements 
-                                    (PatientID, MeasurementType, Height, Weight, BloodPressure, MeasurementDate, MeasuredBy) 
-                                VALUES 
-                                    (@PatientID, @MeasurementType, @Height, @Weight, @BloodPressure, @MeasurementDate, @MeasuredBy)";
-
-                            using (SqlCommand cmd = new SqlCommand(query, con))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                                cmd.Parameters.AddWithValue("@MeasurementType", measurementType);
-                                cmd.Parameters.AddWithValue("@Height", height);
-                                cmd.Parameters.AddWithValue("@Weight", weight);
-                                cmd.Parameters.AddWithValue("@BloodPressure", bloodPressure);
-                                cmd.Parameters.AddWithValue("@MeasurementDate", DateTime.Now);
-                                
-                                // Получаем ID главврача (если пользователь - главврач)
-                                if (this.Owner is GlavDoctorWindow glavDoctorWindow && glavDoctorWindow.ChiefDoctorID > 0)
-                                {
-                                    cmd.Parameters.AddWithValue("@MeasuredBy", glavDoctorWindow.ChiefDoctorID);
-                                }
-                                else
-                                {
-                                    cmd.Parameters.AddWithValue("@MeasuredBy", DBNull.Value);
-                                }
-
-                                cmd.ExecuteNonQuery();
-                            }
-                        }
-
-                        // Обновляем отображение измерений
-                        LoadMeasurements();
-                        MessageBox.Show("Измерение успешно добавлено", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                        measurementWindow.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Ошибка при добавлении измерения: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                };
-
-                Button cancelButton = new Button
-                {
-                    Content = "Отмена",
-                    Width = 100,
-                    Height = 30,
-                    Style = (Style)FindResource("RoundedButtonStyle")
-                };
-                cancelButton.Click += (s, args) => measurementWindow.Close();
-
-                buttonPanel.Children.Add(saveButton);
-                buttonPanel.Children.Add(cancelButton);
-                Grid.SetRow(buttonPanel, 5);
-                Grid.SetColumnSpan(buttonPanel, 2);
-
-                // Добавляем элементы на форму
-                grid.Children.Add(titleBlock);
-                grid.Children.Add(typeLabel);
-                grid.Children.Add(typeComboBox);
-                grid.Children.Add(heightLabel);
-                grid.Children.Add(heightTextBox);
-                grid.Children.Add(weightLabel);
-                grid.Children.Add(weightTextBox);
-                grid.Children.Add(bpLabel);
-                grid.Children.Add(bpTextBox);
-                grid.Children.Add(buttonPanel);
-
-                measurementWindow.Content = grid;
-                measurementWindow.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка при открытии окна измерений: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void btnEditMeasurement_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgMeasurements.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите измерение для редактирования", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            try
-            {
-                // Получаем данные выбранного измерения
-                DataRowView selectedRow = dgMeasurements.SelectedItem as DataRowView;
-                if (selectedRow == null) return;
-
-                // Получаем ID измерения
-                int measurementID = -1;
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
-                    string query = @"
-                        SELECT MeasurementID 
-                        FROM PatientMeasurements 
-                        WHERE PatientID = @PatientID 
-                        AND MeasurementType = @MeasurementType 
-                        AND MeasurementDate = @MeasurementDate";
                     
-                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    // Получаем текущий список диагнозов из DataGrid
+                    DataView diagnosesView = dgDiagnoses.ItemsSource as DataView;
+                    
+                    if (diagnosesView != null)
                     {
-                        cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                        cmd.Parameters.AddWithValue("@MeasurementType", selectedRow["MeasurementType"].ToString());
-                        cmd.Parameters.AddWithValue("@MeasurementDate", Convert.ToDateTime(selectedRow["MeasurementDate"]));
-                        object result = cmd.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
+                        // Сначала удаляем все существующие диагнозы пациента
+                        string deleteQuery = @"
+                            DELETE FROM PatientDiagnoses
+                            WHERE PatientID = @PatientID";
+                            
+                        using (SqlCommand deleteCmd = new SqlCommand(deleteQuery, con))
                         {
-                            measurementID = Convert.ToInt32(result);
+                            deleteCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                            deleteCmd.ExecuteNonQuery();
                         }
-                    }
-                }
-
-                if (measurementID == -1)
-                {
-                    MessageBox.Show("Не удалось найти измерение в базе данных", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Создаем окно для редактирования
-                Window measurementWindow = new Window
-                {
-                    Title = "Редактирование измерения",
-                    Width = 400,
-                    Height = 370,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = this,
-                    ResizeMode = ResizeMode.NoResize
-                };
-
-                // Создаем Grid для размещения элементов
-                Grid grid = new Grid { Margin = new Thickness(20) };
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                // Заголовок
-                TextBlock titleBlock = new TextBlock
-                {
-                    Text = "Редактирование антропометрического измерения",
-                    FontSize = 16,
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 0, 0, 20),
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-                Grid.SetRow(titleBlock, 0);
-                Grid.SetColumnSpan(titleBlock, 2);
-
-                // Тип измерения
-                TextBlock typeLabel = new TextBlock
-                {
-                    Text = "Тип измерения:",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(typeLabel, 1);
-                Grid.SetColumn(typeLabel, 0);
-
-                ComboBox typeComboBox = new ComboBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30
-                };
-                typeComboBox.Items.Add("При поступлении");
-                typeComboBox.Items.Add("В процессе лечения");
-                typeComboBox.Items.Add("При выписке");
-                // Устанавливаем текущее значение
-                string currentType = selectedRow["MeasurementType"].ToString();
-                typeComboBox.SelectedIndex = typeComboBox.Items.IndexOf(currentType);
-                if (typeComboBox.SelectedIndex == -1) typeComboBox.SelectedIndex = 0;
-                
-                Grid.SetRow(typeComboBox, 1);
-                Grid.SetColumn(typeComboBox, 1);
-
-                // Рост
-                TextBlock heightLabel = new TextBlock
-                {
-                    Text = "Рост (см):",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(heightLabel, 2);
-                Grid.SetColumn(heightLabel, 0);
-
-                TextBox heightTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30,
-                    Text = selectedRow["Height"].ToString()
-                };
-                Grid.SetRow(heightTextBox, 2);
-                Grid.SetColumn(heightTextBox, 1);
-
-                // Вес
-                TextBlock weightLabel = new TextBlock
-                {
-                    Text = "Вес (кг):",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(weightLabel, 3);
-                Grid.SetColumn(weightLabel, 0);
-
-                TextBox weightTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30,
-                    Text = selectedRow["Weight"].ToString()
-                };
-                Grid.SetRow(weightTextBox, 3);
-                Grid.SetColumn(weightTextBox, 1);
-
-                // Кровяное давление
-                TextBlock bpLabel = new TextBlock
-                {
-                    Text = "Кровяное давление:",
-                    Margin = new Thickness(0, 0, 10, 10),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                Grid.SetRow(bpLabel, 4);
-                Grid.SetColumn(bpLabel, 0);
-
-                TextBox bpTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10),
-                    Height = 30,
-                    Text = selectedRow["BloodPressure"].ToString()
-                };
-                Grid.SetRow(bpTextBox, 4);
-                Grid.SetColumn(bpTextBox, 1);
-
-                // Кнопки
-                StackPanel buttonPanel = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-
-                Button saveButton = new Button
-                {
-                    Content = "Сохранить",
-                    Width = 100,
-                    Height = 30,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    Style = (Style)FindResource("RoundedButtonStyle")
-                };
-                saveButton.Click += (s, args) =>
-                {
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(heightTextBox.Text) ||
-                            string.IsNullOrWhiteSpace(weightTextBox.Text) ||
-                            string.IsNullOrWhiteSpace(bpTextBox.Text))
+                        
+                        // Затем добавляем текущие диагнозы
+                        foreach (DataRowView row in diagnosesView)
                         {
-                            MessageBox.Show("Пожалуйста, заполните все поля", "Предупреждение");
-                            return;
-                        }
-
-                        // Проверка ввода на корректность числовых значений
-                        if (!decimal.TryParse(heightTextBox.Text, out decimal height) ||
-                            !decimal.TryParse(weightTextBox.Text, out decimal weight))
-                        {
-                            MessageBox.Show("Пожалуйста, введите корректные числовые значения для роста и веса", "Ошибка");
-                            return;
-                        }
-
-                        // Получаем данные из формы
-                        string measurementType = typeComboBox.SelectedItem.ToString();
-                        string bloodPressure = bpTextBox.Text;
-
-                        // Обновляем данные в базе
-                        using (SqlConnection con = new SqlConnection(connectionString))
-                        {
-                            con.Open();
-                            string query = @"
-                                UPDATE PatientMeasurements 
-                                SET MeasurementType = @MeasurementType,
-                                    Height = @Height,
-                                    Weight = @Weight,
-                                    BloodPressure = @BloodPressure
-                                WHERE MeasurementID = @MeasurementID";
-
-                            using (SqlCommand cmd = new SqlCommand(query, con))
+                            string diagnosisName = row["DiagnosisName"].ToString();
+                            int diagnosisID = GetDiagnosisID(diagnosisName);
+                            
+                            if (diagnosisID > 0)
                             {
-                                cmd.Parameters.AddWithValue("@MeasurementID", measurementID);
-                                cmd.Parameters.AddWithValue("@MeasurementType", measurementType);
-                                cmd.Parameters.AddWithValue("@Height", height);
-                                cmd.Parameters.AddWithValue("@Weight", weight);
-                                cmd.Parameters.AddWithValue("@BloodPressure", bloodPressure);
-
-                                cmd.ExecuteNonQuery();
+                                string insertQuery = @"
+                                    INSERT INTO PatientDiagnoses (PatientID, DiagnosisID)
+                                    VALUES (@PatientID, @DiagnosisID)";
+                                    
+                                using (SqlCommand insertCmd = new SqlCommand(insertQuery, con))
+                                {
+                                    insertCmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                    insertCmd.Parameters.AddWithValue("@DiagnosisID", diagnosisID);
+                                    insertCmd.ExecuteNonQuery();
+                                }
                             }
                         }
-
-                        // Обновляем отображение измерений
-                        LoadMeasurements();
-                        MessageBox.Show("Измерение успешно обновлено", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                        measurementWindow.Close();
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Ошибка при обновлении измерения: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                };
-
-                Button cancelButton = new Button
-                {
-                    Content = "Отмена",
-                    Width = 100,
-                    Height = 30,
-                    Style = (Style)FindResource("RoundedButtonStyle")
-                };
-                cancelButton.Click += (s, args) => measurementWindow.Close();
-
-                buttonPanel.Children.Add(saveButton);
-                buttonPanel.Children.Add(cancelButton);
-                Grid.SetRow(buttonPanel, 5);
-                Grid.SetColumnSpan(buttonPanel, 2);
-
-                // Добавляем элементы на форму
-                grid.Children.Add(titleBlock);
-                grid.Children.Add(typeLabel);
-                grid.Children.Add(typeComboBox);
-                grid.Children.Add(heightLabel);
-                grid.Children.Add(heightTextBox);
-                grid.Children.Add(weightLabel);
-                grid.Children.Add(weightTextBox);
-                grid.Children.Add(bpLabel);
-                grid.Children.Add(bpTextBox);
-                grid.Children.Add(buttonPanel);
-
-                measurementWindow.Content = grid;
-                measurementWindow.ShowDialog();
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при редактировании измерения: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Ошибка при сохранении диагнозов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private void btnRemoveMeasurement_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgMeasurements.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите измерение для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            DataRowView selectedRow = dgMeasurements.SelectedItem as DataRowView;
-            string measurementType = selectedRow["MeasurementType"].ToString();
-            DateTime measurementDate = Convert.ToDateTime(selectedRow["MeasurementDate"]);
-
-            if (MessageBox.Show($"Вы уверены, что хотите удалить измерение типа '{measurementType}' от {measurementDate.ToString("dd.MM.yyyy")}?", 
-                               "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        con.Open();
-                        string query = @"
-                            DELETE FROM PatientMeasurements 
-                            WHERE PatientID = @PatientID 
-                            AND MeasurementType = @MeasurementType 
-                            AND MeasurementDate = @MeasurementDate";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
-                        {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@MeasurementType", measurementType);
-                            cmd.Parameters.AddWithValue("@MeasurementDate", measurementDate);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    
-                    // Обновляем отображение измерений
-                    LoadMeasurements();
-                    MessageBox.Show("Измерение успешно удалено", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка при удалении измерения: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void btnSaveMeasurements_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Измерения сохранены", "Сохранено", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void btnAddMedication_Click(object sender, RoutedEventArgs e)
@@ -1604,6 +1278,26 @@ namespace VrachDubRosh
                 Grid.SetRow(instructionsTextBox, 3);
                 Grid.SetColumn(instructionsTextBox, 1);
 
+                // Дата назначения
+                TextBlock dateLabel = new TextBlock
+                {
+                    Text = "Дата назначения:",
+                    Margin = new Thickness(0, 0, 10, 10),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetRow(dateLabel, 4);
+                Grid.SetColumn(dateLabel, 0);
+
+                DatePicker datePicker = new DatePicker
+                {
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Height = 30,
+                    SelectedDate = DateTime.Today,
+                    Style = (Style)FindResource("RoundedDatePickerStyle")
+                };
+                Grid.SetRow(datePicker, 4);
+                Grid.SetColumn(datePicker, 1);
+
                 // Кнопки
                 StackPanel buttonPanel = new StackPanel
                 {
@@ -1651,7 +1345,7 @@ namespace VrachDubRosh
                                 cmd.Parameters.AddWithValue("@MedicationName", medicationName);
                                 cmd.Parameters.AddWithValue("@Dosage", string.IsNullOrEmpty(dosage) ? DBNull.Value : (object)dosage);
                                 cmd.Parameters.AddWithValue("@Instructions", string.IsNullOrEmpty(instructions) ? DBNull.Value : (object)instructions);
-                                cmd.Parameters.AddWithValue("@PrescribedDate", DateTime.Now);
+                                cmd.Parameters.AddWithValue("@PrescribedDate", datePicker.SelectedDate ?? DateTime.Now);
                                 
                                 // Получаем ID главврача (если пользователь - главврач)
                                 if (this.Owner is GlavDoctorWindow glavDoctorWindow && glavDoctorWindow.ChiefDoctorID > 0)
@@ -1689,7 +1383,7 @@ namespace VrachDubRosh
 
                 buttonPanel.Children.Add(saveButton);
                 buttonPanel.Children.Add(cancelButton);
-                Grid.SetRow(buttonPanel, 4);
+                Grid.SetRow(buttonPanel, 5);
                 Grid.SetColumnSpan(buttonPanel, 2);
 
                 // Добавляем элементы на форму
@@ -1700,6 +1394,8 @@ namespace VrachDubRosh
                 grid.Children.Add(dosageTextBox);
                 grid.Children.Add(instructionsLabel);
                 grid.Children.Add(instructionsTextBox);
+                grid.Children.Add(dateLabel);
+                grid.Children.Add(datePicker);
                 grid.Children.Add(buttonPanel);
 
                 medicationWindow.Content = grid;
@@ -1851,6 +1547,27 @@ namespace VrachDubRosh
                 Grid.SetRow(instructionsTextBox, 3);
                 Grid.SetColumn(instructionsTextBox, 1);
 
+                // Дата назначения
+                TextBlock dateLabel = new TextBlock
+                {
+                    Text = "Дата назначения:",
+                    Margin = new Thickness(0, 0, 10, 10),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetRow(dateLabel, 4);
+                Grid.SetColumn(dateLabel, 0);
+
+                DatePicker datePicker = new DatePicker
+                {
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Height = 30,
+                    SelectedDate = selectedRow["PrescribedDate"] != DBNull.Value ? 
+                        (DateTime?)selectedRow["PrescribedDate"] : DateTime.Today,
+                    Style = (Style)FindResource("RoundedDatePickerStyle")
+                };
+                Grid.SetRow(datePicker, 4);
+                Grid.SetColumn(datePicker, 1);
+
                 // Кнопки
                 StackPanel buttonPanel = new StackPanel
                 {
@@ -1890,7 +1607,8 @@ namespace VrachDubRosh
                                 UPDATE PatientMedications 
                                 SET MedicationName = @MedicationName,
                                     Dosage = @Dosage,
-                                    Instructions = @Instructions
+                                    Instructions = @Instructions,
+                                    PrescribedDate = @PrescribedDate
                                 WHERE MedicationID = @MedicationID";
 
                             using (SqlCommand cmd = new SqlCommand(query, con))
@@ -1899,6 +1617,7 @@ namespace VrachDubRosh
                                 cmd.Parameters.AddWithValue("@MedicationName", medicationName);
                                 cmd.Parameters.AddWithValue("@Dosage", string.IsNullOrEmpty(dosage) ? DBNull.Value : (object)dosage);
                                 cmd.Parameters.AddWithValue("@Instructions", string.IsNullOrEmpty(instructions) ? DBNull.Value : (object)instructions);
+                                cmd.Parameters.AddWithValue("@PrescribedDate", datePicker.SelectedDate ?? DateTime.Now);
 
                                 cmd.ExecuteNonQuery();
                             }
@@ -1926,7 +1645,7 @@ namespace VrachDubRosh
 
                 buttonPanel.Children.Add(saveButton);
                 buttonPanel.Children.Add(cancelButton);
-                Grid.SetRow(buttonPanel, 4);
+                Grid.SetRow(buttonPanel, 5);
                 Grid.SetColumnSpan(buttonPanel, 2);
 
                 // Добавляем элементы на форму
@@ -1937,6 +1656,8 @@ namespace VrachDubRosh
                 grid.Children.Add(dosageTextBox);
                 grid.Children.Add(instructionsLabel);
                 grid.Children.Add(instructionsTextBox);
+                grid.Children.Add(dateLabel);
+                grid.Children.Add(datePicker);
                 grid.Children.Add(buttonPanel);
 
                 medicationWindow.Content = grid;
@@ -1950,17 +1671,25 @@ namespace VrachDubRosh
 
         private void btnRemoveMedication_Click(object sender, RoutedEventArgs e)
         {
-            if (dgMedications.SelectedItem == null)
+            if (dgMedications.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите медикамент для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите медикамент(ы) для удаления", "Предупреждение", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            DataRowView selectedRow = dgMedications.SelectedItem as DataRowView;
-            string medicationName = selectedRow["MedicationName"].ToString();
-            DateTime prescribedDate = Convert.ToDateTime(selectedRow["PrescribedDate"]);
+            List<Tuple<string, DateTime>> selectedMedications = new List<Tuple<string, DateTime>>();
+            foreach (DataRowView row in dgMedications.SelectedItems)
+            {
+                string medicationName = row["MedicationName"].ToString();
+                DateTime prescribedDate = Convert.ToDateTime(row["PrescribedDate"]);
+                selectedMedications.Add(new Tuple<string, DateTime>(medicationName, prescribedDate));
+            }
 
-            if (MessageBox.Show($"Вы уверены, что хотите удалить медикамент '{medicationName}'?", 
+            string medicationsStr = selectedMedications.Count == 1 
+                ? $"медикамент '{selectedMedications[0].Item1}'" 
+                : $"{selectedMedications.Count} медикаментов";
+
+            if (MessageBox.Show($"Вы уверены, что хотите удалить {medicationsStr}?", 
                                "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 try
@@ -1968,40 +1697,53 @@ namespace VrachDubRosh
                     using (SqlConnection con = new SqlConnection(connectionString))
                     {
                         con.Open();
-                        string query = @"
-                            DELETE FROM PatientMedications 
-                            WHERE PatientID = @PatientID 
-                            AND MedicationName = @MedicationName 
-                            AND PrescribedDate = @PrescribedDate";
-                        
-                        using (SqlCommand cmd = new SqlCommand(query, con))
+                        using (SqlTransaction transaction = con.BeginTransaction())
                         {
-                            cmd.Parameters.AddWithValue("@PatientID", _patientID);
-                            cmd.Parameters.AddWithValue("@MedicationName", medicationName);
-                            cmd.Parameters.AddWithValue("@PrescribedDate", prescribedDate);
-                            cmd.ExecuteNonQuery();
+                            try
+                            {
+                                foreach (var medication in selectedMedications)
+                                {
+                                    string medicationName = medication.Item1;
+                                    DateTime prescribedDate = medication.Item2;
+                                    
+                                    string query = @"
+                                        DELETE FROM PatientMedications 
+                                        WHERE PatientID = @PatientID 
+                                        AND MedicationName = @MedicationName 
+                                        AND PrescribedDate = @PrescribedDate";
+                                    
+                                    using (SqlCommand cmd = new SqlCommand(query, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@PatientID", _patientID);
+                                        cmd.Parameters.AddWithValue("@MedicationName", medicationName);
+                                        cmd.Parameters.AddWithValue("@PrescribedDate", prescribedDate);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                                
+                                transaction.Commit();
+                                
+                                // Обновляем отображение медикаментов
+                                LoadMedications();
+                                
+                                string successMessage = selectedMedications.Count == 1
+                                    ? "Медикамент успешно удален"
+                                    : "Медикаменты успешно удалены";
+                                MessageBox.Show(successMessage, "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                            catch (Exception ex)
+                            {
+                                transaction.Rollback();
+                                throw ex;
+                            }
                         }
                     }
-                    
-                    // Обновляем отображение медикаментов
-                    LoadMedications();
-                    MessageBox.Show("Медикамент успешно удален", "Успешно", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Ошибка при удалении медикамента: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Ошибка при удалении медикаментов: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-        }
-
-        private void btnSaveMedications_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Медикаменты сохранены", "Сохранено", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void btnSaveAll_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Все изменения успешно сохранены", "Сохранено", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
