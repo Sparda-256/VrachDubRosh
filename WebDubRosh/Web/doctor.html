@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Врач - Дубовая Роща</title>
+  <link rel="stylesheet" href="doctor.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Верхняя панель с кнопками -->
+    <div class="top-panel">
+      <div class="theme-toggle-container">
+        <label class="theme-toggle">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider round">
+            <span class="sun-icon"></span>
+            <span class="moon-icon"></span>
+          </span>
+        </label>
+      </div>
+      <div class="buttons-container">
+        <button id="exitBtn" class="btn btn-red">
+          <i class="icon exit-icon"></i>
+          <span>Выход</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="patients">Пациенты</button>
+        <button class="tab-button" data-tab="appointments">Назначение процедур</button>
+        <button class="tab-button" data-tab="procedures">Процедуры</button>
+      </div>
+      
+      <div class="tab-content">
+        <!-- Вкладка "Пациенты" -->
+        <div id="patients" class="tab-pane active">
+          <div class="search-container">
+            <label for="searchPatients">Поиск:</label>
+            <input type="text" id="searchPatients" class="search-input">
+          </div>
+          
+          <div class="table-container">
+            <table id="patientsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>ФИО</th>
+                  <th>Дата рождения</th>
+                  <th>Пол</th>
+                  <th>Дата записи</th>
+                  <th>Дата выписки</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Вкладка "Назначение процедур" -->
+        <div id="appointments" class="tab-pane">
+          <div class="appointment-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="patientSelect">Пациент:</label>
+                <select id="patientSelect" class="form-select"></select>
+              </div>
+              
+              <div class="form-group">
+                <label for="procedureSelect">Процедура:</label>
+                <select id="procedureSelect" class="form-select"></select>
+              </div>
+              
+              <div class="form-group">
+                <label for="appointmentDate">Дата:</label>
+                <input type="date" id="appointmentDate" class="form-input">
+              </div>
+              
+              <div class="form-group">
+                <label for="appointmentTime">Время (ЧЧ:ММ):</label>
+                <input type="time" id="appointmentTime" class="form-input">
+              </div>
+              
+              <button id="assignProcedureBtn" class="btn btn-accent">
+                <i class="icon calendar-icon"></i>
+                <span>Назначить</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="search-container">
+            <label for="searchAppointments">Поиск:</label>
+            <input type="text" id="searchAppointments" class="search-input">
+          </div>
+          
+          <div class="table-container">
+            <table id="appointmentsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Пациент</th>
+                  <th>Процедура</th>
+                  <th>Дата и время</th>
+                  <th>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="appointments-actions">
+            <div class="checkbox-container">
+              <input type="checkbox" id="hideCompleted" checked>
+              <label for="hideCompleted">Скрыть завершённые и отменённые</label>
+            </div>
+            <div class="buttons-group">
+              <button id="cancelAppointmentBtn" class="btn btn-red">
+                <i class="icon cancel-icon"></i>
+                <span>Отменить</span>
+              </button>
+              <button id="weeklyScheduleBtn" class="btn btn-blue">
+                <i class="icon calendar-icon"></i>
+                <span>Недельный график</span>
+              </button>
+              <button id="updateStatusBtn" class="btn btn-blue">
+                <i class="icon refresh-icon"></i>
+                <span>Обновить</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Вкладка "Процедуры" -->
+        <div id="procedures" class="tab-pane">
+          <div class="search-container">
+            <label for="searchProcedures">Поиск:</label>
+            <input type="text" id="searchProcedures" class="search-input">
+          </div>
+          
+          <div class="table-container">
+            <table id="proceduresTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Наименование</th>
+                  <th>Длительность (мин)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="procedures-actions">
+            <button id="addProcedureBtn" class="btn btn-accent">
+              <i class="icon add-icon"></i>
+              <span>Добавить</span>
+            </button>
+            <button id="deleteProcedureBtn" class="btn btn-red">
+              <i class="icon delete-icon"></i>
+              <span>Удалить</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальные окна -->
+  <!-- Модальное окно добавления процедуры -->
+  <div id="addProcedureModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Добавление процедуры</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="procedureName">Наименование:</label>
+          <input type="text" id="procedureName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="procedureDuration">Длительность (мин):</label>
+          <input type="number" id="procedureDuration" class="form-input" min="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveProcedureBtn" class="btn btn-accent">Сохранить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно добавления описания для пациента -->
+  <div id="addDescriptionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Добавление описания</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p id="patientNameDisplay"></p>
+        <div class="form-group">
+          <label for="patientDescription">Описание:</label>
+          <textarea id="patientDescription" class="form-textarea" rows="6"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveDescriptionBtn" class="btn btn-accent">Сохранить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для описания процедуры -->
+  <div id="procedureDescriptionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Описание процедуры</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p id="appointmentDetailsDisplay"></p>
+        <div class="form-group">
+          <label for="procedureDescription">Описание:</label>
+          <textarea id="procedureDescription" class="form-textarea" rows="6"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveProcedureDescriptionBtn" class="btn btn-accent">Сохранить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="doctor.js"></script>
+</body>
+</html> 

@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function() {
               if (data.role === "ChiefDoctor") {
                   window.location.href = "chief.html";
               } else if (data.role === "Doctor") {
-                  window.location.href = "doctor.html?doctorId=" + data.doctorID;
+                  window.location.href = "doctor.html?id=" + data.doctorID;
               } else if (data.role === "Manager") {
                   window.location.href = "manager.html";
               } else {
