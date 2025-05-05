@@ -24,11 +24,13 @@ document.addEventListener("DOMContentLoaded", function() {
                   window.location.href = "chief.html";
               } else if (data.role === "Doctor") {
                   window.location.href = "doctor.html?doctorId=" + data.doctorID;
+              } else if (data.role === "Manager") {
+                  window.location.href = "manager.html";
               } else {
                   loginMessage.textContent = "Неизвестная роль пользователя.";
               }
           } else {
-              loginMessage.textContent = "Неверный логин или пароль.";
+              loginMessage.textContent = data.message || "Неверный логин или пароль.";
           }
       } catch (error) {
           console.error(error);

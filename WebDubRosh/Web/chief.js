@@ -1,383 +1,299 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Инициализация переключателя темы
+  const themeToggle = document.getElementById('themeToggle');
+  
+  // Проверка, сохранена ли тема в localStorage
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-theme');
+    themeToggle.checked = true;
+  }
+  
+  // Обработчик переключения темы
+  themeToggle.addEventListener('change', function() {
+    if (this.checked) {
+      document.body.classList.add('dark-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  });
+  
   // Переключение вкладок
-  const tabLinks = document.querySelectorAll('.tablinks');
-  tabLinks.forEach(btn => {
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  tabButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-      document.querySelectorAll('.tabcontent').forEach(tab => tab.style.display = 'none');
-      tabLinks.forEach(link => link.classList.remove('active'));
-      const tabId = this.getAttribute('data-tab');
-      document.getElementById(tabId).style.display = 'block';
+      // Деактивировать все вкладки
+      tabButtons.forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      
+      // Активировать выбранную вкладку
       this.classList.add('active');
+      const tabId = this.getAttribute('data-tab');
+      document.getElementById(tabId).classList.add('active');
     });
   });
   
   // Загрузка данных
-  loadNewPatients();
   loadPatients();
   loadDoctors();
-  loadDoctorSelect();
   
   // События поиска
-  document.getElementById('searchNewPatients').addEventListener('input', filterNewPatients);
   document.getElementById('searchPatients').addEventListener('input', filterPatients);
   document.getElementById('searchDoctors').addEventListener('input', filterDoctors);
   
   // События кнопок
-  document.getElementById('assignPatientBtn').addEventListener('click', assignPatient);
-  document.getElementById('reportsBtn').addEventListener('click', () => {
-    window.location.href = '/chief/reports.html';
+  document.getElementById('reportsBtn').addEventListener('click', function() {
+    alert('Отчеты и аналитика. Функция будет реализована позже.');
   });
   
-  // Кнопки "Выход" — переход на страницу логина
-  document.getElementById('exitNewPatients').addEventListener('click', () => {
-    window.location.href = '/login.html';
-  });
-  document.getElementById('exitPatients').addEventListener('click', () => {
-    window.location.href = '/login.html';
-  });
-  document.getElementById('exitDoctors').addEventListener('click', () => {
-    window.location.href = '/login.html';
+  document.getElementById('exitBtn').addEventListener('click', function() {
+    window.location.href = 'login.html';
   });
   
-  // Заглушки для остальных кнопок (дополните логику при необходимости)
-  document.getElementById('addPatientBtn').addEventListener('click', () => {
-    alert('Добавление пациента. Реализуйте модальное окно или отдельную страницу.');
-  });
-  document.getElementById('editPatientBtn').addEventListener('click', () => {
-    const selected = document.querySelector('#patientsTable tbody tr.selected');
-    if (!selected) {
-      alert('Выберите пациента для редактирования.');
+  document.getElementById('createDischargeBtn').addEventListener('click', function() {
+    const selectedRow = document.querySelector('#patientsTable tbody tr.selected');
+    if (!selectedRow) {
+      alert('Выберите пациента для создания выписного эпикриза.');
       return;
     }
-    alert('Редактирование пациента. Реализуйте модальное окно или отдельную страницу.');
+    
+    alert('Функция создания выписного эпикриза будет реализована позже.');
   });
-  document.getElementById('assignDoctorsBtn').addEventListener('click', () => {
-    const selected = document.querySelector('#patientsTable tbody tr.selected');
-    if (!selected) {
+  
+  document.getElementById('assignDoctorsBtn').addEventListener('click', function() {
+    const selectedRow = document.querySelector('#patientsTable tbody tr.selected');
+    if (!selectedRow) {
       alert('Выберите пациента для назначения врача.');
       return;
     }
-    alert('Назначение врача. Реализуйте модальное окно или отдельную страницу.');
+    
+    alert('Функция назначения врача пациенту будет реализована позже.');
   });
-  document.getElementById('addDoctorBtn').addEventListener('click', () => {
-    alert('Добавление врача. Реализуйте модальное окно или отдельную страницу.');
+  
+  document.getElementById('addDoctorBtn').addEventListener('click', function() {
+    alert('Функция добавления врача будет реализована позже.');
   });
-  document.getElementById('editDoctorBtn').addEventListener('click', () => {
-    const selected = document.querySelector('#doctorsTable tbody tr.selected');
-    if (!selected) {
+  
+  document.getElementById('editDoctorBtn').addEventListener('click', function() {
+    const selectedRow = document.querySelector('#doctorsTable tbody tr.selected');
+    if (!selectedRow) {
       alert('Выберите врача для редактирования.');
       return;
     }
-    alert('Редактирование врача. Реализуйте модальное окно или отдельную страницу.');
+    
+    alert('Функция редактирования врача будет реализована позже.');
   });
   
-  // Реализация удаления пациента
-  document.getElementById('deletePatientBtn').addEventListener('click', () => {
-    const selected = document.querySelector('#patientsTable tbody tr.selected');
-    if (!selected) {
-      alert('Выберите пациента для удаления.');
-      return;
-    }
-    const patientID = selected.cells[0].textContent;
-    if (confirm('Вы уверены, что хотите удалить этого пациента?')) {
-      // Используем относительный путь для запроса
-      fetch(`/api/chief/patient/${patientID}`, {
-         method: 'DELETE'
-      })
-      .then(response => response.json())
-      .then(result => {
-         if(result.success) {
-            alert('Пациент удалён.');
-            loadPatients();
-         } else {
-            alert('Ошибка при удалении пациента: ' + result.message);
-         }
-      })
-      .catch(err => {
-         console.error(err);
-         alert('Ошибка при соединении с сервером.');
-      });
-    }
-  });
-  
-  // Реализация удаления врача
-  document.getElementById('deleteDoctorBtn').addEventListener('click', () => {
-    const selected = document.querySelector('#doctorsTable tbody tr.selected');
-    if (!selected) {
+  document.getElementById('deleteDoctorBtn').addEventListener('click', function() {
+    const selectedRow = document.querySelector('#doctorsTable tbody tr.selected');
+    if (!selectedRow) {
       alert('Выберите врача для удаления.');
       return;
     }
-    const doctorID = selected.cells[0].textContent;
-    if (confirm('Вы уверены, что хотите удалить этого врача?')) {
+    
+    const doctorID = selectedRow.dataset.doctorId;
+    const doctorName = selectedRow.querySelector('td:first-child').textContent;
+    
+    if (confirm(`Вы уверены, что хотите удалить врача "${doctorName}"?`)) {
       // Используем относительный путь для запроса
       fetch(`/api/chief/doctor/${doctorID}`, {
-         method: 'DELETE'
+        method: 'DELETE'
       })
       .then(response => response.json())
       .then(result => {
-         if(result.success) {
-            alert('Врач удалён.');
-            loadDoctors();
-            loadDoctorSelect();
-         } else {
-            alert('Ошибка при удалении врача: ' + result.message);
-         }
+        if(result.success) {
+          alert('Врач удалён.');
+          loadDoctors();
+        } else {
+          alert('Ошибка при удалении врача: ' + result.message);
+        }
       })
       .catch(err => {
-         console.error(err);
-         alert('Ошибка при соединении с сервером.');
+        console.error(err);
+        alert('Ошибка при соединении с сервером.');
       });
     }
   });
 });
 
-let newPatientsData = [];
+// Глобальные переменные для хранения данных
 let patientsData = [];
 let doctorsData = [];
 
-function loadNewPatients() {
-  // Относительный путь для запроса
-  fetch('/api/chief/newpatients')
-    .then(response => response.json())
-    .then(data => {
-      newPatientsData = data;
-      renderNewPatientsTable();
-    })
-    .catch(err => console.error('Ошибка загрузки новых пациентов', err));
-}
-
-function renderNewPatientsTable() {
-  const tbody = document.getElementById('newPatientsTable').querySelector('tbody');
-  tbody.innerHTML = '';
-  newPatientsData.forEach(patient => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${patient.NewPatientID || patient.newPatientID}</td>
-      <td>${patient.FullName || patient.fullName}</td>
-      <td>${formatDate(patient.DateOfBirth || patient.dateOfBirth)}</td>
-      <td>${patient.Gender || patient.gender}</td>
-    `;
-    tr.addEventListener('click', () => {
-      tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
-    });
-    tbody.appendChild(tr);
-  });
-}
-
+// Загрузка пациентов
 function loadPatients() {
-  // Относительный путь для запроса
   fetch('/api/chief/patients')
     .then(response => response.json())
     .then(data => {
       patientsData = data;
       renderPatientsTable();
     })
-    .catch(err => console.error('Ошибка загрузки пациентов', err));
+    .catch(err => {
+      console.error('Ошибка загрузки пациентов', err);
+      alert('Не удалось загрузить список пациентов.');
+    });
 }
 
+// Отрисовка таблицы пациентов
 function renderPatientsTable() {
-  const tbody = document.getElementById('patientsTable').querySelector('tbody');
+  const tbody = document.querySelector('#patientsTable tbody');
   tbody.innerHTML = '';
+  
   patientsData.forEach(patient => {
     const tr = document.createElement('tr');
+    tr.dataset.patientId = patient.PatientID || patient.patientID;
+    
     tr.innerHTML = `
-      <td>${patient.PatientID || patient.patientID}</td>
       <td>${patient.FullName || patient.fullName}</td>
       <td>${formatDate(patient.DateOfBirth || patient.dateOfBirth)}</td>
       <td>${patient.Gender || patient.gender}</td>
       <td>${formatDate(patient.RecordDate || patient.recordDate)}</td>
       <td>${formatDate(patient.DischargeDate || patient.dischargeDate)}</td>
     `;
-    tr.addEventListener('dblclick', () => {
-      alert(`Открыть процедуры для пациента ID ${patient.PatientID || patient.patientID}`);
-    });
-    tr.addEventListener('click', () => {
+    
+    // Обработчик клика для выделения строки
+    tr.addEventListener('click', function() {
       tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
+      this.classList.add('selected');
     });
+    
+    // Обработчик двойного клика для открытия медкарты
+    tr.addEventListener('dblclick', function() {
+      alert(`Открытие медицинской карты пациента "${patient.FullName || patient.fullName}" будет реализовано позже.`);
+    });
+    
     tbody.appendChild(tr);
   });
 }
 
+// Загрузка врачей
 function loadDoctors() {
-  // Относительный путь для запроса
   fetch('/api/chief/doctors')
     .then(response => response.json())
     .then(data => {
       doctorsData = data;
       renderDoctorsTable();
     })
-    .catch(err => console.error('Ошибка загрузки врачей', err));
+    .catch(err => {
+      console.error('Ошибка загрузки врачей', err);
+      alert('Не удалось загрузить список врачей.');
+    });
 }
 
+// Отрисовка таблицы врачей
 function renderDoctorsTable() {
-  const tbody = document.getElementById('doctorsTable').querySelector('tbody');
+  const tbody = document.querySelector('#doctorsTable tbody');
   tbody.innerHTML = '';
+  
   doctorsData.forEach(doctor => {
     const tr = document.createElement('tr');
+    tr.dataset.doctorId = doctor.DoctorID || doctor.doctorID;
+    
     tr.innerHTML = `
-      <td>${doctor.DoctorID || doctor.doctorID}</td>
       <td>${doctor.FullName || doctor.fullName}</td>
       <td>${doctor.Specialty || doctor.specialty}</td>
+      <td>${doctor.GeneralName || doctor.generalName || ''}</td>
       <td>${doctor.OfficeNumber || doctor.officeNumber}</td>
       <td>${doctor.WorkExperience || doctor.workExperience}</td>
     `;
-    tr.addEventListener('dblclick', () => {
-      alert(`Открыть процедуры для врача ID ${doctor.DoctorID || doctor.doctorID}`);
-    });
-    tr.addEventListener('click', () => {
+    
+    // Обработчик клика для выделения строки
+    tr.addEventListener('click', function() {
       tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
+      this.classList.add('selected');
     });
+    
+    // Обработчик двойного клика для открытия списка процедур
+    tr.addEventListener('dblclick', function() {
+      alert(`Открытие списка процедур врача "${doctor.FullName || doctor.fullName}" будет реализовано позже.`);
+    });
+    
     tbody.appendChild(tr);
   });
 }
 
-function loadDoctorSelect() {
-  // Относительный путь для запроса
-  fetch('/api/chief/doctors')
-    .then(response => response.json())
-    .then(data => {
-      const select = document.getElementById('doctorSelect');
-      select.innerHTML = '';
-      data.forEach(doctor => {
-        const option = document.createElement('option');
-        option.value = doctor.DoctorID || doctor.doctorID;
-        option.textContent = doctor.FullName || doctor.fullName;
-        select.appendChild(option);
-      });
-    })
-    .catch(err => console.error('Ошибка загрузки списка врачей', err));
-}
-
-function filterNewPatients() {
-  const search = document.getElementById('searchNewPatients').value.toLowerCase();
-  const filtered = newPatientsData.filter(p => (p.FullName || p.fullName).toLowerCase().includes(search));
-  const tbody = document.getElementById('newPatientsTable').querySelector('tbody');
-  tbody.innerHTML = '';
-  filtered.forEach(patient => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${patient.NewPatientID || patient.newPatientID}</td>
-      <td>${patient.FullName || patient.fullName}</td>
-      <td>${formatDate(patient.DateOfBirth || patient.dateOfBirth)}</td>
-      <td>${patient.Gender || patient.gender}</td>
-    `;
-    tr.addEventListener('click', () => {
-      tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
-    });
-    tbody.appendChild(tr);
-  });
-}
-
+// Фильтрация пациентов
 function filterPatients() {
-  const search = document.getElementById('searchPatients').value.toLowerCase();
-  const filtered = patientsData.filter(p => (p.FullName || p.fullName).toLowerCase().includes(search));
-  const tbody = document.getElementById('patientsTable').querySelector('tbody');
+  const searchText = document.getElementById('searchPatients').value.toLowerCase();
+  const filteredData = patientsData.filter(patient => 
+    (patient.FullName || patient.fullName).toLowerCase().includes(searchText)
+  );
+  
+  const tbody = document.querySelector('#patientsTable tbody');
   tbody.innerHTML = '';
-  filtered.forEach(patient => {
+  
+  filteredData.forEach(patient => {
     const tr = document.createElement('tr');
+    tr.dataset.patientId = patient.PatientID || patient.patientID;
+    
     tr.innerHTML = `
-      <td>${patient.PatientID || patient.patientID}</td>
       <td>${patient.FullName || patient.fullName}</td>
       <td>${formatDate(patient.DateOfBirth || patient.dateOfBirth)}</td>
       <td>${patient.Gender || patient.gender}</td>
       <td>${formatDate(patient.RecordDate || patient.recordDate)}</td>
       <td>${formatDate(patient.DischargeDate || patient.dischargeDate)}</td>
     `;
-    tr.addEventListener('dblclick', () => {
-      alert(`Открыть процедуры для пациента ID ${patient.PatientID || patient.patientID}`);
-    });
-    tr.addEventListener('click', () => {
+    
+    tr.addEventListener('click', function() {
       tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
+      this.classList.add('selected');
     });
+    
+    tr.addEventListener('dblclick', function() {
+      alert(`Открытие медицинской карты пациента "${patient.FullName || patient.fullName}" будет реализовано позже.`);
+    });
+    
     tbody.appendChild(tr);
   });
 }
 
+// Фильтрация врачей
 function filterDoctors() {
-  const search = document.getElementById('searchDoctors').value.toLowerCase();
-  const filtered = doctorsData.filter(d => (d.FullName || d.fullName).toLowerCase().includes(search));
-  const tbody = document.getElementById('doctorsTable').querySelector('tbody');
+  const searchText = document.getElementById('searchDoctors').value.toLowerCase();
+  const filteredData = doctorsData.filter(doctor => 
+    (doctor.FullName || doctor.fullName).toLowerCase().includes(searchText)
+  );
+  
+  const tbody = document.querySelector('#doctorsTable tbody');
   tbody.innerHTML = '';
-  filtered.forEach(doctor => {
+  
+  filteredData.forEach(doctor => {
     const tr = document.createElement('tr');
+    tr.dataset.doctorId = doctor.DoctorID || doctor.doctorID;
+    
     tr.innerHTML = `
-      <td>${doctor.DoctorID || doctor.doctorID}</td>
       <td>${doctor.FullName || doctor.fullName}</td>
       <td>${doctor.Specialty || doctor.specialty}</td>
+      <td>${doctor.GeneralName || doctor.generalName || ''}</td>
       <td>${doctor.OfficeNumber || doctor.officeNumber}</td>
       <td>${doctor.WorkExperience || doctor.workExperience}</td>
     `;
-    tr.addEventListener('dblclick', () => {
-      alert(`Открыть процедуры для врача ID ${doctor.DoctorID || doctor.doctorID}`);
-    });
-    tr.addEventListener('click', () => {
+    
+    tr.addEventListener('click', function() {
       tbody.querySelectorAll('tr').forEach(row => row.classList.remove('selected'));
-      tr.classList.add('selected');
+      this.classList.add('selected');
     });
+    
+    tr.addEventListener('dblclick', function() {
+      alert(`Открытие списка процедур врача "${doctor.FullName || doctor.fullName}" будет реализовано позже.`);
+    });
+    
     tbody.appendChild(tr);
   });
 }
 
-function assignPatient() {
-  const newPatientsTbody = document.getElementById('newPatientsTable').querySelector('tbody');
-  const selectedRow = newPatientsTbody.querySelector('tr.selected');
-  if (!selectedRow) {
-    alert('Выберите пациента из списка новых пациентов.');
-    return;
-  }
-  const newPatientID = selectedRow.cells[0].textContent;
-  const doctorSelect = document.getElementById('doctorSelect');
-  const doctorID = doctorSelect.value;
-  if (!doctorID) {
-    alert('Выберите врача для назначения.');
-    return;
-  }
-  const recordDate = document.getElementById('recordDate').value;
-  const dischargeDate = document.getElementById('dischargeDate').value;
-  if (!recordDate || !dischargeDate) {
-    alert('Выберите дату записи и дату выписки.');
-    return;
-  }
-  
-  const payload = {
-    newPatientID: parseInt(newPatientID),
-    doctorID: parseInt(doctorID),
-    recordDate: recordDate,
-    dischargeDate: dischargeDate
-  };
-  
-  // Относительный путь для запроса
-  fetch('/api/chief/assignPatient', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(response => response.json())
-  .then(result => {
-    if(result.success) {
-      alert('Пациент успешно назначен.');
-      loadNewPatients();
-      loadPatients();
-    } else {
-      alert('Ошибка при назначении пациента: ' + result.message);
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert('Ошибка при соединении с сервером.');
-  });
-}
-
+// Форматирование даты
 function formatDate(dateString) {
-  if(!dateString) return '';
+  if (!dateString) return '';
+  
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // Если не удалось преобразовать
+  
   const day = ('0' + date.getDate()).slice(-2);
   const month = ('0' + (date.getMonth() + 1)).slice(-2);
   const year = date.getFullYear();
+  
   return `${day}.${month}.${year}`;
 }

@@ -42,6 +42,19 @@ namespace WebDubRosh.Controllers
                             return Ok(new { success = true, role = "ChiefDoctor" });
                         }
                     }
+                    
+                    // Проверка в таблице Managers
+                    string queryManager = "SELECT COUNT(*) FROM Managers WHERE FullName = @login AND Password = @password";
+                    using (var cmd = new SqlCommand(queryManager, con))
+                    {
+                        cmd.Parameters.AddWithValue("@login", request.Username);
+                        cmd.Parameters.AddWithValue("@password", request.Password);
+                        int count = (int)cmd.ExecuteScalar();
+                        if (count > 0)
+                        {
+                            return Ok(new { success = true, role = "Manager" });
+                        }
+                    }
 
                     // Проверка в таблице Doctors
                     string queryDoctor = "SELECT DoctorID FROM Doctors WHERE FullName = @login AND Password = @password";
@@ -58,7 +71,7 @@ namespace WebDubRosh.Controllers
                     }
                 }
 
-                return Ok(new { success = false });
+                return Ok(new { success = false, message = "Неверный логин или пароль." });
             }
             catch (Exception ex)
             {

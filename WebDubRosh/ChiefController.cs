@@ -12,31 +12,6 @@ namespace WebDubRosh.Controllers
         // Обновлённая строка подключения с TrustServerCertificate=True для работы через localtunnel
         private readonly string _connectionString = "data source=localhost;initial catalog=PomoshnikPolicliniki2;integrated security=True;encrypt=False;MultipleActiveResultSets=True;App=EntityFramework;TrustServerCertificate=True";
 
-        // GET: api/chief/newpatients
-        [HttpGet("newpatients")]
-        public IActionResult GetNewPatients()
-        {
-            try
-            {
-                DataTable dt = new DataTable();
-                using (SqlConnection con = new SqlConnection(_connectionString))
-                {
-                    con.Open();
-                    string query = "SELECT NewPatientID, FullName, DateOfBirth, Gender FROM NewPatients";
-                    using (SqlCommand cmd = new SqlCommand(query, con))
-                    using (SqlDataAdapter da = new SqlDataAdapter(cmd))
-                    {
-                        da.Fill(dt);
-                    }
-                }
-                return Ok(DataTableToList(dt));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = ex.Message });
-            }
-        }
-
         // GET: api/chief/patients
         [HttpGet("patients")]
         public IActionResult GetPatients()
@@ -72,7 +47,7 @@ namespace WebDubRosh.Controllers
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
-                    string query = "SELECT DoctorID, FullName, Specialty, OfficeNumber, WorkExperience FROM Doctors";
+                    string query = "SELECT DoctorID, FullName, Specialty, GeneralName, OfficeNumber, WorkExperience FROM Doctors";
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     using (SqlDataAdapter da = new SqlDataAdapter(cmd))
                     {
@@ -87,81 +62,89 @@ namespace WebDubRosh.Controllers
             }
         }
 
-        // POST: api/chief/assignPatient
-        [HttpPost("assignPatient")]
-        public IActionResult AssignPatient([FromBody] AssignPatientRequest request)
+        // GET: api/chief/patient/{id}/medcard
+        [HttpGet("patient/{id}/medcard")]
+        public IActionResult GetPatientMedCard(int id)
         {
-            if (request == null || request.NewPatientID <= 0 || request.DoctorID <= 0 || request.RecordDate == null || request.DischargeDate == null)
-            {
-                return BadRequest(new { success = false, message = "Некорректные данные." });
-            }
-
             try
             {
+                // Основная информация о пациенте
+                var patientInfo = new System.Collections.Generic.Dictionary<string, object>();
+                // Процедуры пациента
+                var patientProcedures = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
+                
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
-                    using (SqlTransaction tran = con.BeginTransaction())
+                    
+                    // Получаем информацию о пациенте
+                    string patientQuery = @"
+                        SELECT P.PatientID, P.FullName, P.DateOfBirth, P.Gender, P.RecordDate, P.DischargeDate
+                        FROM Patients P
+                        WHERE P.PatientID = @PatientID";
+                    
+                    using (SqlCommand cmd = new SqlCommand(patientQuery, con))
                     {
-                        // 1. Перенос пациента в таблицу Patients
-                        string insertQuery = @"
-                            INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate)
-                            SELECT FullName, DateOfBirth, Gender, @RecordDate, @DischargeDate FROM NewPatients
-                            WHERE NewPatientID = @NewPatientID;
-                            SELECT SCOPE_IDENTITY();";
-                        int newPatientInsertedID;
-                        using (SqlCommand cmdInsert = new SqlCommand(insertQuery, con, tran))
+                        cmd.Parameters.AddWithValue("@PatientID", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            cmdInsert.Parameters.AddWithValue("@RecordDate", request.RecordDate);
-                            cmdInsert.Parameters.AddWithValue("@DischargeDate", request.DischargeDate);
-                            cmdInsert.Parameters.AddWithValue("@NewPatientID", request.NewPatientID);
-                            object result = cmdInsert.ExecuteScalar();
-                            newPatientInsertedID = Convert.ToInt32(result);
+                            if (reader.Read())
+                            {
+                                patientInfo["PatientID"] = reader["PatientID"];
+                                patientInfo["FullName"] = reader["FullName"];
+                                patientInfo["DateOfBirth"] = Convert.ToDateTime(reader["DateOfBirth"]).ToString("yyyy-MM-dd");
+                                patientInfo["Gender"] = reader["Gender"];
+                                patientInfo["RecordDate"] = Convert.ToDateTime(reader["RecordDate"]).ToString("yyyy-MM-dd");
+                                patientInfo["DischargeDate"] = Convert.ToDateTime(reader["DischargeDate"]).ToString("yyyy-MM-dd");
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Пациент не найден" });
+                            }
                         }
-
-                        // 2. Связь пациента с выбранным врачом
-                        string assignQuery = "INSERT INTO PatientDoctorAssignments (PatientID, DoctorID) VALUES (@PatientID, @DoctorID)";
-                        using (SqlCommand cmdAssign = new SqlCommand(assignQuery, con, tran))
-                        {
-                            cmdAssign.Parameters.AddWithValue("@PatientID", newPatientInsertedID);
-                            cmdAssign.Parameters.AddWithValue("@DoctorID", request.DoctorID);
-                            cmdAssign.ExecuteNonQuery();
-                        }
-
-                        // 3. Удаление записей из таблиц NewPatientSymptoms, NewPatientAnswers, NewPatientDiagnoses
-                        string deleteSymptomsQuery = "DELETE FROM NewPatientSymptoms WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelSymptoms = new SqlCommand(deleteSymptomsQuery, con, tran))
-                        {
-                            cmdDelSymptoms.Parameters.AddWithValue("@NewPatientID", request.NewPatientID);
-                            cmdDelSymptoms.ExecuteNonQuery();
-                        }
-
-                        string deleteAnswersQuery = "DELETE FROM NewPatientAnswers WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelAnswers = new SqlCommand(deleteAnswersQuery, con, tran))
-                        {
-                            cmdDelAnswers.Parameters.AddWithValue("@NewPatientID", request.NewPatientID);
-                            cmdDelAnswers.ExecuteNonQuery();
-                        }
-
-                        string deleteDiagnosesQuery = "DELETE FROM NewPatientDiagnoses WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelDiagnoses = new SqlCommand(deleteDiagnosesQuery, con, tran))
-                        {
-                            cmdDelDiagnoses.Parameters.AddWithValue("@NewPatientID", request.NewPatientID);
-                            cmdDelDiagnoses.ExecuteNonQuery();
-                        }
-
-                        // 4. Удаление записи из NewPatients
-                        string deleteNewPatientQuery = "DELETE FROM NewPatients WHERE NewPatientID = @NewPatientID";
-                        using (SqlCommand cmdDelete = new SqlCommand(deleteNewPatientQuery, con, tran))
-                        {
-                            cmdDelete.Parameters.AddWithValue("@NewPatientID", request.NewPatientID);
-                            cmdDelete.ExecuteNonQuery();
-                        }
-
-                        tran.Commit();
                     }
                 }
-                return Ok(new { success = true });
+                
+                // Возвращаем всю информацию о пациенте
+                return Ok(new { 
+                    success = true, 
+                    patient = patientInfo
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/chief/doctor/{id}/procedures
+        [HttpGet("doctor/{id}/procedures")]
+        public IActionResult GetDoctorProcedures(int id)
+        {
+            try
+            {
+                // Информация о процедурах врача
+                DataTable dt = new DataTable();
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT p.ProcedureID, p.ProcedureName, p.Duration, p.Description
+                        FROM Procedures p
+                        WHERE p.DoctorID = @DoctorID";
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DoctorID", id);
+                        using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+                        {
+                            da.Fill(dt);
+                        }
+                    }
+                }
+                
+                return Ok(DataTableToList(dt));
             }
             catch (Exception ex)
             {
@@ -178,22 +161,53 @@ namespace WebDubRosh.Controllers
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
-                    // Удаляем связи пациента с врачами
-                    string deleteAssignmentsQuery = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                    using (SqlCommand cmd = new SqlCommand(deleteAssignmentsQuery, con))
+                    using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        cmd.Parameters.AddWithValue("@PatientID", id);
-                        cmd.ExecuteNonQuery();
-                    }
-                    // Удаляем пациента
-                    string deletePatientQuery = "DELETE FROM Patients WHERE PatientID = @PatientID";
-                    using (SqlCommand cmd = new SqlCommand(deletePatientQuery, con))
-                    {
-                        cmd.Parameters.AddWithValue("@PatientID", id);
-                        int rowsAffected = cmd.ExecuteNonQuery();
-                        if (rowsAffected == 0)
+                        try
                         {
-                            return NotFound(new { success = false, message = "Пациент не найден." });
+                            // Удаляем процедуры, назначенные пациенту
+                            string deleteProcedureAppointments = "DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
+                            using (SqlCommand cmd = new SqlCommand(deleteProcedureAppointments, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем описания пациента
+                            string deleteDescriptions = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
+                            using (SqlCommand cmd = new SqlCommand(deleteDescriptions, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем связи пациента с врачами
+                            string deleteAssignments = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
+                            using (SqlCommand cmd = new SqlCommand(deleteAssignments, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем пациента
+                            string deletePatient = "DELETE FROM Patients WHERE PatientID = @PatientID";
+                            using (SqlCommand cmd = new SqlCommand(deletePatient, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                int rowsAffected = cmd.ExecuteNonQuery();
+                                if (rowsAffected == 0)
+                                {
+                                    tran.Rollback();
+                                    return NotFound(new { success = false, message = "Пациент не найден." });
+                                }
+                            }
+                            
+                            tran.Commit();
+                        }
+                        catch
+                        {
+                            tran.Rollback();
+                            throw;
                         }
                     }
                 }
@@ -214,22 +228,61 @@ namespace WebDubRosh.Controllers
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
-                    // Удаляем связи врача с пациентами
-                    string deleteAssignmentsQuery = "DELETE FROM PatientDoctorAssignments WHERE DoctorID = @DoctorID";
-                    using (SqlCommand cmd = new SqlCommand(deleteAssignmentsQuery, con))
+                    using (SqlTransaction tran = con.BeginTransaction())
                     {
-                        cmd.Parameters.AddWithValue("@DoctorID", id);
-                        cmd.ExecuteNonQuery();
-                    }
-                    // Удаляем врача
-                    string deleteDoctorQuery = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
-                    using (SqlCommand cmd = new SqlCommand(deleteDoctorQuery, con))
-                    {
-                        cmd.Parameters.AddWithValue("@DoctorID", id);
-                        int rowsAffected = cmd.ExecuteNonQuery();
-                        if (rowsAffected == 0)
+                        try
                         {
-                            return NotFound(new { success = false, message = "Врач не найден." });
+                            // Удаляем назначенные процедуры
+                            string deleteAppointments = "DELETE FROM ProcedureAppointments WHERE DoctorID = @DoctorID";
+                            using (SqlCommand cmd = new SqlCommand(deleteAppointments, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@DoctorID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем описания пациентов, созданные этим врачом
+                            string deleteDescriptions = "DELETE FROM PatientDescriptions WHERE DoctorID = @DoctorID";
+                            using (SqlCommand cmd = new SqlCommand(deleteDescriptions, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@DoctorID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем связи врача с пациентами
+                            string deleteAssignments = "DELETE FROM PatientDoctorAssignments WHERE DoctorID = @DoctorID";
+                            using (SqlCommand cmd = new SqlCommand(deleteAssignments, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@DoctorID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем процедуры врача
+                            string deleteProcedures = "DELETE FROM Procedures WHERE DoctorID = @DoctorID";
+                            using (SqlCommand cmd = new SqlCommand(deleteProcedures, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@DoctorID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Удаляем врача
+                            string deleteDoctor = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
+                            using (SqlCommand cmd = new SqlCommand(deleteDoctor, con, tran))
+                            {
+                                cmd.Parameters.AddWithValue("@DoctorID", id);
+                                int rowsAffected = cmd.ExecuteNonQuery();
+                                if (rowsAffected == 0)
+                                {
+                                    tran.Rollback();
+                                    return NotFound(new { success = false, message = "Врач не найден." });
+                                }
+                            }
+                            
+                            tran.Commit();
+                        }
+                        catch
+                        {
+                            tran.Rollback();
+                            throw;
                         }
                     }
                 }
@@ -256,13 +309,5 @@ namespace WebDubRosh.Controllers
             }
             return list;
         }
-    }
-
-    public class AssignPatientRequest
-    {
-        public int NewPatientID { get; set; }
-        public int DoctorID { get; set; }
-        public DateTime RecordDate { get; set; }
-        public DateTime DischargeDate { get; set; }
     }
 }
