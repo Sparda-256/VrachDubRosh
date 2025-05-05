@@ -99,7 +99,22 @@ namespace WebDubRosh
                         });
 
                         // Подключаем файлы
-                        string siteFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Web");
+                        string projectDir = AppDomain.CurrentDomain.BaseDirectory;
+                        // Navigate up from bin/Debug/net8.0-windows to the project directory
+                        if (projectDir.Contains("bin\\Debug") || projectDir.Contains("bin\\Release"))
+                        {
+                            projectDir = Path.GetFullPath(Path.Combine(projectDir, "..", "..", ".."));
+                        }
+                        string siteFolder = Path.Combine(projectDir, "Web");
+                        
+                        // Verify that the directory exists
+                        if (!Directory.Exists(siteFolder))
+                        {
+                            Console.WriteLine($"Web directory not found at: {siteFolder}");
+                            // Fall back to the app's directory if needed
+                            siteFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Web");
+                        }
+                        
                         var defaultFilesOptions = new DefaultFilesOptions
                         {
                             FileProvider = new PhysicalFileProvider(siteFolder)

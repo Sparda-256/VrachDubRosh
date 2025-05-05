@@ -2,7 +2,7 @@
 using System;
 using System.Data.SqlClient;
 
-namespace PomoshnikPolicliniki.Controllers
+namespace WebDubRosh.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
