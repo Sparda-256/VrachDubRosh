@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Менеджер - Дубовая Роща</title>
+  <link rel="stylesheet" href="manager.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Верхняя панель с кнопками -->
+    <div class="top-panel">
+      <div class="theme-toggle-container">
+        <label class="theme-toggle">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider round">
+            <span class="sun-icon"></span>
+            <span class="moon-icon"></span>
+          </span>
+        </label>
+      </div>
+      <div class="buttons-container">
+        <button id="exitBtn" class="btn btn-red">
+          <i class="icon exit-icon"></i>
+          <span>Выход</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="patients">Пациенты</button>
+        <button class="tab-button" data-tab="accompanying">Сопровождающие</button>
+        <button class="tab-button" data-tab="accommodation">Размещение</button>
+        <button class="tab-button" data-tab="documents">Документы</button>
+      </div>
+      
+      <div class="tab-content">
+        <!-- Вкладка "Пациенты" -->
+        <div id="patients" class="tab-pane active">
+          <div class="search-container">
+            <label for="searchPatients">Поиск:</label>
+            <input type="text" id="searchPatients" class="search-input">
+          </div>
+          
+          <div class="table-container">
+            <table id="patientsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>ФИО</th>
+                  <th>Дата рождения</th>
+                  <th>Пол</th>
+                  <th>Дата записи</th>
+                  <th>Дата выписки</th>
+                  <th>Документы</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="buttons-group">
+            <button id="addPatientBtn" class="btn btn-accent">
+              <i class="icon add-icon"></i>
+              <span>Добавить</span>
+            </button>
+            <button id="editPatientBtn" class="btn btn-blue">
+              <i class="icon edit-icon"></i>
+              <span>Редактировать</span>
+            </button>
+            <button id="deletePatientBtn" class="btn btn-red">
+              <i class="icon delete-icon"></i>
+              <span>Удалить</span>
+            </button>
+            <button id="manageDocumentsBtn" class="btn btn-blue">
+              <i class="icon doc-icon"></i>
+              <span>Документы</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Вкладка "Сопровождающие" -->
+        <div id="accompanying" class="tab-pane">
+          <div class="search-container">
+            <label for="searchAccompanying">Поиск:</label>
+            <input type="text" id="searchAccompanying" class="search-input">
+          </div>
+          
+          <div class="table-container">
+            <table id="accompanyingTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>ФИО</th>
+                  <th>ФИО пациента</th>
+                  <th>Отношение</th>
+                  <th>Доверенность</th>
+                  <th>Документы</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="buttons-group">
+            <button id="addAccompanyingBtn" class="btn btn-accent">
+              <i class="icon add-icon"></i>
+              <span>Добавить</span>
+            </button>
+            <button id="editAccompanyingBtn" class="btn btn-blue">
+              <i class="icon edit-icon"></i>
+              <span>Редактировать</span>
+            </button>
+            <button id="deleteAccompanyingBtn" class="btn btn-red">
+              <i class="icon delete-icon"></i>
+              <span>Удалить</span>
+            </button>
+            <button id="manageAccompanyingDocumentsBtn" class="btn btn-blue">
+              <i class="icon doc-icon"></i>
+              <span>Документы</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Вкладка "Размещение" -->
+        <div id="accommodation" class="tab-pane">
+          <div class="filters-container">
+            <div class="filter-group">
+              <label for="buildingFilter">Корпус:</label>
+              <select id="buildingFilter" class="filter-select">
+                <option value="">Все корпуса</option>
+                <!-- Данные будут загружены через JavaScript -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="roomStatusFilter">Статус:</label>
+              <select id="roomStatusFilter" class="filter-select">
+                <option value="all">Все комнаты</option>
+                <option value="free">Свободные</option>
+                <option value="full">Заполненные</option>
+                <option value="partial">Частично заполненные</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="stats-container">
+            <div class="stat-item">
+              <span class="stat-label">Всего комнат:</span>
+              <span id="totalRooms" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Свободных мест:</span>
+              <span id="availableBeds" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Занятых мест:</span>
+              <span id="occupiedBeds" class="stat-value occupied">0</span>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="accommodationTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Корпус</th>
+                  <th>Комната</th>
+                  <th>Место</th>
+                  <th>Статус</th>
+                  <th>Проживающий</th>
+                  <th>Тип</th>
+                  <th>Дата заселения</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="buttons-group">
+            <button id="checkOutBtn" class="btn btn-red">
+              <i class="icon check-out-icon"></i>
+              <span>Выселить</span>
+            </button>
+            <button id="refreshAccommodationBtn" class="btn btn-blue">
+              <i class="icon refresh-icon"></i>
+              <span>Обновить</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Вкладка "Документы" -->
+        <div id="documents" class="tab-pane">
+          <div class="filters-container">
+            <div class="filter-grid">
+              <div class="filter-group">
+                <label for="searchDocuments">Поиск:</label>
+                <input type="text" id="searchDocuments" class="search-input">
+              </div>
+              <div class="filter-group">
+                <label for="documentCategoryFilter">Категория:</label>
+                <select id="documentCategoryFilter" class="filter-select">
+                  <option value="">Все документы</option>
+                  <option value="medical">Медицинские документы</option>
+                  <option value="legal">Юридические документы</option>
+                  <option value="financial">Финансовые документы</option>
+                  <option value="administrative">Административные документы</option>
+                  <option value="other">Прочее</option>
+                </select>
+              </div>
+              <div class="upload-button-container">
+                <button id="uploadDocumentBtn" class="btn btn-accent">
+                  <i class="icon upload-icon"></i>
+                  <span>Загрузить документ</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="documentsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Категория</th>
+                  <th>Тип файла</th>
+                  <th>Размер</th>
+                  <th>Дата загрузки</th>
+                  <th>Загрузил</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="buttons-group">
+            <button id="viewDocumentBtn" class="btn btn-blue">
+              <i class="icon view-icon"></i>
+              <span>Просмотр</span>
+            </button>
+            <button id="downloadDocumentBtn" class="btn btn-blue">
+              <i class="icon download-icon"></i>
+              <span>Скачать</span>
+            </button>
+            <button id="printDocumentBtn" class="btn btn-blue">
+              <i class="icon print-icon"></i>
+              <span>Печать</span>
+            </button>
+            <button id="deleteDocumentBtn" class="btn btn-red">
+              <i class="icon delete-icon"></i>
+              <span>Удалить</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальные окна -->
+  <!-- Модальное окно для добавления/редактирования пациента -->
+  <div id="patientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="patientModalTitle">Добавление пациента</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="patientFullName">ФИО:</label>
+          <input type="text" id="patientFullName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="patientDateOfBirth">Дата рождения:</label>
+          <input type="date" id="patientDateOfBirth" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="patientGender">Пол:</label>
+          <select id="patientGender" class="form-select">
+            <option value="Мужской">Мужской</option>
+            <option value="Женский">Женский</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="patientStayType">Тип стационара:</label>
+          <select id="patientStayType" class="form-select">
+            <option value="Дневной">Дневной</option>
+            <option value="Круглосуточный">Круглосуточный</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="savePatientBtn" class="btn btn-accent">Сохранить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для добавления/редактирования сопровождающего -->
+  <div id="accompanyingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="accompanyingModalTitle">Добавление сопровождающего</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="accompanyingPatient">Пациент:</label>
+          <select id="accompanyingPatient" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="accompanyingFullName">ФИО:</label>
+          <input type="text" id="accompanyingFullName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="accompanyingDateOfBirth">Дата рождения:</label>
+          <input type="date" id="accompanyingDateOfBirth" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="accompanyingRelationship">Отношение к пациенту:</label>
+          <select id="accompanyingRelationship" class="form-select">
+            <option value="Родитель">Родитель</option>
+            <option value="Опекун">Опекун</option>
+            <option value="Супруг(а)">Супруг(а)</option>
+            <option value="Ребенок">Ребенок</option>
+            <option value="Другое">Другое</option>
+          </select>
+        </div>
+        <div class="form-group checkbox-container">
+          <input type="checkbox" id="accompanyingPowerOfAttorney">
+          <label for="accompanyingPowerOfAttorney">Имеет доверенность</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveAccompanyingBtn" class="btn btn-accent">Сохранить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для заселения -->
+  <div id="checkInModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Заселение</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="checkInBuilding">Корпус:</label>
+          <select id="checkInBuilding" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="checkInRoom">Комната:</label>
+          <select id="checkInRoom" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="checkInBed">Место:</label>
+          <select id="checkInBed" class="form-select">
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="personType">Тип проживающего:</label>
+          <select id="personType" class="form-select">
+            <option value="patient">Пациент</option>
+            <option value="accompanying">Сопровождающее лицо</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="checkInPerson">Проживающий:</label>
+          <select id="checkInPerson" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="checkInDate">Дата заселения:</label>
+          <input type="date" id="checkInDate" class="form-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveCheckInBtn" class="btn btn-accent">Заселить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для загрузки документов -->
+  <div id="uploadDocumentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Загрузка документа</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="documentName">Название документа:</label>
+          <input type="text" id="documentName" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="documentCategory">Категория:</label>
+          <select id="documentCategory" class="form-select">
+            <option value="administrative">Административный документ</option>
+            <option value="medical">Медицинский документ</option>
+            <option value="legal">Юридический документ</option>
+            <option value="financial">Финансовый документ</option>
+            <option value="other">Прочее</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="documentFile">Файл:</label>
+          <input type="file" id="documentFile" class="form-file">
+        </div>
+        <div class="form-group">
+          <label for="documentDescription">Описание (необязательно):</label>
+          <textarea id="documentDescription" class="form-textarea" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveDocumentBtn" class="btn btn-accent">Загрузить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="manager.js"></script>
+</body>
+</html> 

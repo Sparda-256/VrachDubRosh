@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function() {
               } else if (data.role === "Doctor") {
                   window.location.href = "doctor.html?id=" + data.doctorID;
               } else if (data.role === "Manager") {
-                  window.location.href = "manager.html";
+                  window.location.href = "manager.html?id=" + data.managerID;
               } else {
                   loginMessage.textContent = "Неизвестная роль пользователя.";
               }
