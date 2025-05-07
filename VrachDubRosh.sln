@@ -5,8 +5,6 @@ VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VrachDubRosh", "VrachDubRosh\VrachDubRosh.csproj", "{7AA38930-F82C-482E-BC92-A49851D7D4A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebDubRosh", "WebDubRosh\WebDubRosh.csproj", "{672F0FDB-506A-432E-A021-D54FE57A39F2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
@@ -24,10 +22,6 @@ Global
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AA38930-F82C-482E-BC92-A49851D7D4A7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{238CF03E-79D0-4BDB-BAC3-6C0777F3BDE5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
