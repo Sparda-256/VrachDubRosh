@@ -355,9 +355,16 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(data => {
         console.log('Получено документов:', data.length);
-        console.log('Данные документов:', data);
-        documents = data;
         
+        // Покажем структуру первого документа, если он есть
+        if (data.length > 0) {
+          console.log('Структура документа:');
+          for (const key in data[0]) {
+            console.log(`${key}: ${typeof data[0][key]} - ${data[0][key]}`);
+          }
+        }
+        
+        documents = data;
         renderDocuments();
       })
       .catch(error => {
@@ -471,26 +478,38 @@ document.addEventListener('DOMContentLoaded', function() {
   // Отображение документов
   function renderDocuments() {
     const tbody = documentsTable.querySelector('tbody');
+    
+    // Очищаем таблицу
     tbody.innerHTML = '';
     
-    documents.forEach(doc => {
+    console.log(`Отрисовка ${documents.length} документов`);
+    
+    if (documents.length === 0) {
+      // Если документов нет, показываем сообщение
       const row = document.createElement('tr');
-      row.dataset.id = doc.DocumentID;
-      
-      // Получаем отображаемый тип файла на основе фактического расширения
-      const displayFileType = getDisplayFileType(doc.FileType);
-      
-      row.innerHTML = `
-        <td>${doc.DocumentName}</td>
-        <td>${doc.Category}</td>
-        <td>${displayFileType}</td>
-        <td>${doc.FileSize}</td>
-        <td>${formatDateTime(new Date(doc.UploadDate))}</td>
-        <td>${doc.UploadedBy || 'Система'}</td>
-      `;
-      
+      row.innerHTML = `<td colspan="6" class="text-center">Документы не найдены</td>`;
       tbody.appendChild(row);
-    });
+    } else {
+      // Отображаем документы
+      documents.forEach(doc => {
+        const row = document.createElement('tr');
+        row.dataset.id = doc.DocumentID;
+        
+        // Получаем отображаемый тип файла на основе фактического расширения
+        const displayFileType = getDisplayFileType(doc.FileType);
+        
+        row.innerHTML = `
+          <td>${doc.DocumentName || '-'}</td>
+          <td>${doc.Category || '-'}</td>
+          <td>${displayFileType}</td>
+          <td>${doc.FileSize || '-'}</td>
+          <td>${formatDateTime(new Date(doc.UploadDate))}</td>
+          <td>${doc.UploadedBy || 'Система'}</td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
     
     // Обновляем состояние кнопок после обновления таблицы
     updateDocumentButtonStates();
@@ -565,19 +584,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Фильтрация документов
   function filterDocuments() {
+    // Если поиск не инициализирован, выходим из функции
+    if (!searchDocuments) {
+      console.error('Элемент поиска документов не найден');
+      return;
+    }
+    
+    console.log('Функция filterDocuments вызвана');
+    console.log('Поисковый запрос:', searchDocuments.value);
+    console.log('Всего документов перед фильтрацией:', documents.length);
+    
+    // Получаем значение поиска
+    const searchValue = (searchDocuments.value || '').toLowerCase().trim();
+    
     // Если есть поисковый запрос, фильтруем локально
-    if (searchDocuments && searchDocuments.value.trim() !== '') {
-      const searchValue = searchDocuments.value.toLowerCase().trim();
+    if (searchValue !== '') {
+      console.log('Используемый поисковый запрос:', searchValue);
       
       // Фильтруем документы по поисковому запросу
-      const filteredDocuments = documents.filter(doc => 
-        doc.DocumentName.toLowerCase().includes(searchValue) ||
-        doc.Category.toLowerCase().includes(searchValue) ||
-        doc.FileType.toLowerCase().includes(searchValue) ||
-        (doc.UploadedBy && doc.UploadedBy.toLowerCase().includes(searchValue))
-      );
+      const filteredDocuments = documents.filter(doc => {
+        // Проверки на null и undefined
+        const docName = (doc.DocumentName || '').toLowerCase();
+        const docCategory = (doc.Category || '').toLowerCase();
+        const docType = (doc.FileType || '').toLowerCase();
+        const docUploader = (doc.UploadedBy || '').toLowerCase();
+        
+        // Проверка на совпадение
+        const nameMatch = docName.includes(searchValue);
+        const categoryMatch = docCategory.includes(searchValue);
+        const typeMatch = docType.includes(searchValue);
+        const uploaderMatch = docUploader.includes(searchValue);
+        
+        // Отображаем для отладки
+        if (nameMatch || categoryMatch || typeMatch || uploaderMatch) {
+          console.log(`Найдено совпадение: ${doc.DocumentName || 'Без имени'}`);
+        }
+        
+        return nameMatch || categoryMatch || typeMatch || uploaderMatch;
+      });
       
-      // Сохраняем отфильтрованные документы временно для отображения
+      console.log('Количество документов после фильтрации:', filteredDocuments.length);
+      
+      // Временно заменяем массив документов для отображения
       const originalDocuments = documents;
       documents = filteredDocuments;
       
@@ -587,6 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Восстанавливаем оригинальный массив
       documents = originalDocuments;
     } else {
+      console.log('Поисковый запрос пустой, отображаем все документы');
       // Если нет поиска, просто отображаем все документы
       renderDocuments();
     }
