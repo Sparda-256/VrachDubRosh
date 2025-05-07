@@ -51,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const uploadDocumentBtn = document.getElementById('uploadDocumentBtn');
   const viewDocumentBtn = document.getElementById('viewDocumentBtn');
   const downloadDocumentBtn = document.getElementById('downloadDocumentBtn');
-  const printDocumentBtn = document.getElementById('printDocumentBtn');
   const deleteDocumentBtn = document.getElementById('deleteDocumentBtn');
 
   // Модальные окна
@@ -152,7 +151,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработчики фильтров
     buildingFilter.addEventListener('change', filterAccommodations);
     roomStatusFilter.addEventListener('change', filterAccommodations);
-    documentCategoryFilter.addEventListener('change', filterDocuments);
+    
+    // Обработчик для фильтра категории документов
+    documentCategoryFilter.addEventListener('change', function() {
+      console.log('Выбрана категория:', documentCategoryFilter.value);
+      loadDocuments(); // Загружаем документы с выбранной категорией
+    });
 
     // Обработчики кнопок
     exitBtn.addEventListener('click', () => {
@@ -179,7 +183,6 @@ document.addEventListener('DOMContentLoaded', function() {
     uploadDocumentBtn.addEventListener('click', showUploadDocumentModal);
     viewDocumentBtn.addEventListener('click', viewDocument);
     downloadDocumentBtn.addEventListener('click', downloadDocument);
-    printDocumentBtn.addEventListener('click', printDocument);
     deleteDocumentBtn.addEventListener('click', deleteDocument);
 
     // Обработчики выбора строк в таблицах
@@ -342,17 +345,23 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadDocuments() {
     const category = documentCategoryFilter.value || '';
     
-    return fetch(`/api/manager/documents?category=${category}`)
-      .then(response => response.json())
+    console.log('Загрузка документов с категорией:', category);
+    console.log('URL запроса:', `/api/manager/documents?category=${encodeURIComponent(category)}`);
+    
+    return fetch(`/api/manager/documents?category=${encodeURIComponent(category)}`)
+      .then(response => {
+        console.log('Статус ответа:', response.status);
+        return response.json();
+      })
       .then(data => {
-        console.log('Received documents data:', data);
+        console.log('Получено документов:', data.length);
+        console.log('Данные документов:', data);
         documents = data;
         
-        // Применяем поисковый фильтр, если он установлен
-        filterDocuments();
+        renderDocuments();
       })
       .catch(error => {
-        console.error('Error loading documents:', error);
+        console.error('Ошибка при загрузке документов:', error);
         alert('Ошибка при загрузке документов.');
       });
   }
@@ -468,10 +477,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = document.createElement('tr');
       row.dataset.id = doc.DocumentID;
       
+      // Получаем отображаемый тип файла на основе фактического расширения
+      const displayFileType = getDisplayFileType(doc.FileType);
+      
       row.innerHTML = `
         <td>${doc.DocumentName}</td>
         <td>${doc.Category}</td>
-        <td>${doc.FileType}</td>
+        <td>${displayFileType}</td>
         <td>${doc.FileSize}</td>
         <td>${formatDateTime(new Date(doc.UploadDate))}</td>
         <td>${doc.UploadedBy || 'Система'}</td>
@@ -482,6 +494,36 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обновляем состояние кнопок после обновления таблицы
     updateDocumentButtonStates();
+  }
+
+  // Функция для получения отображаемого типа файла
+  function getDisplayFileType(fileExtension) {
+    const extension = fileExtension.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return 'PDF документ';
+      case 'doc':
+      case 'docx':
+        return 'Документ Word';
+      case 'xls':
+      case 'xlsx':
+        return 'Таблица Excel';
+      case 'ppt':
+      case 'pptx':
+        return 'Презентация';
+      case 'txt':
+        return 'Текстовый документ';
+      case 'jpg':
+      case 'jpeg':
+        return 'Изображение JPEG';
+      case 'png':
+        return 'Изображение PNG';
+      case 'gif':
+        return 'Изображение GIF';
+      default:
+        return extension.toUpperCase();
+    }
   }
 
   // Фильтрация пациентов
@@ -585,7 +627,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Убедимся, что все элементы существуют перед изменением их состояния
     if (viewDocumentBtn) viewDocumentBtn.disabled = !hasSingleSelection;
     if (downloadDocumentBtn) downloadDocumentBtn.disabled = !hasSelection;
-    if (printDocumentBtn) printDocumentBtn.disabled = !hasSingleSelection;
     if (deleteDocumentBtn) deleteDocumentBtn.disabled = !hasSelection;
   }
 
@@ -784,7 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('documentName').value = '';
     document.getElementById('documentFile').value = '';
     document.getElementById('documentDescription').value = '';
-    document.getElementById('documentCategory').value = 'administrative'; // Значение по умолчанию
+    document.getElementById('documentCategory').value = 'Медицинские документы'; // Значение по умолчанию
     
     // Показываем модальное окно
     const modal = document.getElementById('uploadDocumentModal');
@@ -868,17 +909,6 @@ document.addEventListener('DOMContentLoaded', function() {
     selectedDocumentIDs.forEach(documentID => {
       window.open(`/api/manager/document/${documentID}/download`, '_blank');
     });
-  }
-
-  // Печать документа
-  function printDocument() {
-    if (selectedDocumentIDs.length !== 1) {
-      alert('Выберите один документ для печати.');
-      return;
-    }
-    
-    const documentID = selectedDocumentIDs[0];
-    window.open(`/api/manager/document/${documentID}/print`, '_blank');
   }
 
   // Удаление документа

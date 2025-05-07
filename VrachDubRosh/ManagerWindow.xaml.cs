@@ -58,6 +58,7 @@ namespace VrachDubRosh
         public string DocumentName { get; set; }
         public string Category { get; set; }
         public string FileType { get; set; }
+        public string DisplayFileType { get; set; }
         public string FileSize { get; set; }
         public DateTime UploadDate { get; set; }
         public string UploadedBy { get; set; }
@@ -1223,6 +1224,7 @@ namespace VrachDubRosh
                                     DocumentName = reader["DocumentName"].ToString(),
                                     Category = reader["Category"].ToString(),
                                     FileType = reader["FileType"].ToString(),
+                                    DisplayFileType = GetDisplayFileType(reader["FileType"].ToString()),
                                     FileSize = fileSizeFormatted,
                                     UploadDate = Convert.ToDateTime(reader["UploadDate"]),
                                     UploadedBy = reader["UploadedBy"].ToString(),
@@ -1276,6 +1278,33 @@ namespace VrachDubRosh
             }
             
             return string.Format("{0:n1} {1}", number, suffixes[counter]);
+        }
+        
+        private string GetDisplayFileType(string fileType)
+        {
+            switch (fileType.ToLower())
+            {
+                case "docx":
+                    return "Документ Word";
+                case "xlsx":
+                    return "Электронная таблица";
+                case "pdf":
+                    return "PDF документ";
+                case "png":
+                    return "Изображение";
+                case "jpg":
+                case "jpeg":
+                    return "Изображение";
+                case "gif":
+                    return "Изображение";
+                case "txt":
+                    return "Текстовый документ";
+                case "ppt":
+                case "pptx":
+                    return "Презентация";
+                default:
+                    return fileType.Replace(".", "").ToUpper();
+            }
         }
         
         private void UpdateDocumentButtonStates()
@@ -1371,11 +1400,14 @@ namespace VrachDubRosh
                 // Загружаем файл в память
                 byte[] fileData = File.ReadAllBytes(filePath);
                 
-                // Определяем тип файла на основе расширения
-                string fileType = GetFileTypeByExtension(fileExtension);
+                // Определяем тип файла на основе расширения для хранения в БД (без точки)
+                string fileExtensionWithoutDot = fileExtension.TrimStart('.');
+                
+                // Определяем отображаемый тип файла для пользовательского интерфейса
+                string displayFileType = GetDisplayFileType(fileExtensionWithoutDot);
                 
                 // Открываем диалог для добавления информации о документе
-                UploadDocumentWindow uploadWindow = new UploadDocumentWindow(fileName, fileType);
+                UploadDocumentWindow uploadWindow = new UploadDocumentWindow(fileName, displayFileType);
                 
                 if (uploadWindow.ShowDialog() == true)
                 {
@@ -1437,7 +1469,7 @@ namespace VrachDubRosh
                             {
                                 cmd.Parameters.AddWithValue("@DocumentName", uploadWindow.DocumentName);
                                 cmd.Parameters.AddWithValue("@Category", uploadWindow.SelectedCategory);
-                                cmd.Parameters.AddWithValue("@FileType", fileType);
+                                cmd.Parameters.AddWithValue("@FileType", fileExtensionWithoutDot);
                                 cmd.Parameters.AddWithValue("@FileSizeBytes", fileSize);
                                 cmd.Parameters.AddWithValue("@UploadDate", DateTime.Now);
                                 cmd.Parameters.AddWithValue("@UploadedBy", currentUser);
@@ -1458,30 +1490,6 @@ namespace VrachDubRosh
                         MessageBox.Show("Ошибка при загрузке документа: " + ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
-            }
-        }
-        
-        // Определение типа файла по расширению
-        private string GetFileTypeByExtension(string extension)
-        {
-            switch (extension.ToLower())
-            {
-                case ".docx":
-                case ".doc":
-                    return "Word";
-                case ".xlsx":
-                case ".xls":
-                    return "Excel";
-                case ".pdf":
-                    return "PDF";
-                case ".png":
-                case ".jpg":
-                case ".jpeg":
-                    return "Изображение";
-                case ".txt":
-                    return "Текст";
-                default:
-                    return extension.Replace(".", "").ToUpper();
             }
         }
         
@@ -1543,10 +1551,19 @@ namespace VrachDubRosh
                         return;
                     }
                     
+                    // Обеспечиваем, что у имени файла есть правильное расширение
+                    string suggestedFileName = selectedDocument.DocumentName;
+                    string fileExtension = selectedDocument.FileType.ToLower();
+                    
+                    if (!suggestedFileName.ToLower().EndsWith($".{fileExtension}"))
+                    {
+                        suggestedFileName = $"{suggestedFileName}.{fileExtension}";
+                    }
+                    
                     // Открываем диалог сохранения файла
                     SaveFileDialog saveFileDialog = new SaveFileDialog();
-                    saveFileDialog.FileName = selectedDocument.DocumentName;
-                    saveFileDialog.Filter = $"Файлы {selectedDocument.FileType} (*.{selectedDocument.FileType.ToLower()})|*.{selectedDocument.FileType.ToLower()}|Все файлы (*.*)|*.*";
+                    saveFileDialog.FileName = suggestedFileName;
+                    saveFileDialog.Filter = $"Файлы {fileExtension} (*.{fileExtension})|*.{fileExtension}|Все файлы (*.*)|*.*";
                     
                     if (saveFileDialog.ShowDialog() == true)
                     {
@@ -1574,12 +1591,21 @@ namespace VrachDubRosh
                                 // Проверяем, существует ли файл
                                 if (File.Exists(document.FilePath))
                                 {
+                                    // Обеспечиваем, что у имени файла есть правильное расширение
+                                    string fileName = document.DocumentName;
+                                    string fileExtension = document.FileType.ToLower();
+                                    
+                                    if (!fileName.ToLower().EndsWith($".{fileExtension}"))
+                                    {
+                                        fileName = $"{fileName}.{fileExtension}";
+                                    }
+                                    
                                     // Создаем уникальное имя файла, если файл с таким именем уже существует
-                                    string destinationPath = Path.Combine(destinationFolder, document.DocumentName);
+                                    string destinationPath = Path.Combine(destinationFolder, fileName);
                                     int counter = 1;
                                     
-                                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(document.DocumentName);
-                                    string extension = Path.GetExtension(document.DocumentName);
+                                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                                    string extension = Path.GetExtension(fileName);
                                     
                                     while (File.Exists(destinationPath))
                                     {

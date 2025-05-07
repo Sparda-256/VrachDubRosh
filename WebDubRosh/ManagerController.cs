@@ -467,9 +467,10 @@ namespace WebDubRosh.Controllers
                     ORDER BY UploadDate DESC";
 
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    da.SelectCommand.Parameters.AddWithValue("@Category", category ?? (object)DBNull.Value);
+                    da.SelectCommand.Parameters.AddWithValue("@Category", string.IsNullOrEmpty(category) ? (object)DBNull.Value : category);
                     da.Fill(dt);
                 }
+                
                 return Ok(DataTableToList(dt));
             }
             catch (Exception ex)
@@ -746,6 +747,9 @@ namespace WebDubRosh.Controllers
                 // Получаем расширение файла
                 string fileExtension = Path.GetExtension(file.FileName).TrimStart('.').ToLower();
                 
+                // Определяем понятный тип файла для отображения в интерфейсе
+                string displayFileType = GetDisplayFileType(fileExtension);
+                
                 // Генерируем уникальное имя файла
                 string fileName = $"{Guid.NewGuid()}_{DateTime.Now.ToString("yyyyMMddHHmmss")}.{fileExtension}";
                 string filePath = Path.Combine(categoryDirectory, fileName);
@@ -771,7 +775,7 @@ namespace WebDubRosh.Controllers
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@DocumentName", documentName);
-                        cmd.Parameters.AddWithValue("@Category", GetCategoryName(category));
+                        cmd.Parameters.AddWithValue("@Category", category);
                         cmd.Parameters.AddWithValue("@FileType", fileExtension);
                         cmd.Parameters.AddWithValue("@FilePath", filePath);
                         cmd.Parameters.AddWithValue("@FileSizeBytes", file.Length);
@@ -799,22 +803,33 @@ namespace WebDubRosh.Controllers
             }
         }
 
-        private string GetCategoryName(string categoryCode)
+        // Метод для получения понятного типа файла для отображения
+        private string GetDisplayFileType(string fileExtension)
         {
-            switch (categoryCode.ToLower())
+            switch (fileExtension.ToLower())
             {
-                case "administrative":
-                    return "Административный";
-                case "medical":
-                    return "Медицинский";
-                case "financial":
-                    return "Финансовый";
-                case "legal":
-                    return "Юридический";
-                case "other":
-                    return "Прочее";
+                case "pdf":
+                    return "PDF";
+                case "doc":
+                case "docx":
+                    return "Word";
+                case "xls":
+                case "xlsx":
+                    return "Excel";
+                case "ppt":
+                case "pptx":
+                    return "PowerPoint";
+                case "txt":
+                    return "Text";
+                case "jpg":
+                case "jpeg":
+                    return "JPEG";
+                case "png":
+                    return "PNG";
+                case "gif":
+                    return "GIF";
                 default:
-                    return categoryCode;
+                    return fileExtension.ToUpper();
             }
         }
 
@@ -840,15 +855,27 @@ namespace WebDubRosh.Controllers
                 case "image":
                     return "jpg";
                 case "документ":
+                case "word":
                     return "docx";
                 case "таблица":
+                case "excel":
                 case "spreadsheet":
                     return "xlsx";
                 case "презентация":
+                case "powerpoint":
                     return "pptx";
                 case "текст":
                 case "text":
                     return "txt";
+                case "pdf":
+                    return "pdf";
+                case "png":
+                    return "png";
+                case "jpg":
+                case "jpeg":
+                    return "jpg";
+                case "gif":
+                    return "gif";
                 default:
                     // Если тип выглядит как уже стандартное расширение (pdf, doc и т.д.), возвращаем его
                     if (extension.Length <= 5 && !extension.Contains(" "))
