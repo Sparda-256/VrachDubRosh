@@ -332,33 +332,73 @@
         <span class="close-modal">&times;</span>
       </div>
       <div class="modal-body">
+        <!-- Поле для скрытого хранения ID сопровождающего при редактировании -->
+        <input type="hidden" id="accompanyingPersonID" value="">
+        
         <div class="form-group">
           <label for="accompanyingPatient">Пациент:</label>
-          <select id="accompanyingPatient" class="form-select"></select>
+          <div style="position: relative;">
+            <input type="text" id="patientSearch" class="form-input" placeholder="Введите имя пациента для поиска">
+            <select id="accompanyingPatient" class="form-select" style="margin-top: 5px;"></select>
+          </div>
         </div>
+        
         <div class="form-group">
-          <label for="accompanyingFullName">ФИО:</label>
-          <input type="text" id="accompanyingFullName" class="form-input">
+          <label for="accompanyingFullName">ФИО сопровождающего:</label>
+          <input type="text" id="accompanyingFullName" class="form-input" required>
         </div>
+        
         <div class="form-group">
           <label for="accompanyingDateOfBirth">Дата рождения:</label>
           <input type="date" id="accompanyingDateOfBirth" class="form-input">
         </div>
+        
         <div class="form-group">
           <label for="accompanyingRelationship">Отношение к пациенту:</label>
           <select id="accompanyingRelationship" class="form-select">
             <option value="Родитель">Родитель</option>
             <option value="Опекун">Опекун</option>
-            <option value="Супруг(а)">Супруг(а)</option>
-            <option value="Ребенок">Ребенок</option>
-            <option value="Другое">Другое</option>
+            <option value="Бабушка/Дедушка">Бабушка/Дедушка</option>
+            <option value="Другой родственник">Другой родственник</option>
+            <option value="Иное лицо">Иное лицо</option>
           </select>
         </div>
-        <div class="form-group checkbox-container">
-          <input type="checkbox" id="accompanyingPowerOfAttorney">
-          <label for="accompanyingPowerOfAttorney">Имеет доверенность</label>
+        
+        <div class="form-group">
+          <div id="powerOfAttorneyContainer">
+            <div id="powerOfAttorneyStatusContainer" style="display: flex; align-items: center; margin-bottom: 10px;">
+              <span>Доверенность: </span>
+              <span id="powerOfAttorneyStatus" style="margin-left: 10px; font-weight: bold; color: #757575;">Не требуется</span>
+            </div>
+            <button id="uploadPowerOfAttorneyBtn" class="btn btn-blue" style="display: none;">
+              <i class="icon upload-icon"></i>
+              <span>Загрузить доверенность</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Секция размещения (скрыта по умолчанию) -->
+        <div id="accompanyingAccommodationSection" style="display: none; margin-top: 20px;">
+          <hr>
+          <h3>Размещение сопровождающего</h3>
+          
+          <div class="form-group">
+            <label for="accompanyingBuilding">Корпус:</label>
+            <select id="accompanyingBuilding" class="form-select"></select>
+          </div>
+          
+          <div class="form-group">
+            <label for="accompanyingRoom">Комната:</label>
+            <select id="accompanyingRoom" class="form-select"></select>
+          </div>
+          
+          <div class="form-group">
+            <label for="accompanyingBed">Кровать:</label>
+            <select id="accompanyingBed" class="form-select"></select>
+          </div>
         </div>
       </div>
+      
       <div class="modal-footer">
         <button id="saveAccompanyingBtn" class="btn btn-accent">Сохранить</button>
         <button class="btn btn-gray close-modal">Отмена</button>
@@ -487,6 +527,9 @@
       </div>
     </div>
   </div>
+  
+  <!-- Скрытый input для загрузки файлов доверенности -->
+  <input type="file" id="powerOfAttorneyFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
   
   <script src="manager.js"></script>
 </body>

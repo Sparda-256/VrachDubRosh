@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedAccompanyingIDs = [];
   let selectedAccommodationIDs = [];
   let selectedDocumentIDs = [];
+  let selectedPowerOfAttorneyFile = null; // Переменная для хранения выбранного файла доверенности
 
   // Элементы DOM
   const themeToggle = document.getElementById('themeToggle');
@@ -137,6 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
       button.addEventListener('click', () => {
         const modal = button.closest('.modal');
         modal.style.display = 'none';
+        // Сбрасываем выбранный файл при закрытии любого модального окна
+        selectedPowerOfAttorneyFile = null; 
       });
     });
 
@@ -144,6 +147,8 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('click', (event) => {
       if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
+        // Сбрасываем выбранный файл при закрытии любого модального окна
+        selectedPowerOfAttorneyFile = null; 
       }
     });
   }
@@ -194,6 +199,157 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчики выбора строк в таблицах
     initTableSelectionListeners();
+    
+    // Инициализация обработчиков для формы сопровождающего
+    initAccompanyingFormEvents();
+  }
+
+  // Инициализация обработчиков событий формы сопровождающего
+  function initAccompanyingFormEvents() {
+    // Обработчик для выбора отношения к пациенту
+    const relationshipSelect = document.getElementById('accompanyingRelationship');
+    relationshipSelect.addEventListener('change', function() {
+      const relationship = this.options[this.selectedIndex].text;
+      // Получаем текущий статус доверенности (нужен ли он?)
+      // const hasPoA = document.getElementById('powerOfAttorneyStatus').textContent === 'Загружена';
+      // Передаем false, т.к. при смене отношения статус сбрасывается, пока не загружен новый файл
+      updatePowerOfAttorneyUI(relationship, false);
+    });
+
+    // Обработчик для выбора пациента
+    const patientSelect = document.getElementById('accompanyingPatient');
+    patientSelect.addEventListener('change', function() {
+      // Проверяем тип стационара выбранного пациента
+      if (this.value && this.options[this.selectedIndex]) {
+        const stayType = this.options[this.selectedIndex].dataset.stayType;
+        console.log('Выбран пациент со стационаром:', stayType);
+
+        // Показываем или скрываем секцию размещения
+        const accommodationSection = document.getElementById('accompanyingAccommodationSection');
+
+        if (stayType === 'Круглосуточный') {
+          accommodationSection.style.display = 'block';
+
+          // Если список корпусов пуст, загружаем их
+          const buildingSelect = document.getElementById('accompanyingBuilding');
+          if (buildingSelect.options.length <= 1) { // <=1 потому что есть опция "Выберите..."
+            loadBuildingsForAccompanying()
+              .catch(error => {
+                console.error('Ошибка при загрузке корпусов:', error);
+                showNotification('Ошибка при загрузке корпусов', 'error');
+              });
+          }
+        } else {
+          accommodationSection.style.display = 'none';
+        }
+      } else {
+        // Если пациент не выбран, скрываем секцию размещения
+        document.getElementById('accompanyingAccommodationSection').style.display = 'none';
+      }
+    });
+
+    // Обработчик кнопки загрузки доверенности
+    const uploadPowerOfAttorneyBtn = document.getElementById('uploadPowerOfAttorneyBtn');
+    const powerOfAttorneyFileInput = document.getElementById('powerOfAttorneyFileInput');
+
+    uploadPowerOfAttorneyBtn.addEventListener('click', function() {
+        // Просто открываем диалог выбора файла
+        powerOfAttorneyFileInput.click(); 
+    });
+
+    // Обработчик изменения файла в скрытом input
+    powerOfAttorneyFileInput.addEventListener('change', handlePowerOfAttorneyUpload);
+
+
+    // Обработчик кнопки сохранения
+    const saveAccompanyingBtn = document.getElementById('saveAccompanyingBtn');
+    saveAccompanyingBtn.addEventListener('click', saveAccompanyingPerson);
+
+    // Обработчик для поиска пациента
+    const patientSearchInput = document.getElementById('patientSearch');
+    patientSearchInput.addEventListener('input', function() {
+      initPatientSearch(); // Вызываем функцию фильтрации
+    });
+
+    // Загружаем список пациентов при инициализации
+    // loadPatientsList(); // Этот вызов не нужен здесь, он делается в showAdd/Edit
+  }
+
+  // Новая функция для обработки загрузки файла доверенности
+  function handlePowerOfAttorneyUpload(event) {
+      const file = event.target.files[0];
+      
+      if (!file) {
+          showNotification('Файл не выбран.', 'info');
+          selectedPowerOfAttorneyFile = null; // Очищаем, если отменили выбор
+          // Обновляем UI обратно, если нужно (например, если ранее был выбран файл)
+          const accompanyingID = document.getElementById('accompanyingPersonID').value;
+          const relationshipSelect = document.getElementById('accompanyingRelationship');
+          const relationship = relationshipSelect.options[relationshipSelect.selectedIndex]?.text;
+          // Проверяем, загружена ли доверенность на сервер (только в режиме редактирования)
+          const isUploaded = accompanyingID ? document.getElementById('powerOfAttorneyStatus').textContent === 'Загружена' : false;
+          updatePowerOfAttorneyUI(relationship, isUploaded); // Обновляем UI с учетом того, был ли файл загружен ранее
+          return;
+      }
+
+      // Проверка типа файла (необязательно, но рекомендуется)
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+           showNotification('Недопустимый тип файла. Разрешены: PDF, JPG, PNG, DOC, DOCX.', 'error');
+           selectedPowerOfAttorneyFile = null; // Сбрасываем файл
+           event.target.value = null; // Очищаем input
+           // Обновляем UI обратно
+           const accompanyingID = document.getElementById('accompanyingPersonID').value;
+           const relationshipSelect = document.getElementById('accompanyingRelationship');
+           const relationship = relationshipSelect.options[relationshipSelect.selectedIndex]?.text;
+           const isUploaded = accompanyingID ? document.getElementById('powerOfAttorneyStatus').textContent === 'Загружена' : false;
+           updatePowerOfAttorneyUI(relationship, isUploaded);
+           return;
+      }
+
+      // Сохраняем выбранный файл в переменную
+      selectedPowerOfAttorneyFile = file;
+      
+      // Обновляем UI, показывая, что файл выбран
+      const powerOfAttorneyStatus = document.getElementById('powerOfAttorneyStatus');
+      powerOfAttorneyStatus.textContent = 'Файл выбран: ' + file.name;
+      powerOfAttorneyStatus.style.color = 'var(--blue-color)'; // Синий цвет для выбранного файла
+      showNotification('Файл доверенности выбран. Сохраните сопровождающего.', 'info');
+
+      // Очищаем input file, чтобы можно было выбрать тот же файл еще раз
+      event.target.value = null;
+  }
+
+  // Обновление UI доверенности
+  function updatePowerOfAttorneyUI(relationship, hasPowerOfAttorney = false) {
+    const powerOfAttorneyContainer = document.getElementById('powerOfAttorneyContainer');
+    const powerOfAttorneyStatus = document.getElementById('powerOfAttorneyStatus');
+    const uploadPowerOfAttorneyBtn = document.getElementById('uploadPowerOfAttorneyBtn');
+
+    // Определяем, требуется ли доверенность
+    const isPowerOfAttorneyRequired = relationship !== 'Родитель' && relationship !== 'Опекун';
+
+    if (isPowerOfAttorneyRequired) {
+      powerOfAttorneyContainer.style.display = 'block'; // Показываем контейнер
+      uploadPowerOfAttorneyBtn.style.display = 'inline-block'; // Показываем кнопку
+
+      // Кнопка должна быть доступна только в режиме редактирования
+      const accompanyingID = document.getElementById('accompanyingPersonID').value;
+      uploadPowerOfAttorneyBtn.disabled = !accompanyingID; // Отключаем, если ID пуст
+
+      if (hasPowerOfAttorney) {
+        powerOfAttorneyStatus.textContent = 'Загружена';
+        powerOfAttorneyStatus.style.color = 'var(--green-color)'; // Зеленый
+      } else {
+        powerOfAttorneyStatus.textContent = 'Требуется загрузить';
+        powerOfAttorneyStatus.style.color = 'var(--red-color)'; // Красный
+      }
+    } else {
+       powerOfAttorneyContainer.style.display = 'none'; // Скрываем весь блок
+      // uploadPowerOfAttorneyBtn.style.display = 'none';
+      // powerOfAttorneyStatus.textContent = 'Не требуется';
+      // powerOfAttorneyStatus.style.color = 'var(--gray-color)'; // Серый
+    }
   }
 
   function initTableSelectionListeners() {
@@ -1764,18 +1920,686 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Показать модальное окно добавления сопровождающего
   function showAddAccompanyingModal() {
-    // TODO: Реализовать отображение модального окна добавления сопровождающего
-    alert('Функция добавления сопровождающего будет реализована в будущих версиях.');
+    // Устанавливаем заголовок модального окна
+    document.getElementById('accompanyingModalTitle').textContent = 'Добавление сопровождающего';
+    document.getElementById('accompanyingPersonID').value = '';
+    selectedPowerOfAttorneyFile = null; // Сбрасываем выбранный файл
+    
+    // Очищаем форму
+    document.getElementById('patientSearch').value = '';
+    document.getElementById('accompanyingFullName').value = '';
+    document.getElementById('accompanyingDateOfBirth').value = '';
+    document.getElementById('accompanyingRelationship').selectedIndex = 0; // Родитель
+    
+    // Скрываем секцию размещения по умолчанию
+    document.getElementById('accompanyingAccommodationSection').style.display = 'none';
+    
+    // Обновляем UI доверенности
+    updatePowerOfAttorneyUI('Родитель');
+    
+    // Загружаем список пациентов
+    loadPatientsList();
+    
+    // Загружаем список корпусов для размещения
+    loadBuildingsForAccompanying();
+    
+    // Отображаем модальное окно
+    document.getElementById('accompanyingModal').style.display = 'block';
   }
   
   // Показать модальное окно редактирования сопровождающего
   function showEditAccompanyingModal() {
     if (selectedAccompanyingIDs.length !== 1) {
-      alert('Выберите одного сопровождающего для редактирования.');
+      showNotification('Выберите одного сопровождающего для редактирования', 'error');
       return;
     }
-    // TODO: Реализовать отображение модального окна редактирования сопровождающего
-    alert('Функция редактирования сопровождающего будет реализована в будущих версиях.');
+    selectedPowerOfAttorneyFile = null; // Сбрасываем выбранный файл при открытии
+    
+    const accompanyingID = selectedAccompanyingIDs[0];
+    
+    // Устанавливаем заголовок модального окна
+    document.getElementById('accompanyingModalTitle').textContent = 'Редактирование сопровождающего';
+    document.getElementById('accompanyingPersonID').value = accompanyingID;
+    
+    // Показываем индикатор загрузки
+    showNotification('Загрузка данных сопровождающего...', 'info');
+    
+    // Загружаем данные сопровождающего
+    loadAccompanyingPersonData(accompanyingID);
+    
+    // Отображаем модальное окно
+    document.getElementById('accompanyingModal').style.display = 'block';
+  }
+
+  // Загрузка списка пациентов для выбора при добавлении сопровождающего
+  function loadPatientsList() {
+    // Возвращаем Promise
+    return fetch('/api/manager/patients/list')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки списка пациентов');
+        }
+        return response.json();
+      })
+      .then(data => {
+        const patientSelect = document.getElementById('accompanyingPatient');
+        patientSelect.innerHTML = '<option value="">Выберите пациента</option>';
+        
+        console.log("Данные пациентов для выпадающего списка:", data);
+        
+        if (Array.isArray(data)) {
+          data.forEach(patient => {
+            const option = document.createElement('option');
+            
+            // Получаем ID пациента с учетом возможных разных имен свойств
+            const patientId = patient.PatientID || patient.patientID || patient.patientId || patient.id;
+            const fullName = patient.FullName || patient.fullName || patient.name || '';
+            const stayType = patient.StayType || patient.stayType || 'Дневной';
+            
+            option.value = patientId;
+            option.textContent = fullName;
+            option.dataset.stayType = stayType;
+            
+            patientSelect.appendChild(option);
+          });
+        }
+        
+        // Возвращаем данные, чтобы цепочка then могла продолжиться
+        return data;
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке списка пациентов:', error);
+        showNotification('Ошибка при загрузке списка пациентов', 'error');
+        // Продолжаем цепочку even при ошибке
+        return Promise.resolve([]);
+      });
+  }
+  
+  // Инициализация поиска по пациентам
+  function initPatientSearch() {
+    const searchInput = document.getElementById('patientSearch');
+    const patientSelect = document.getElementById('accompanyingPatient');
+    const searchText = searchInput.value.toLowerCase().trim();
+    
+    // Сохраняем все опции при первом вызове, если они еще не сохранены
+    if (!window.allPatientOptions || window.allPatientOptions.length === 0) {
+      window.allPatientOptions = Array.from(patientSelect.options).slice(1); // Пропускаем первую опцию "Выберите пациента"
+    }
+    
+    // Очищаем список и добавляем первую опцию
+    patientSelect.innerHTML = '<option value="">Выберите пациента</option>';
+    
+    // Если поле поиска пустое, показываем все опции
+    const options = searchText ? 
+      window.allPatientOptions.filter(option => option.textContent.toLowerCase().includes(searchText)) : 
+      window.allPatientOptions;
+    
+    // Добавляем отфильтрованные опции
+    options.forEach(option => {
+      patientSelect.appendChild(option.cloneNode(true));
+    });
+    
+    // Если нет результатов поиска, показываем сообщение
+    if (searchText && options.length === 0) {
+      const noMatchOption = document.createElement('option');
+      noMatchOption.textContent = `Пациенты не найдены: "${searchText}"`;
+      noMatchOption.disabled = true;
+      patientSelect.appendChild(noMatchOption);
+    }
+    
+    // Возвращаем количество найденных пациентов
+    return options.length;
+  }
+  
+  // Загрузка данных сопровождающего для редактирования
+  function loadAccompanyingPersonData(accompanyingID) {
+    fetch(`/api/manager/accompanyingperson/${accompanyingID}`)
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            try {
+              const errorData = JSON.parse(text);
+              throw new Error(errorData.message || 'Ошибка при загрузке данных сопровождающего');
+            } catch (e) {
+              throw new Error('Ошибка при загрузке данных сопровождающего: ' + text);
+            }
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Raw data from /api/manager/accompanyingperson/id:', JSON.stringify(data, null, 2)); // Отладочный вывод
+        if (!data.success) {
+          throw new Error(data.message || 'Не удалось загрузить данные сопровождающего');
+        }
+        
+        // Предполагаем, что сервер мог преобразовать имена свойств в camelCase
+        // Сначала проверяем, есть ли camelCase версия ключа, потом PascalCase
+        const accompanying = data.accompanyingperson || data.accompanyingPerson;
+        const accommodationData = data.accommodationinfo || data.accommodationInfo;
+
+        if (!accompanying) {
+          console.error("Объект accompanyingPerson не найден в ответе сервера:", data);
+          throw new Error('Отсутствуют данные сопровождающего в ответе сервера.');
+        }
+        console.log("Accompanying person object:", JSON.stringify(accompanying, null, 2));
+        if (accommodationData) {
+          console.log("Accommodation info object:", JSON.stringify(accommodationData, null, 2));
+        }
+
+        // Загружаем список пациентов
+        loadPatientsList().then(() => {
+          let patientName = '';
+          try {
+            if (window.accompanyingPersons && Array.isArray(window.accompanyingPersons)) {
+              const accompanyingPersonFromArray = window.accompanyingPersons.find(p => p.AccompanyingPersonID == accompanyingID);
+              if (accompanyingPersonFromArray && accompanyingPersonFromArray.PatientName) {
+                patientName = accompanyingPersonFromArray.PatientName;
+              }
+            }
+            if (!patientName) {
+              const patientSelect = document.getElementById('accompanyingPatient');
+              const patientIdToFind = accompanying.patientID || accompanying.PatientID; // camelCase first
+              for (let i = 0; i < patientSelect.options.length; i++) {
+                if (patientSelect.options[i].value == patientIdToFind) {
+                  patientName = patientSelect.options[i].textContent;
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Ошибка при поиске имени пациента:", e);
+          }
+          
+          // Заполняем форму данными сопровождающего, используя camelCase первым, затем PascalCase как fallback
+          document.getElementById('accompanyingPatient').value = accompanying.patientID || accompanying.PatientID;
+          document.getElementById('patientSearch').value = patientName;
+          document.getElementById('accompanyingFullName').value = accompanying.fullName || accompanying.FullName;
+          
+          const dateOfBirth = accompanying.dateOfBirth || accompanying.DateOfBirth;
+          if (dateOfBirth) {
+            const dob = new Date(dateOfBirth);
+            const year = dob.getFullYear();
+            const month = String(dob.getMonth() + 1).padStart(2, '0');
+            const day = String(dob.getDate()).padStart(2, '0');
+            const dobFormatted = `${year}-${month}-${day}`;
+            document.getElementById('accompanyingDateOfBirth').value = dobFormatted;
+          } else {
+            document.getElementById('accompanyingDateOfBirth').value = '';
+          }
+          
+          const relationship = accompanying.relationship || accompanying.Relationship;
+          selectRelationship(relationship);
+          
+          const hasPowerOfAttorney = accompanying.hasPowerOfAttorney !== undefined ? accompanying.hasPowerOfAttorney : accompanying.HasPowerOfAttorney;
+          updatePowerOfAttorneyUI(relationship, hasPowerOfAttorney);
+          
+          const patientSelect = document.getElementById('accompanyingPatient');
+          const selectedOption = patientSelect.options[patientSelect.selectedIndex];
+          const stayType = selectedOption?.dataset.stayType;
+          
+          const accommodationSection = document.getElementById('accompanyingAccommodationSection');
+          accommodationSection.style.display = stayType === 'Круглосуточный' ? 'block' : 'none';
+          
+          if (stayType === 'Круглосуточный') {
+            loadBuildingsForAccompanying().then(() => {
+              if (accommodationData) {
+                loadAccompanyingAccommodation(accommodationData); // Передаем accommodationData, которая может быть camelCased
+              }
+            });
+          }
+          
+          showNotification('Данные сопровождающего загружены', 'success');
+        });
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке данных сопровождающего:', error);
+        showNotification(error.message, 'error');
+        document.getElementById('accompanyingModal').style.display = 'none';
+      });
+  }
+  
+  // Выбор отношения к пациенту в комбобоксе
+  function selectRelationship(relationship) {
+    const relationshipSelect = document.getElementById('accompanyingRelationship');
+    
+    for (let i = 0; i < relationshipSelect.options.length; i++) {
+      if (relationshipSelect.options[i].text === relationship) {
+        relationshipSelect.selectedIndex = i;
+        return;
+      }
+    }
+    
+    // Если не нашли точное совпадение, выбираем "Иное лицо"
+    for (let i = 0; i < relationshipSelect.options.length; i++) {
+      if (relationshipSelect.options[i].text === "Иное лицо") {
+        relationshipSelect.selectedIndex = i;
+        return;
+      }
+    }
+  }
+  
+  // Обновление UI доверенности
+  function updatePowerOfAttorneyUI(relationship, hasPowerOfAttorney = false) {
+    const powerOfAttorneyStatus = document.getElementById('powerOfAttorneyStatus');
+    const uploadPowerOfAttorneyBtn = document.getElementById('uploadPowerOfAttorneyBtn');
+    
+    // Определяем, требуется ли доверенность
+    const isPowerOfAttorneyRequired = relationship !== 'Родитель' && relationship !== 'Опекун';
+    
+    if (isPowerOfAttorneyRequired) {
+      uploadPowerOfAttorneyBtn.style.display = 'inline-block'; // Показываем кнопку
+      uploadPowerOfAttorneyBtn.disabled = false; // Кнопка всегда активна, если требуется
+
+      if (hasPowerOfAttorney) {
+        powerOfAttorneyStatus.textContent = 'Загружена';
+        powerOfAttorneyStatus.style.color = 'var(--green-color)'; // Зеленый
+      } else if (selectedPowerOfAttorneyFile) {
+        // Если файл выбран локально, но еще не сохранен
+        powerOfAttorneyStatus.textContent = 'Файл выбран: ' + selectedPowerOfAttorneyFile.name;
+        powerOfAttorneyStatus.style.color = 'var(--blue-color)'; 
+      } else {
+        powerOfAttorneyStatus.textContent = 'Требуется загрузить';
+        powerOfAttorneyStatus.style.color = 'var(--red-color)'; // Красный
+      }
+    } else {
+      uploadPowerOfAttorneyBtn.style.display = 'none';
+      powerOfAttorneyStatus.textContent = 'Не требуется';
+      powerOfAttorneyStatus.style.color = 'var(--gray-color)'; // Серый
+    }
+  }
+  
+  // Загрузка корпусов для размещения сопровождающего
+  function loadBuildingsForAccompanying() {
+    return fetch('/api/manager/buildings')
+      .then(response => response.json())
+      .then(buildings => {
+        const buildingSelect = document.getElementById('accompanyingBuilding');
+        buildingSelect.innerHTML = '<option value="">Выберите корпус</option>';
+        
+        buildings.forEach(building => {
+          const option = document.createElement('option');
+          option.value = building.BuildingID;
+          option.textContent = `Корпус ${building.BuildingNumber}`;
+          buildingSelect.appendChild(option);
+        });
+        
+        // Добавляем обработчик события изменения корпуса
+        buildingSelect.onchange = function() {
+          if (this.value) {
+            loadRoomsForAccompanying(this.value);
+          } else {
+            document.getElementById('accompanyingRoom').innerHTML = '<option value="">Выберите комнату</option>';
+            document.getElementById('accompanyingBed').innerHTML = '<option value="">Выберите кровать</option>';
+          }
+        };
+      });
+  }
+  
+  // Загрузка комнат для размещения сопровождающего
+  function loadRoomsForAccompanying(buildingID) {
+    return fetch(`/api/manager/rooms/${buildingID}`)
+      .then(response => response.json())
+      .then(rooms => {
+        const roomSelect = document.getElementById('accompanyingRoom');
+        roomSelect.innerHTML = '<option value="">Выберите комнату</option>';
+        
+        if (!rooms || rooms.length === 0) {
+          document.getElementById('accompanyingBed').innerHTML = '<option value="">Нет доступных комнат</option>';
+          return;
+        }
+        
+        // Выводим в консоль первый элемент для анализа структуры
+        console.log("Пример данных комнаты для сопровождающего:", rooms[0]);
+        
+        rooms.forEach(room => {
+          const option = document.createElement('option');
+          
+          // Получаем ID комнаты с учетом возможных разных имен свойств
+          const roomId = room.RoomID || room.roomID || room.roomId || room.id;
+          
+          // Получаем номер комнаты
+          const roomNumber = room.RoomNumber || room.roomNumber || room.number || '';
+          
+          // Получаем список доступных кроватей
+          const availableBeds = room.AvailableBeds || room.availableBeds || room.beds || [];
+          
+          if (!roomId) {
+            console.error("Не удалось определить ID комнаты:", room);
+            return; // Пропускаем эту комнату
+          }
+          
+          option.value = roomId;
+          option.textContent = `Комната ${roomNumber}`;
+          option.dataset.availableBeds = JSON.stringify(availableBeds);
+          roomSelect.appendChild(option);
+        });
+        
+        // Добавляем обработчик события изменения комнаты
+        roomSelect.onchange = function() {
+          if (this.value) {
+            const selectedOption = this.options[this.selectedIndex];
+            let availableBeds = [];
+            
+            try {
+              if (selectedOption.dataset.availableBeds) {
+                availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+              }
+            } catch (e) {
+              console.error('Ошибка при парсинге JSON доступных кроватей:', e);
+            }
+            
+            updateAvailableBedsForAccompanying(availableBeds);
+          } else {
+            document.getElementById('accompanyingBed').innerHTML = '<option value="">Выберите кровать</option>';
+          }
+        };
+        
+        // Возвращаем промис для цепочки then
+        return Promise.resolve();
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке комнат для сопровождающего:', error);
+        showNotification('Ошибка при загрузке комнат: ' + error.message, 'error');
+        
+        // Возвращаем отклоненный промис для обработки ошибок в цепочке then
+        return Promise.reject(error);
+      });
+  }
+  
+  // Обновление списка доступных кроватей для сопровождающего
+  function updateAvailableBedsForAccompanying(availableBeds) {
+    const bedSelect = document.getElementById('accompanyingBed');
+    bedSelect.innerHTML = '<option value="">Выберите кровать</option>';
+    
+    console.log("Обновление списка кроватей для сопровождающего:", availableBeds);
+    
+    // Проверка входных данных
+    if (!availableBeds) {
+      console.error('Ошибка: availableBeds не определен');
+      bedSelect.innerHTML = '<option value="">Нет доступных кроватей</option>';
+      return;
+    }
+    
+    // Проверяем, если availableBeds это массив объектов вместо примитивов
+    let bedNumbers = availableBeds;
+    
+    if (Array.isArray(availableBeds) && availableBeds.length > 0 && typeof availableBeds[0] === 'object') {
+      console.log('Преобразуем массив объектов в массив номеров кроватей');
+      bedNumbers = availableBeds.map(bed => {
+        return bed.BedNumber || bed.bedNumber || bed.number || bed;
+      });
+    }
+    
+    // Проверка, что bedNumbers является массивом
+    if (!Array.isArray(bedNumbers)) {
+      console.error('Ошибка: bedNumbers не является массивом:', bedNumbers);
+      bedSelect.innerHTML = '<option value="">Нет доступных кроватей</option>';
+      return;
+    }
+    
+    if (bedNumbers.length === 0) {
+      bedSelect.innerHTML = '<option value="">Нет доступных кроватей</option>';
+      return;
+    }
+    
+    console.log("Номера доступных кроватей:", bedNumbers);
+    
+    bedNumbers.forEach(bedNumber => {
+      const option = document.createElement('option');
+      option.value = bedNumber;
+      option.textContent = `Кровать ${bedNumber}`;
+      bedSelect.appendChild(option);
+    });
+  }
+  
+  // Загрузка данных о размещении сопровождающего
+  function loadAccompanyingAccommodation(accommodationInfo) {
+    if (!accommodationInfo) return;
+    
+    console.log("Загрузка данных о размещении сопровождающего:", accommodationInfo);
+    
+    // Выбираем корпус
+    const buildingSelect = document.getElementById('accompanyingBuilding');
+    buildingSelect.value = accommodationInfo.BuildingID || accommodationInfo.buildingID || accommodationInfo.buildingId || '';
+    
+    // Проверяем, выбран ли корпус
+    if (!buildingSelect.value) {
+      console.error("Не удалось выбрать корпус:", accommodationInfo);
+      return;
+    }
+    
+    // Получаем ID комнаты и кровати
+    const roomID = accommodationInfo.RoomID || accommodationInfo.roomID || accommodationInfo.roomId || '';
+    const bedNumber = accommodationInfo.BedNumber || accommodationInfo.bedNumber || accommodationInfo.bedNum || 1;
+    
+    if (!roomID) {
+      console.error("Не удалось определить ID комнаты для размещения:", accommodationInfo);
+      return;
+    }
+    
+    // Загружаем комнаты для выбранного корпуса
+    loadRoomsForAccompanying(buildingSelect.value)
+      .then(() => {
+        // Выбираем комнату
+        const roomSelect = document.getElementById('accompanyingRoom');
+        roomSelect.value = roomID;
+        
+        // Проверяем, что комната выбрана
+        if (!roomSelect.value) {
+          console.error("Не удалось выбрать комнату:", roomID);
+          return;
+        }
+        
+        // Обновляем список кроватей
+        const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+        let availableBeds = [];
+        
+        try {
+          if (selectedOption.dataset.availableBeds) {
+            availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+          }
+        } catch (e) {
+          console.error('Ошибка при парсинге JSON доступных кроватей:', e);
+        }
+        
+        // Добавляем текущую кровать в список доступных, если её там нет
+        if (!availableBeds.includes(bedNumber)) {
+          console.log(`Добавляем текущую кровать ${bedNumber} в список доступных:`, availableBeds);
+          availableBeds.push(bedNumber);
+        }
+        
+        updateAvailableBedsForAccompanying(availableBeds);
+        
+        // Выбираем кровать
+        const bedSelect = document.getElementById('accompanyingBed');
+        bedSelect.value = bedNumber;
+        
+        // Проверяем, что кровать выбрана
+        if (!bedSelect.value) {
+          console.error(`Не удалось выбрать кровать ${bedNumber} из доступных:`, availableBeds);
+        }
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке данных о размещении сопровождающего:', error);
+        showNotification('Ошибка при загрузке данных о размещении', 'error');
+      });
+  }
+  
+  // Сохранение данных сопровождающего
+  function saveAccompanyingPerson() {
+    // Собираем данные из формы
+    const accompanyingID = document.getElementById('accompanyingPersonID').value;
+    const patientID = document.getElementById('accompanyingPatient').value;
+    const fullName = document.getElementById('accompanyingFullName').value.trim();
+    const dateOfBirth = document.getElementById('accompanyingDateOfBirth').value;
+    const relationship = document.getElementById('accompanyingRelationship').options[document.getElementById('accompanyingRelationship').selectedIndex].text;
+    
+    // Проверяем, требуется ли доверенность и есть ли файл (локально или уже загружен)
+    const isPowerOfAttorneyRequired = relationship !== 'Родитель' && relationship !== 'Опекун';
+    let hasPowerOfAttorney = false; // Флаг для отправки на сервер
+    
+    // В режиме редактирования проверяем, загружена ли уже
+    if (accompanyingID) { 
+        hasPowerOfAttorney = document.getElementById('powerOfAttorneyStatus').textContent === 'Загружена';
+    }
+    // Если файл выбран локально, считаем, что доверенность будет
+    if (selectedPowerOfAttorneyFile) {
+        hasPowerOfAttorney = true;
+    }
+
+    // Проверка наличия доверенности, если она требуется
+    if (isPowerOfAttorneyRequired && !hasPowerOfAttorney) {
+      showNotification('Для выбранного отношения требуется выбрать файл доверенности', 'error');
+      return;
+    }
+    
+    // Проверка заполнения обязательных полей
+    if (!patientID) {
+      showNotification('Пожалуйста, выберите пациента', 'error');
+      return;
+    }
+    
+    if (!fullName) {
+      showNotification('Пожалуйста, введите ФИО сопровождающего', 'error');
+      return;
+    }
+    
+    // Проверяем тип стационара пациента
+    const patientSelect = document.getElementById('accompanyingPatient');
+    const selectedOption = patientSelect.options[patientSelect.selectedIndex];
+    const stayType = selectedOption?.dataset.stayType;
+    
+    // Данные о размещении (для круглосуточного стационара)
+    let accommodationInfo = null;
+    
+    if (stayType === 'Круглосуточный') {
+      const buildingID = document.getElementById('accompanyingBuilding').value;
+      const roomID = document.getElementById('accompanyingRoom').value;
+      const bedNumber = document.getElementById('accompanyingBed').value;
+      
+      if (!buildingID || !roomID || !bedNumber) {
+        showNotification('Пожалуйста, выберите корпус, комнату и кровать для размещения', 'error');
+        return;
+      }
+      
+      accommodationInfo = {
+        RoomID: parseInt(roomID),
+        BedNumber: parseInt(bedNumber)
+      };
+    }
+    
+    // Формируем объект данных сопровождающего
+    const accompanyingData = {
+      PatientID: parseInt(patientID),
+      FullName: fullName,
+      DateOfBirth: dateOfBirth || null,
+      Relationship: relationship,
+      HasPowerOfAttorney: hasPowerOfAttorney,
+      NeedAccommodation: stayType === 'Круглосуточный',
+      AccommodationInfo: accommodationInfo
+    };
+    
+    // Определяем, это добавление нового или редактирование существующего
+    const isEditMode = !!accompanyingID;
+    
+    // --- Логика сохранения --- 
+    
+    // Функция для выполнения основного запроса (POST/PUT)
+    function executeMainRequest() {
+        const url = isEditMode 
+          ? `/api/manager/accompanyingperson/${accompanyingID}`
+          : '/api/manager/accompanyingperson';
+        const method = isEditMode ? 'PUT' : 'POST';
+        
+        return fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(accompanyingData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            // Пытаемся получить текст ошибки с сервера
+            return response.json().then(err => { throw new Error(err.message || `Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего`); });
+          }
+          return response.json();
+        });
+    }
+
+    // Функция для загрузки файла доверенности
+    function executeFileUpload(personID, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showNotification('Загрузка файла доверенности...', 'info');
+
+        return fetch(`/api/manager/${personID}/powerofattorney`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Ошибка сервера при загрузке файла доверенности'); });
+            }
+            return response.json();
+        });
+    }
+
+    // --- Основной процесс сохранения --- 
+    showNotification(`${isEditMode ? 'Обновление' : 'Добавление'} сопровождающего...`, 'info');
+    
+    executeMainRequest()
+      .then(mainResult => {
+          // Если это не режим редактирования И требуется доверенность И файл был выбран
+          if (!isEditMode && isPowerOfAttorneyRequired && selectedPowerOfAttorneyFile) {
+              const newAccompanyingPersonID = mainResult.accompanyingPersonID;
+              if (!newAccompanyingPersonID) {
+                  throw new Error('Не удалось получить ID нового сопровождающего после сохранения.');
+              }
+              // Выполняем загрузку файла
+              return executeFileUpload(newAccompanyingPersonID, selectedPowerOfAttorneyFile)
+                  .then(uploadResult => {
+                      if (!uploadResult.success) {
+                          // Ошибка при загрузке файла, но сопровождающий уже создан
+                          throw new Error(`Сопровождающий создан (ID: ${newAccompanyingPersonID}), но не удалось загрузить доверенность: ${uploadResult.message}`);
+                      }
+                      return mainResult; // Возвращаем результат основного сохранения
+                  });
+          } else if (isEditMode && selectedPowerOfAttorneyFile) {
+              // Если режим редактирования и был выбран НОВЫЙ файл для замены
+              return executeFileUpload(accompanyingID, selectedPowerOfAttorneyFile)
+                   .then(uploadResult => {
+                      if (!uploadResult.success) {
+                          throw new Error(`Данные сопровождающего обновлены, но не удалось загрузить новую доверенность: ${uploadResult.message}`);
+                      }
+                      return mainResult;
+                  });
+          }
+          // Если файл не требовался или не был выбран (или режим редактирования без нового файла)
+          return mainResult; 
+      })
+      .then(finalResult => {
+          // Успешное завершение (основной запрос и, возможно, загрузка файла)
+          showNotification(`Сопровождающий успешно ${isEditMode ? 'обновлен' : 'добавлен'}`, 'success');
+          
+          // Закрываем модальное окно
+          document.getElementById('accompanyingModal').style.display = 'none';
+          selectedPowerOfAttorneyFile = null; // Очищаем выбранный файл
+          
+          // Обновляем списки
+          loadAccompanyingPersons();
+          if (accompanyingData.NeedAccommodation) {
+            loadAccommodations();
+          }
+      })
+      .catch(error => {
+          // Обработка любых ошибок (основной запрос или загрузка файла)
+          console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего:`, error);
+          showNotification(error.message, 'error');
+          // Не закрываем окно, если была ошибка
+      });
   }
 
   // Удаление сопровождающего

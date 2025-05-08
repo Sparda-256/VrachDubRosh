@@ -968,6 +968,377 @@ namespace WebDubRosh.Controllers
             }
         }
 
+        // GET: api/manager/accompanyingperson/{id}
+        [HttpGet("accompanyingperson/{id}")]
+        public IActionResult GetAccompanyingPerson(int id)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT ap.AccompanyingPersonID, ap.PatientID, ap.FullName, ap.DateOfBirth, 
+                               ap.Relationship, ap.HasPowerOfAttorney
+                        FROM AccompanyingPersons ap
+                        WHERE ap.AccompanyingPersonID = @AccompanyingPersonID";
+                        
+                        using (SqlCommand cmd = new SqlCommand(query, con))
+                        {
+                            cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                            
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    var accompanyingPerson = new
+                                    {
+                                        AccompanyingPersonID = reader.GetInt32(0),
+                                        PatientID = reader.GetInt32(1),
+                                        FullName = reader.GetString(2),
+                                        DateOfBirth = reader["DateOfBirth"] != DBNull.Value ? reader.GetDateTime(3) : (DateTime?)null,
+                                        Relationship = reader["Relationship"] != DBNull.Value ? reader.GetString(4) : null,
+                                        HasPowerOfAttorney = reader.GetBoolean(5)
+                                    };
+
+                                    // Если сопровождающий привязан к пациенту на круглосуточном стационаре, получаем данные о размещении
+                                    var accommodationInfo = GetAccompanyingAccommodation(id);
+                                    
+                                    return Ok(new { success = true, accompanyingPerson, accommodationInfo });
+                                }
+                                else
+                                {
+                                    return NotFound(new { success = false, message = "Сопровождающий не найден" });
+                                }
+                            }
+                        }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/manager/patients/list
+        [HttpGet("patients/list")]
+        public IActionResult GetPatientsList()
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = "SELECT PatientID, FullName, StayType FROM Patients ORDER BY FullName";
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.Fill(dt);
+                }
+                return Ok(DataTableToList(dt));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: api/manager/accompanyingperson
+        [HttpPost("accompanyingperson")]
+        public IActionResult AddAccompanyingPerson([FromBody] AccompanyingPersonModel model)
+        {
+            try
+            {
+                if (model == null)
+                    return BadRequest(new { success = false, message = "Не указаны данные сопровождающего" });
+                    
+                if (string.IsNullOrEmpty(model.FullName))
+                    return BadRequest(new { success = false, message = "ФИО сопровождающего обязательно для заполнения" });
+                    
+                if (model.PatientID <= 0)
+                    return BadRequest(new { success = false, message = "Необходимо выбрать пациента" });
+                    
+                // Проверка наличия доверенности, если она требуется
+                if (model.Relationship != "Родитель" && model.Relationship != "Опекун" && !model.HasPowerOfAttorney)
+                {
+                    return BadRequest(new { success = false, message = "Для выбранного отношения требуется наличие доверенности" });
+                }
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Добавляем сопровождающего
+                            string insertQuery = @"
+                                INSERT INTO AccompanyingPersons (PatientID, FullName, DateOfBirth, Relationship, HasPowerOfAttorney)
+                                VALUES (@PatientID, @FullName, @DateOfBirth, @Relationship, @HasPowerOfAttorney);
+                                SELECT SCOPE_IDENTITY();";
+                                
+                            int newAccompanyingPersonID;
+                            using (SqlCommand cmd = new SqlCommand(insertQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", model.PatientID);
+                                cmd.Parameters.AddWithValue("@FullName", model.FullName);
+                                
+                                if (model.DateOfBirth.HasValue)
+                                    cmd.Parameters.AddWithValue("@DateOfBirth", model.DateOfBirth.Value);
+                                else
+                                    cmd.Parameters.AddWithValue("@DateOfBirth", DBNull.Value);
+                                    
+                                cmd.Parameters.AddWithValue("@Relationship", model.Relationship);
+                                cmd.Parameters.AddWithValue("@HasPowerOfAttorney", model.HasPowerOfAttorney);
+                                
+                                newAccompanyingPersonID = Convert.ToInt32(cmd.ExecuteScalar());
+                            }
+                            
+                            // Если нужно размещение сопровождающего
+                            if (model.NeedAccommodation && model.AccommodationInfo != null)
+                            {
+                                // Проверяем, доступно ли выбранное место
+                                string checkBedQuery = @"
+                                    SELECT COUNT(*) FROM Accommodations 
+                                    WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@RoomID", model.AccommodationInfo.RoomID);
+                                    cmd.Parameters.AddWithValue("@BedNumber", model.AccommodationInfo.BedNumber);
+                                    
+                                    int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                    
+                                    if (occupiedCount > 0)
+                                    {
+                                        transaction.Rollback();
+                                        return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                    }
+                                }
+                                
+                                // Добавляем размещение сопровождающего
+                                string insertAccommodationQuery = @"
+                                    INSERT INTO Accommodations (RoomID, AccompanyingPersonID, BedNumber, CheckInDate)
+                                    VALUES (@RoomID, @AccompanyingPersonID, @BedNumber, @CheckInDate)";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@RoomID", model.AccommodationInfo.RoomID);
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", newAccompanyingPersonID);
+                                    cmd.Parameters.AddWithValue("@BedNumber", model.AccommodationInfo.BedNumber);
+                                    cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                            
+                            transaction.Commit();
+                            
+                            return Ok(new { 
+                                success = true, 
+                                message = "Сопровождающий успешно добавлен", 
+                                accompanyingPersonID = newAccompanyingPersonID 
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw new Exception("Ошибка при добавлении сопровождающего: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // PUT: api/manager/accompanyingperson/{id}
+        [HttpPut("accompanyingperson/{id}")]
+        public IActionResult UpdateAccompanyingPerson(int id, [FromBody] AccompanyingPersonModel model)
+        {
+            try
+            {
+                if (model == null)
+                    return BadRequest(new { success = false, message = "Не указаны данные сопровождающего" });
+                    
+                if (string.IsNullOrEmpty(model.FullName))
+                    return BadRequest(new { success = false, message = "ФИО сопровождающего обязательно для заполнения" });
+                    
+                if (model.PatientID <= 0)
+                    return BadRequest(new { success = false, message = "Необходимо выбрать пациента" });
+                    
+                // Проверка наличия доверенности, если она требуется
+                if (model.Relationship != "Родитель" && model.Relationship != "Опекун" && !model.HasPowerOfAttorney)
+                {
+                    return BadRequest(new { success = false, message = "Для выбранного отношения требуется наличие доверенности" });
+                }
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Проверяем существование сопровождающего
+                            string checkQuery = "SELECT COUNT(*) FROM AccompanyingPersons WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                            int accompanyingPersonCount = 0;
+                            
+                            using (SqlCommand cmd = new SqlCommand(checkQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                accompanyingPersonCount = Convert.ToInt32(cmd.ExecuteScalar());
+                            }
+                            
+                            if (accompanyingPersonCount == 0)
+                            {
+                                transaction.Rollback();
+                                return NotFound(new { success = false, message = $"Сопровождающий с ID {id} не найден" });
+                            }
+                            
+                            // Обновляем данные сопровождающего
+                            string updateQuery = @"
+                                UPDATE AccompanyingPersons
+                                SET PatientID = @PatientID,
+                                    FullName = @FullName,
+                                    DateOfBirth = @DateOfBirth,
+                                    Relationship = @Relationship,
+                                    HasPowerOfAttorney = @HasPowerOfAttorney
+                                WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                                
+                            using (SqlCommand cmd = new SqlCommand(updateQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                cmd.Parameters.AddWithValue("@PatientID", model.PatientID);
+                                cmd.Parameters.AddWithValue("@FullName", model.FullName);
+                                
+                                if (model.DateOfBirth.HasValue)
+                                    cmd.Parameters.AddWithValue("@DateOfBirth", model.DateOfBirth.Value);
+                                else
+                                    cmd.Parameters.AddWithValue("@DateOfBirth", DBNull.Value);
+                                    
+                                cmd.Parameters.AddWithValue("@Relationship", model.Relationship);
+                                cmd.Parameters.AddWithValue("@HasPowerOfAttorney", model.HasPowerOfAttorney);
+                                
+                                cmd.ExecuteNonQuery();
+                            }
+                            
+                            // Проверяем, нужно ли обновить размещение
+                            if (model.NeedAccommodation && model.AccommodationInfo != null)
+                            {
+                                // Проверяем текущее размещение
+                                int? currentRoomID = null;
+                                int? currentBedNumber = null;
+                                
+                                string checkAccommodationQuery = @"
+                                    SELECT RoomID, BedNumber
+                                    FROM Accommodations
+                                    WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(checkAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                    using (SqlDataReader reader = cmd.ExecuteReader())
+                                    {
+                                        if (reader.Read())
+                                        {
+                                            currentRoomID = reader.GetInt32(0);
+                                            currentBedNumber = reader.GetInt32(1);
+                                        }
+                                    }
+                                }
+                                
+                                bool accommodationChanged = currentRoomID != model.AccommodationInfo.RoomID || 
+                                                           currentBedNumber != model.AccommodationInfo.BedNumber;
+                                
+                                // Если размещение изменилось или его не было
+                                if (accommodationChanged || currentRoomID == null)
+                                {
+                                    // Если есть текущее размещение, закрываем его
+                                    if (currentRoomID.HasValue)
+                                    {
+                                        string closeAccommodationQuery = @"
+                                            UPDATE Accommodations
+                                            SET CheckOutDate = GETDATE()
+                                            WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
+                                            
+                                        using (SqlCommand cmd = new SqlCommand(closeAccommodationQuery, con, transaction))
+                                        {
+                                            cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                    }
+                                    
+                                    // Проверяем, доступно ли выбранное место
+                                    string checkBedQuery = @"
+                                        SELECT COUNT(*) FROM Accommodations 
+                                        WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", model.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@BedNumber", model.AccommodationInfo.BedNumber);
+                                        
+                                        int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                        
+                                        if (occupiedCount > 0)
+                                        {
+                                            transaction.Rollback();
+                                            return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                        }
+                                    }
+                                    
+                                    // Добавляем новое размещение
+                                    string insertAccommodationQuery = @"
+                                        INSERT INTO Accommodations (RoomID, AccompanyingPersonID, BedNumber, CheckInDate)
+                                        VALUES (@RoomID, @AccompanyingPersonID, @BedNumber, @CheckInDate)";
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", model.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                        cmd.Parameters.AddWithValue("@BedNumber", model.AccommodationInfo.BedNumber);
+                                        cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                            else if (!model.NeedAccommodation)
+                            {
+                                // Если размещение больше не нужно, выселяем сопровождающего
+                                string closeAccommodationQuery = @"
+                                    UPDATE Accommodations
+                                    SET CheckOutDate = GETDATE()
+                                    WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(closeAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                            
+                            transaction.Commit();
+                            
+                            return Ok(new { 
+                                success = true, 
+                                message = "Сопровождающий успешно обновлен"
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw new Exception("Ошибка при обновлении сопровождающего: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         // DELETE: api/manager/accompanyingperson/{id}
         [HttpDelete("accompanyingperson/{id}")]
         public IActionResult DeleteAccompanyingPerson(int id)
@@ -1028,6 +1399,221 @@ namespace WebDubRosh.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // Вспомогательный метод для получения информации о размещении сопровождающего
+        private object GetAccompanyingAccommodation(int accompanyingPersonID)
+        {
+            using (SqlConnection con = new SqlConnection(_connectionString))
+            {
+                con.Open();
+                string query = @"
+                    SELECT a.AccommodationID, a.RoomID, r.RoomNumber, b.BuildingID, b.BuildingNumber, a.BedNumber
+                    FROM Accommodations a
+                    JOIN Rooms r ON a.RoomID = r.RoomID
+                    JOIN Buildings b ON r.BuildingID = b.BuildingID
+                    WHERE a.AccompanyingPersonID = @AccompanyingPersonID AND a.CheckOutDate IS NULL";
+                    
+                using (SqlCommand cmd = new SqlCommand(query, con))
+                {
+                    cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingPersonID);
+                    
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new
+                            {
+                                AccommodationID = reader.GetInt32(0),
+                                RoomID = reader.GetInt32(1),
+                                RoomNumber = reader.GetString(2),
+                                BuildingID = reader.GetInt32(3),
+                                BuildingNumber = reader.GetInt32(4),
+                                BedNumber = reader.GetInt32(5)
+                            };
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // POST: api/manager/accompanyingperson/{id}/powerofattorney
+        [HttpPost("{id}/powerofattorney")]
+        public IActionResult UploadPowerOfAttorney(int id, [FromForm] IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "Файл доверенности не выбран или пустой." });
+                }
+        
+                // Проверяем существование сопровождающего
+                string accompanyingPersonName = string.Empty;
+                using (SqlConnection conCheck = new SqlConnection(_connectionString))
+                {
+                    conCheck.Open();
+                    string checkQuery = "SELECT FullName FROM AccompanyingPersons WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conCheck))
+                    {
+                        checkCmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                        object result = checkCmd.ExecuteScalar();
+                        if (result == null || result == DBNull.Value)
+                        {
+                            return NotFound(new { success = false, message = "Сопровождающее лицо не найдено." });
+                        }
+                        accompanyingPersonName = result.ToString();
+                    }
+                }
+        
+        
+                // Получаем ID типа документа "Доверенность от законных представителей"
+                int powerOfAttorneyDocTypeID = -1;
+                using (SqlConnection conType = new SqlConnection(_connectionString))
+                {
+                    conType.Open();
+                    // Исправляем поиск: ищем без тройных кавычек
+                    string docTypeQuery = "SELECT DocumentTypeID FROM DocumentTypes WHERE DocumentName = 'Доверенность от законных представителей'";
+                    using (SqlCommand typeCmd = new SqlCommand(docTypeQuery, conType))
+                    {
+                        object result = typeCmd.ExecuteScalar();
+                        if (result == null || result == DBNull.Value)
+                        {
+                            // Тип документа не найден - возвращаем ошибку, не создаем автоматически
+                            return BadRequest(new { success = false, message = "Тип документа 'Доверенность от законных представителей' не найден в базе данных. Обратитесь к администратору." });
+                        }
+                        powerOfAttorneyDocTypeID = Convert.ToInt32(result);
+                    }
+                }
+        
+                // Убедимся, что ID найден корректно
+                 if(powerOfAttorneyDocTypeID <= 0) {
+                     return StatusCode(500, new { success = false, message = "Не удалось определить тип документа для доверенности." });
+                 }
+        
+        
+                // Определяем путь для сохранения
+                string baseDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Documents", "PowerOfAttorney");
+                Directory.CreateDirectory(baseDirectory); // Создаем папку, если ее нет
+        
+                string personFolder = Path.Combine(baseDirectory, id.ToString());
+                Directory.CreateDirectory(personFolder);
+        
+                // Создаем уникальное имя файла
+                string fileExtension = Path.GetExtension(file.FileName);
+                string uniqueFileName = $"poa_{DateTime.Now:yyyyMMddHHmmssfff}{fileExtension}";
+                string destinationPath = Path.Combine(personFolder, uniqueFileName);
+                string relativePath = Path.Combine("Documents", "PowerOfAttorney", id.ToString(), uniqueFileName).Replace('\\', '/'); // Относительный путь для веб-доступа
+        
+        
+                // Сохраняем файл
+                using (var stream = new FileStream(destinationPath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+        
+                // Сохраняем информацию в БД
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Проверяем, есть ли уже загруженная доверенность
+                            int existingDocID = -1;
+                            string oldFilePath = null;
+                            string checkDocQuery = @"
+                                SELECT DocumentID, DocumentPath FROM AccompanyingPersonDocuments
+                                WHERE AccompanyingPersonID = @AccompanyingPersonID
+                                AND DocumentTypeID = @DocumentTypeID";
+        
+                            using (SqlCommand checkCmd = new SqlCommand(checkDocQuery, con, transaction))
+                            {
+                                checkCmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                checkCmd.Parameters.AddWithValue("@DocumentTypeID", powerOfAttorneyDocTypeID);
+                                using(SqlDataReader reader = checkCmd.ExecuteReader())
+                                {
+                                    if(reader.Read())
+                                    {
+                                        existingDocID = reader.GetInt32(0);
+                                        oldFilePath = reader.IsDBNull(1) ? null : reader.GetString(1);
+                                    }
+                                } // SqlDataReader закроется здесь
+                            }
+        
+        
+                            if (existingDocID > 0)
+                            {
+                                // Удаляем старый файл, если он существует и путь отличается
+                                if (!string.IsNullOrEmpty(oldFilePath) && oldFilePath != destinationPath && System.IO.File.Exists(oldFilePath))
+                                {
+                                     try { System.IO.File.Delete(oldFilePath); } catch (Exception ex) { Console.WriteLine($"Не удалось удалить старый файл доверенности: {ex.Message}");}
+                                }
+        
+                                // Обновляем существующий документ
+                                string updateDocQuery = @"
+                                    UPDATE AccompanyingPersonDocuments
+                                    SET DocumentPath = @DocumentPath, UploadDate = GETDATE(), IsVerified = 0
+                                    WHERE DocumentID = @DocumentID";
+        
+                                using (SqlCommand updateCmd = new SqlCommand(updateDocQuery, con, transaction))
+                                {
+                                    updateCmd.Parameters.AddWithValue("@DocumentPath", destinationPath); // Сохраняем полный путь
+                                    updateCmd.Parameters.AddWithValue("@DocumentID", existingDocID);
+                                    updateCmd.ExecuteNonQuery();
+                                }
+                            }
+                            else
+                            {
+                                // Добавляем новый документ
+                                string insertDocQuery = @"
+                                    INSERT INTO AccompanyingPersonDocuments
+                                    (AccompanyingPersonID, DocumentTypeID, DocumentPath, UploadDate, IsVerified)
+                                    VALUES (@AccompanyingPersonID, @DocumentTypeID, @DocumentPath, GETDATE(), 0)";
+        
+                                using (SqlCommand insertCmd = new SqlCommand(insertDocQuery, con, transaction))
+                                {
+                                    insertCmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                    insertCmd.Parameters.AddWithValue("@DocumentTypeID", powerOfAttorneyDocTypeID);
+                                    insertCmd.Parameters.AddWithValue("@DocumentPath", destinationPath); // Сохраняем полный путь
+                                    insertCmd.ExecuteNonQuery();
+                                }
+                            }
+        
+                            // Обновляем флаг HasPowerOfAttorney в основной таблице
+                            string updatePersonQuery = @"
+                                UPDATE AccompanyingPersons
+                                SET HasPowerOfAttorney = 1
+                                WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                            using (SqlCommand updatePersonCmd = new SqlCommand(updatePersonQuery, con, transaction))
+                            {
+                                updatePersonCmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                                updatePersonCmd.ExecuteNonQuery();
+                            }
+        
+        
+                            transaction.Commit();
+                             return Ok(new { success = true, message = "Доверенность успешно загружена.", filePath = relativePath });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            // Попытка удалить загруженный файл в случае ошибки БД
+                            try { if (System.IO.File.Exists(destinationPath)) System.IO.File.Delete(destinationPath); } catch { }
+                            Console.WriteLine($"Ошибка при сохранении доверенности в БД: {ex.Message}");
+                            return StatusCode(500, new { success = false, message = "Ошибка сервера при сохранении доверенности: " + ex.Message });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Общая ошибка при загрузке доверенности: {ex.Message}");
+                return StatusCode(500, new { success = false, message = "Ошибка сервера при загрузке доверенности: " + ex.Message });
             }
         }
 
@@ -2113,6 +2699,17 @@ namespace WebDubRosh.Controllers
         public int RoomID { get; set; }
         public int BedNumber { get; set; }
         public int? CurrentPatientID { get; set; }
+    }
+
+    public class AccompanyingPersonModel
+    {
+        public int PatientID { get; set; }
+        public string FullName { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string Relationship { get; set; }
+        public bool HasPowerOfAttorney { get; set; }
+        public bool NeedAccommodation { get; set; }
+        public AccommodationInfoModel AccommodationInfo { get; set; }
     }
 
     #endregion
