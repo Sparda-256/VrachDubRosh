@@ -721,29 +721,112 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Удаляем пациентов по очереди
-    const promises = selectedPatientIDs.map(patientID => {
+    // Показываем уведомление о начале процесса
+    showNotification('Выполняется удаление пациентов...', 'info');
+    
+    // Массив для хранения результатов удаления
+    const results = {
+      success: [],
+      failed: []
+    };
+    
+    // Функция для удаления одного пациента
+    function deleteOnePatient(patientID) {
+      console.log(`Отправка запроса на удаление пациента ID: ${patientID}`);
+      
       return fetch(`/api/manager/patient/${patientID}`, {
         method: 'DELETE'
       })
-      .then(response => response.json());
-    });
-    
-    Promise.all(promises)
-      .then(results => {
-        const successCount = results.filter(r => r.success).length;
+      .then(response => {
+        console.log(`Получен ответ для пациента ID: ${patientID}, статус: ${response.status}`);
         
-        if (successCount > 0) {
-          alert(`Успешно удалено ${successCount} пациента(ов).`);
-          loadPatients();
-          selectedPatientIDs = [];
+        if (!response.ok) {
+          return response.text().then(text => {
+            console.error(`Ошибка при удалении пациента ID: ${patientID}, текст: ${text}`);
+            
+            try {
+              const errorData = JSON.parse(text);
+              throw new Error(errorData.message || `Ошибка при удалении пациента (ID: ${patientID})`);
+            } catch (e) {
+              throw new Error(`Ошибка при удалении пациента (ID: ${patientID}): ${text}`);
+            }
+          });
+        }
+        
+        return response.json();
+      })
+      .then(data => {
+        console.log(`Успешный ответ для пациента ID: ${patientID}:`, data);
+        
+        if (data.success) {
+          results.success.push(patientID);
+          return true;
         } else {
-          alert('Не удалось удалить пациентов.');
+          results.failed.push({ id: patientID, reason: data.message || 'Неизвестная ошибка' });
+          return false;
         }
       })
       .catch(error => {
-        console.error('Error deleting patients:', error);
-        alert('Ошибка при удалении пациентов.');
+        console.error(`Ошибка при удалении пациента ID: ${patientID}:`, error);
+        results.failed.push({ id: patientID, reason: error.message });
+        return false;
+      });
+    }
+    
+    // Удаляем пациентов последовательно, а не параллельно
+    // Это поможет избежать проблем с одновременными транзакциями в БД
+    let promise = Promise.resolve();
+    
+    selectedPatientIDs.forEach(patientID => {
+      promise = promise.then(() => deleteOnePatient(patientID));
+    });
+    
+    promise
+      .then(() => {
+        console.log('Все операции удаления завершены:', results);
+        
+        // Формируем сообщение для пользователя
+        let message = '';
+        
+        if (results.success.length > 0) {
+          message += `Успешно удалено: ${results.success.length} пациент(ов).`;
+        }
+        
+        if (results.failed.length > 0) {
+          if (message) message += '\n\n';
+          message += `Не удалось удалить: ${results.failed.length} пациент(ов).`;
+          
+          // Добавляем причины ошибок (до 3 штук, чтобы не перегружать сообщение)
+          const failReasons = results.failed.slice(0, 3).map(f => `ID ${f.id}: ${f.reason}`);
+          message += '\n' + failReasons.join('\n');
+          
+          if (results.failed.length > 3) {
+            message += '\n...и еще ' + (results.failed.length - 3) + ' пациент(ов)';
+          }
+        }
+        
+        if (results.success.length > 0) {
+          showNotification(message.split('\n')[0], 'success');
+          
+          // Обновляем списки
+          loadPatients();
+          loadAccommodations(); // Обновляем также размещение, т.к. оно могло измениться
+          
+          // Очищаем выбранные идентификаторы
+          selectedPatientIDs = [];
+        } else {
+          showNotification('Не удалось удалить ни одного пациента', 'error');
+        }
+        
+        // Если были ошибки, показываем полное сообщение в диалоговом окне
+        if (results.failed.length > 0) {
+          alert(message);
+        }
+      })
+      .catch(error => {
+        console.error('Общая ошибка при удалении пациентов:', error);
+        showNotification('Произошла ошибка при удалении пациентов', 'error');
+        alert('Ошибка при удалении пациентов: ' + error.message);
       });
   }
 

@@ -61,115 +61,248 @@ namespace WebDubRosh.Controllers
         {
             try
             {
+                Console.WriteLine($"Запрос на удаление пациента с ID: {id}");
+                
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
+                    Console.WriteLine("Соединение с базой данных открыто");
+                    
                     using (SqlTransaction tran = con.BeginTransaction())
                     {
                         try
                         {
-                            // 1. Проверяем, существуют ли зависимые записи
-                            string checkQuery = @"SELECT COUNT(*) FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                            int dependentCount = 0;
+                            // 1. Проверяем, существует ли пациент
+                            string checkPatientQuery = "SELECT COUNT(*) FROM Patients WHERE PatientID = @PatientID";
+                            int patientCount = 0;
                             
-                            using (SqlCommand checkCmd = new SqlCommand(checkQuery, con, tran))
+                            using (SqlCommand checkCmd = new SqlCommand(checkPatientQuery, con, tran))
                             {
                                 checkCmd.Parameters.AddWithValue("@PatientID", id);
-                                dependentCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+                                patientCount = Convert.ToInt32(checkCmd.ExecuteScalar());
                             }
                             
-                            if (dependentCount > 0)
+                            if (patientCount == 0)
                             {
                                 tran.Rollback();
+                                Console.WriteLine($"Пациент с ID {id} не найден");
+                                return NotFound(new { success = false, message = $"Пациент с ID {id} не найден" });
+                            }
+                            
+                            // 2. Проверяем, существуют ли зависимые записи назначенных врачей
+                            string checkDoctorsQuery = @"SELECT COUNT(*) FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
+                            int doctorsCount = 0;
+                            
+                            using (SqlCommand checkCmd = new SqlCommand(checkDoctorsQuery, con, tran))
+                            {
+                                checkCmd.Parameters.AddWithValue("@PatientID", id);
+                                doctorsCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+                            }
+                            
+                            if (doctorsCount > 0)
+                            {
+                                tran.Rollback();
+                                Console.WriteLine($"Пациент с ID {id} имеет {doctorsCount} назначенных врачей");
                                 return BadRequest(new { success = false, message = "Нельзя удалить пациента, так как у него есть назначенные врачи. Сначала отмените назначения." });
                             }
 
-                            // 2. Удаляем документы пациента
+                            // 3. Проверяем наличие записей о размещении пациента и удаляем их
+                            string deleteAccommodationsQuery = "DELETE FROM Accommodations WHERE PatientID = @PatientID";
+                            int accommodationsDeleted = 0;
+                            
+                            using (SqlCommand cmdDeleteAccommodations = new SqlCommand(deleteAccommodationsQuery, con, tran))
+                            {
+                                cmdDeleteAccommodations.Parameters.AddWithValue("@PatientID", id);
+                                accommodationsDeleted = cmdDeleteAccommodations.ExecuteNonQuery();
+                            }
+                            
+                            Console.WriteLine($"Удалено записей о размещении пациента: {accommodationsDeleted}");
+
+                            // 4. Проверяем наличие сопровождающих лиц у пациента
+                            string checkAccompanyingQuery = @"SELECT COUNT(*) FROM AccompanyingPersons WHERE PatientID = @PatientID";
+                            int accompanyingCount = 0;
+                            
+                            using (SqlCommand checkCmd = new SqlCommand(checkAccompanyingQuery, con, tran))
+                            {
+                                checkCmd.Parameters.AddWithValue("@PatientID", id);
+                                accompanyingCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+                            }
+                            
+                            // Если у пациента есть сопровождающие, удаляем их данные
+                            if (accompanyingCount > 0)
+                            {
+                                Console.WriteLine($"Обнаружено {accompanyingCount} сопровождающих лиц для пациента с ID {id}");
+                                
+                                // 4.1. Получаем список ID сопровождающих лиц
+                                List<int> accompanyingIDs = new List<int>();
+                                using (SqlCommand getIDsCmd = new SqlCommand("SELECT AccompanyingPersonID FROM AccompanyingPersons WHERE PatientID = @PatientID", con, tran))
+                                {
+                                    getIDsCmd.Parameters.AddWithValue("@PatientID", id);
+                                    using (SqlDataReader reader = getIDsCmd.ExecuteReader())
+                                    {
+                                        while (reader.Read())
+                                        {
+                                            accompanyingIDs.Add(reader.GetInt32(0));
+                                        }
+                                    }
+                                }
+                                
+                                // 4.2. Для каждого сопровождающего удаляем его документы и размещение
+                                foreach (int accompanyingID in accompanyingIDs)
+                                {
+                                    // Удаляем записи размещения сопровождающего
+                                    string deleteAccompanyingAccommodationsQuery = "DELETE FROM Accommodations WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                                    int accomDeleted = 0;
+                                    
+                                    using (SqlCommand cmd = new SqlCommand(deleteAccompanyingAccommodationsQuery, con, tran))
+                                    {
+                                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                                        accomDeleted = cmd.ExecuteNonQuery();
+                                    }
+                                    
+                                    Console.WriteLine($"Удалено записей о размещении сопровождающего {accompanyingID}: {accomDeleted}");
+                                    
+                                    // Удаляем документы сопровождающего лица
+                                    string deleteAccompanyingDocsQuery = "DELETE FROM AccompanyingPersonDocuments WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                                    int accompanyingDocsDeleted = 0;
+                                    
+                                    using (SqlCommand cmd = new SqlCommand(deleteAccompanyingDocsQuery, con, tran))
+                                    {
+                                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingID);
+                                        accompanyingDocsDeleted = cmd.ExecuteNonQuery();
+                                    }
+                                    
+                                    Console.WriteLine($"Удалено документов сопровождающего {accompanyingID}: {accompanyingDocsDeleted}");
+                                }
+                                
+                                // 4.3. Удаляем самих сопровождающих
+                                string deleteAccompanyingQuery = "DELETE FROM AccompanyingPersons WHERE PatientID = @PatientID";
+                                int accompanyingDeleted = 0;
+                                
+                                using (SqlCommand cmd = new SqlCommand(deleteAccompanyingQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", id);
+                                    accompanyingDeleted = cmd.ExecuteNonQuery();
+                                }
+                                
+                                Console.WriteLine($"Удалено сопровождающих лиц: {accompanyingDeleted}");
+                            }
+
+                            Console.WriteLine("Продолжаем удаление связанных данных пациента");
+                            
+                            // 5. Удаляем документы пациента
                             string deleteDocumentsQuery = "DELETE FROM PatientDocuments WHERE PatientID = @PatientID";
+                            int docsDeleted = 0;
+                            
                             using (SqlCommand cmdDocuments = new SqlCommand(deleteDocumentsQuery, con, tran))
                             {
                                 cmdDocuments.Parameters.AddWithValue("@PatientID", id);
-                                cmdDocuments.ExecuteNonQuery();
+                                docsDeleted = cmdDocuments.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено документов: {docsDeleted}");
 
-                            // 3. Удаляем описания пациента
+                            // 6. Удаляем описания пациента
                             string deleteDescriptionsQuery = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
+                            int descsDeleted = 0;
+                            
                             using (SqlCommand cmdDescriptions = new SqlCommand(deleteDescriptionsQuery, con, tran))
                             {
                                 cmdDescriptions.Parameters.AddWithValue("@PatientID", id);
-                                cmdDescriptions.ExecuteNonQuery();
+                                descsDeleted = cmdDescriptions.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено описаний: {descsDeleted}");
 
-                            // 4. Удаляем диагнозы пациента
+                            // 7. Удаляем диагнозы пациента
                             string deleteDiagnosesQuery = "DELETE FROM PatientDiagnoses WHERE PatientID = @PatientID";
+                            int diagnosesDeleted = 0;
+                            
                             using (SqlCommand cmdDiagnoses = new SqlCommand(deleteDiagnosesQuery, con, tran))
                             {
                                 cmdDiagnoses.Parameters.AddWithValue("@PatientID", id);
-                                cmdDiagnoses.ExecuteNonQuery();
+                                diagnosesDeleted = cmdDiagnoses.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено диагнозов: {diagnosesDeleted}");
 
-                            // 5. Удаляем назначения процедур
+                            // 8. Удаляем назначения процедур
                             string deleteProcedureAppointmentsQuery = "DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
+                            int proceduresDeleted = 0;
+                            
                             using (SqlCommand cmdAppointments = new SqlCommand(deleteProcedureAppointmentsQuery, con, tran))
                             {
                                 cmdAppointments.Parameters.AddWithValue("@PatientID", id);
-                                cmdAppointments.ExecuteNonQuery();
+                                proceduresDeleted = cmdAppointments.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено назначений процедур: {proceduresDeleted}");
 
-                            // 6. Удаляем медикаменты пациента
+                            // 9. Удаляем медикаменты пациента
                             string deleteMedicationsQuery = "DELETE FROM PatientMedications WHERE PatientID = @PatientID";
+                            int medicationsDeleted = 0;
+                            
                             using (SqlCommand cmdMedications = new SqlCommand(deleteMedicationsQuery, con, tran))
                             {
                                 cmdMedications.Parameters.AddWithValue("@PatientID", id);
-                                cmdMedications.ExecuteNonQuery();
+                                medicationsDeleted = cmdMedications.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено медикаментов: {medicationsDeleted}");
 
-                            // 7. Удаляем измерения пациента
+                            // 10. Удаляем измерения пациента
                             string deleteMeasurementsQuery = "DELETE FROM PatientMeasurements WHERE PatientID = @PatientID";
+                            int measurementsDeleted = 0;
+                            
                             using (SqlCommand cmdMeasurements = new SqlCommand(deleteMeasurementsQuery, con, tran))
                             {
                                 cmdMeasurements.Parameters.AddWithValue("@PatientID", id);
-                                cmdMeasurements.ExecuteNonQuery();
+                                measurementsDeleted = cmdMeasurements.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено измерений: {measurementsDeleted}");
 
-                            // 8. Удаляем выписные документы
+                            // 11. Удаляем выписные документы
                             string deleteDischargeDocsQuery = "DELETE FROM DischargeDocuments WHERE PatientID = @PatientID";
+                            int dischargeDocsDeleted = 0;
+                            
                             using (SqlCommand cmdDischargeDocs = new SqlCommand(deleteDischargeDocsQuery, con, tran))
                             {
                                 cmdDischargeDocs.Parameters.AddWithValue("@PatientID", id);
-                                cmdDischargeDocs.ExecuteNonQuery();
+                                dischargeDocsDeleted = cmdDischargeDocs.ExecuteNonQuery();
                             }
+                            
+                            Console.WriteLine($"Удалено выписных документов: {dischargeDocsDeleted}");
 
-                            // 9. Выселяем пациента из комнаты, если он где-то проживает
-                            string updateAccommodationsQuery = @"
-                            UPDATE Accommodations
-                            SET CheckOutDate = GETDATE()
-                            WHERE PatientID = @PatientID AND CheckOutDate IS NULL";
-                            using (SqlCommand cmdAccommodations = new SqlCommand(updateAccommodationsQuery, con, tran))
-                            {
-                                cmdAccommodations.Parameters.AddWithValue("@PatientID", id);
-                                cmdAccommodations.ExecuteNonQuery();
-                            }
-
-                            // 10. Удаляем самого пациента
+                            // 12. Теперь когда все связи удалены, удаляем самого пациента
                             string deletePatientQuery = "DELETE FROM Patients WHERE PatientID = @PatientID";
+                            int patientDeleted = 0;
+                            
                             using (SqlCommand cmdPatient = new SqlCommand(deletePatientQuery, con, tran))
                             {
                                 cmdPatient.Parameters.AddWithValue("@PatientID", id);
-                                int rowsAffected = cmdPatient.ExecuteNonQuery();
-                                if (rowsAffected == 0)
+                                patientDeleted = cmdPatient.ExecuteNonQuery();
+                                
+                                if (patientDeleted == 0)
                                 {
                                     tran.Rollback();
+                                    Console.WriteLine($"Не удалось удалить пациента с ID {id}");
                                     return NotFound(new { success = false, message = "Пациент не найден." });
                                 }
                             }
+                            
+                            Console.WriteLine($"Удален пациент: {patientDeleted}");
 
+                            // Все операции выполнены успешно, фиксируем транзакцию
                             tran.Commit();
+                            Console.WriteLine($"Транзакция успешно завершена, пациент с ID {id} полностью удален");
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            Console.WriteLine($"Ошибка при удалении пациента с ID {id}: {ex.Message}");
+                            Console.WriteLine($"StackTrace: {ex.StackTrace}");
                             tran.Rollback();
-                            throw;
+                            throw new Exception($"Ошибка при удалении пациента: {ex.Message}", ex);
                         }
                     }
                 }
@@ -178,6 +311,8 @@ namespace WebDubRosh.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Общая ошибка при удалении пациента: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
