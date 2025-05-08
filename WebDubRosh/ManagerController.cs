@@ -525,6 +525,316 @@ namespace WebDubRosh.Controllers
             }
         }
 
+        // GET: api/manager/patient/{id}
+        [HttpGet("patient/{id}")]
+        public IActionResult GetPatient(int id)
+        {
+            try
+            {
+                Console.WriteLine($"Запрос на получение данных пациента с ID: {id}");
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    // Получаем основные данные пациента
+                    string patientQuery = @"
+                        SELECT p.PatientID, p.FullName, p.DateOfBirth, p.Gender, p.RecordDate, p.DischargeDate, p.StayType
+                        FROM Patients p
+                        WHERE p.PatientID = @PatientID";
+                    
+                    PatientModel patient = null;
+                    
+                    using (SqlCommand cmd = new SqlCommand(patientQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", id);
+                        
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                patient = new PatientModel
+                                {
+                                    FullName = reader["FullName"].ToString(),
+                                    DateOfBirth = Convert.ToDateTime(reader["DateOfBirth"]),
+                                    Gender = reader["Gender"].ToString(),
+                                    StayType = reader["StayType"].ToString(),
+                                    RecordDate = reader["RecordDate"] != DBNull.Value ? Convert.ToDateTime(reader["RecordDate"]) : (DateTime?)null,
+                                    DischargeDate = reader["DischargeDate"] != DBNull.Value ? Convert.ToDateTime(reader["DischargeDate"]) : (DateTime?)null
+                                };
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = $"Пациент с ID {id} не найден" });
+                            }
+                        }
+                    }
+                    
+                    // Если пациент в круглосуточном стационаре, получаем данные о его размещении
+                    if (patient.StayType == "Круглосуточный")
+                    {
+                        string accommodationQuery = @"
+                            SELECT a.RoomID, a.BedNumber
+                            FROM Accommodations a
+                            WHERE a.PatientID = @PatientID AND a.CheckOutDate IS NULL";
+                        
+                        using (SqlCommand cmd = new SqlCommand(accommodationQuery, con))
+                        {
+                            cmd.Parameters.AddWithValue("@PatientID", id);
+                            
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    patient.AccommodationInfo = new AccommodationInfoModel
+                                    {
+                                        RoomID = Convert.ToInt32(reader["RoomID"]),
+                                        BedNumber = Convert.ToInt32(reader["BedNumber"])
+                                    };
+                                }
+                            }
+                        }
+                    }
+                    
+                    return Ok(new { success = true, patient });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении данных пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // PUT: api/manager/patient/{id}
+        [HttpPut("patient/{id}")]
+        public IActionResult UpdatePatient(int id, [FromBody] PatientModel patient)
+        {
+            try
+            {
+                if (patient == null)
+                    return BadRequest(new { success = false, message = "Получен пустой объект пациента" });
+                    
+                if (string.IsNullOrEmpty(patient.FullName))
+                    return BadRequest(new { success = false, message = "ФИО пациента обязательно для заполнения" });
+
+                Console.WriteLine($"Запрос на обновление пациента с ID: {id}");
+                Console.WriteLine($"Новые данные: {patient.FullName}, Стационар: {patient.StayType}");
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Проверяем существование пациента
+                            string checkQuery = "SELECT COUNT(*) FROM Patients WHERE PatientID = @PatientID";
+                            int patientCount = 0;
+                            
+                            using (SqlCommand cmd = new SqlCommand(checkQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                patientCount = Convert.ToInt32(cmd.ExecuteScalar());
+                            }
+                            
+                            if (patientCount == 0)
+                            {
+                                transaction.Rollback();
+                                return NotFound(new { success = false, message = $"Пациент с ID {id} не найден" });
+                            }
+                            
+                            // Обновляем основные данные пациента
+                            string updateQuery;
+                            if (patient.DischargeDate.HasValue)
+                            {
+                                updateQuery = @"
+                                    UPDATE Patients
+                                    SET FullName = @FullName, 
+                                        DateOfBirth = @DateOfBirth, 
+                                        Gender = @Gender, 
+                                        RecordDate = @RecordDate, 
+                                        DischargeDate = @DischargeDate,
+                                        StayType = @StayType
+                                    WHERE PatientID = @PatientID";
+                            }
+                            else
+                            {
+                                updateQuery = @"
+                                    UPDATE Patients
+                                    SET FullName = @FullName, 
+                                        DateOfBirth = @DateOfBirth, 
+                                        Gender = @Gender, 
+                                        RecordDate = @RecordDate, 
+                                        DischargeDate = NULL,
+                                        StayType = @StayType
+                                    WHERE PatientID = @PatientID";
+                            }
+
+                            using (SqlCommand cmd = new SqlCommand(updateQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                cmd.Parameters.AddWithValue("@FullName", patient.FullName);
+                                cmd.Parameters.AddWithValue("@DateOfBirth", patient.DateOfBirth);
+                                cmd.Parameters.AddWithValue("@Gender", patient.Gender);
+                                cmd.Parameters.AddWithValue("@RecordDate", patient.RecordDate ?? DateTime.Now);
+                                cmd.Parameters.AddWithValue("@StayType", patient.StayType ?? "Дневной");
+                                
+                                if (patient.DischargeDate.HasValue)
+                                    cmd.Parameters.AddWithValue("@DischargeDate", patient.DischargeDate.Value);
+                                
+                                int rowsUpdated = cmd.ExecuteNonQuery();
+                                Console.WriteLine($"Обновлено записей пациента: {rowsUpdated}");
+                            }
+
+                            // Если изменился тип стационара или данные размещения
+                            // Сначала получим текущий тип стационара
+                            string currentStayTypeQuery = "SELECT StayType FROM Patients WHERE PatientID = @PatientID";
+                            string currentStayType = string.Empty;
+                            
+                            using (SqlCommand cmd = new SqlCommand(currentStayTypeQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                object result = cmd.ExecuteScalar();
+                                if (result != null && result != DBNull.Value)
+                                {
+                                    currentStayType = result.ToString();
+                                }
+                            }
+                            
+                            // Проверяем наличие размещения у пациента
+                            bool hasAccommodation = false;
+                            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Accommodations WHERE PatientID = @PatientID AND CheckOutDate IS NULL", con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                hasAccommodation = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                            }
+                            
+                            // Обработка размещения в зависимости от ситуации
+                            if (patient.StayType == "Круглосуточный")
+                            {
+                                // Если переход с дневного на круглосуточный ИЛИ изменение размещения
+                                if ((currentStayType != "Круглосуточный" || !hasAccommodation) && patient.AccommodationInfo != null)
+                                {
+                                    // Удаляем предыдущие записи размещения, если они есть
+                                    if (hasAccommodation)
+                                    {
+                                        using (SqlCommand cmd = new SqlCommand("DELETE FROM Accommodations WHERE PatientID = @PatientID", con, transaction))
+                                        {
+                                            cmd.Parameters.AddWithValue("@PatientID", id);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                    }
+                                    
+                                    // Проверка доступности кровати
+                                    string checkBedQuery = @"
+                                        SELECT COUNT(*) FROM Accommodations 
+                                        WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                        int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                        
+                                        if (occupiedCount > 0)
+                                        {
+                                            transaction.Rollback();
+                                            return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                        }
+                                    }
+                                    
+                                    // Добавление нового размещения
+                                    string insertAccommodationQuery = @"
+                                        INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
+                                        VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@PatientID", id);
+                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                        cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                            else if (currentStayType == "Круглосуточный" && patient.StayType == "Дневной")
+                            {
+                                // Если переход с круглосуточного на дневной - удаляем размещение
+                                using (SqlCommand cmd = new SqlCommand("DELETE FROM Accommodations WHERE PatientID = @PatientID", con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", id);
+                                    int deleted = cmd.ExecuteNonQuery();
+                                    Console.WriteLine($"Удалено записей размещения: {deleted}");
+                                }
+                            }
+                            
+                            transaction.Commit();
+                            
+                            return Ok(new { 
+                                success = true, 
+                                message = "Пациент успешно обновлен", 
+                                patientId = id 
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            Console.WriteLine($"Ошибка при обновлении пациента: {ex.Message}");
+                            throw new Exception("Ошибка при обновлении пациента: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Общая ошибка при обновлении пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/manager/rooms/{roomId}/building
+        [HttpGet("rooms/{roomId}/building")]
+        public IActionResult GetRoomBuilding(int roomId)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT r.BuildingID
+                        FROM Rooms r
+                        WHERE r.RoomID = @RoomID";
+                    
+                    int buildingId = 0;
+                    
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@RoomID", roomId);
+                        object result = cmd.ExecuteScalar();
+                        
+                        if (result != null && result != DBNull.Value)
+                        {
+                            buildingId = Convert.ToInt32(result);
+                        }
+                        else
+                        {
+                            return NotFound(new { success = false, message = $"Комната с ID {roomId} не найдена" });
+                        }
+                    }
+                    
+                    return Ok(new { success = true, buildingID = buildingId });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении данных о здании: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         #endregion
 
         #region Сопровождающие лица

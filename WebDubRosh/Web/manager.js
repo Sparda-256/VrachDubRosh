@@ -685,6 +685,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Показать модальное окно добавления пациента
   function showAddPatientModal() {
+    // Очищаем атрибут ID пациента и устанавливаем заголовок
+    document.getElementById('patientModalTitle').textContent = 'Добавление пациента';
+    const saveButton = document.getElementById('savePatientBtn');
+    saveButton.dataset.patientId = '';
+    saveButton.textContent = 'Сохранить';
+    
     // Очищаем форму
     document.getElementById('patientFullName').value = '';
     document.getElementById('patientDateOfBirth').value = '';
@@ -703,11 +709,149 @@ document.addEventListener('DOMContentLoaded', function() {
   // Показать модальное окно редактирования пациента
   function showEditPatientModal() {
     if (selectedPatientIDs.length !== 1) {
-      alert('Выберите одного пациента для редактирования.');
+      showNotification('Выберите одного пациента для редактирования', 'error');
       return;
     }
-    // TODO: Реализовать отображение модального окна редактирования пациента
-    alert('Функция редактирования пациента будет реализована в будущих версиях.');
+    
+    const patientID = selectedPatientIDs[0];
+    
+    // Показываем индикатор загрузки
+    document.getElementById('patientModalTitle').textContent = 'Редактирование пациента';
+    document.getElementById('patientModal').style.display = 'block';
+    showNotification('Загрузка данных пациента...', 'info');
+    
+    // Загружаем данные пациента
+    loadPatientData(patientID);
+  }
+
+  // Загрузка данных пациента для редактирования
+  function loadPatientData(patientID) {
+    fetch(`/api/manager/patient/${patientID}`)
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            try {
+              const errorData = JSON.parse(text);
+              throw new Error(errorData.message || 'Ошибка при загрузке данных пациента');
+            } catch (e) {
+              throw new Error('Ошибка при загрузке данных пациента: ' + text);
+            }
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.message || 'Не удалось загрузить данные пациента');
+        }
+        
+        const patient = data.patient;
+        console.log('Загружены данные пациента:', patient);
+        
+        // Заполняем форму данными пациента
+        document.getElementById('patientFullName').value = patient.fullName;
+        document.getElementById('patientGender').value = patient.gender;
+        
+        // Преобразуем дату рождения в формат YYYY-MM-DD для поля input[type="date"]
+        if (patient.dateOfBirth) {
+          const dob = new Date(patient.dateOfBirth);
+          const dobFormatted = dob.toISOString().split('T')[0];
+          document.getElementById('patientDateOfBirth').value = dobFormatted;
+        }
+        
+        // Устанавливаем дату записи
+        if (patient.recordDate) {
+          const recordDate = new Date(patient.recordDate);
+          const recordDateFormatted = recordDate.toISOString().split('T')[0];
+          document.getElementById('patientRecordDate').value = recordDateFormatted;
+        }
+        
+        // Устанавливаем дату выписки, если есть
+        if (patient.dischargeDate) {
+          const dischargeDate = new Date(patient.dischargeDate);
+          const dischargeDateFormatted = dischargeDate.toISOString().split('T')[0];
+          document.getElementById('patientDischargeDate').value = dischargeDateFormatted;
+        } else {
+          document.getElementById('patientDischargeDate').value = '';
+        }
+        
+        // Устанавливаем тип стационара
+        document.getElementById('patientStayType').value = patient.stayType;
+        
+        // Триггерим изменение типа стационара для показа/скрытия секции размещения
+        const stayTypeEvent = new Event('change');
+        document.getElementById('patientStayType').dispatchEvent(stayTypeEvent);
+        
+        // Если пациент в круглосуточном стационаре и есть данные о размещении
+        if (patient.stayType === 'Круглосуточный' && patient.accommodationInfo) {
+          // Загружаем корпуса, если не загружены
+          const buildingSelect = document.getElementById('patientBuilding');
+          if (buildingSelect.options.length === 0) {
+            // Ждем загрузки корпусов и затем загружаем комнаты
+            fetch('/api/manager/buildings')
+              .then(response => response.json())
+              .then(buildings => {
+                console.log('Загружены данные о корпусах:', buildings);
+                buildingSelect.innerHTML = '<option value="">Выберите корпус</option>';
+                
+                buildings.forEach(building => {
+                  const option = document.createElement('option');
+                  option.value = building.BuildingID;
+                  option.textContent = `Корпус ${building.BuildingNumber}`;
+                  buildingSelect.appendChild(option);
+                });
+                
+                // Находим корпус для выбранной комнаты
+                return fetch(`/api/manager/rooms/${patient.accommodationInfo.roomID}/building`);
+              })
+              .then(response => response.json())
+              .then(data => {
+                // Выбираем корпус
+                const buildingID = data.buildingID;
+                buildingSelect.value = buildingID;
+                
+                // Загружаем комнаты для выбранного корпуса
+                return loadRooms(buildingID);
+              })
+              .then(() => {
+                // Выбираем комнату
+                const roomSelect = document.getElementById('patientRoom');
+                roomSelect.value = patient.accommodationInfo.roomID;
+                
+                // Триггерим изменение комнаты для загрузки кроватей
+                const roomEvent = new Event('change');
+                roomSelect.dispatchEvent(roomEvent);
+                
+                // После загрузки кроватей, выбираем нужную кровать
+                setTimeout(() => {
+                  const bedSelect = document.getElementById('patientBed');
+                  for (let i = 0; i < bedSelect.options.length; i++) {
+                    if (parseInt(bedSelect.options[i].value) === patient.accommodationInfo.bedNumber) {
+                      bedSelect.selectedIndex = i;
+                      break;
+                    }
+                  }
+                }, 500);
+              })
+              .catch(error => {
+                console.error('Ошибка при загрузке данных размещения:', error);
+                showNotification('Не удалось загрузить данные размещения', 'error');
+              });
+          }
+        }
+        
+        // Меняем текст кнопки сохранения и добавляем атрибут ID пациента
+        const saveButton = document.getElementById('savePatientBtn');
+        saveButton.textContent = 'Сохранить изменения';
+        saveButton.dataset.patientId = patientID;
+        
+        // Скрываем индикатор загрузки
+        showNotification('Данные пациента загружены', 'success');
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке данных пациента:', error);
+        showNotification(error.message, 'error');
+      });
   }
 
   // Удаление пациента
@@ -1170,7 +1314,9 @@ document.addEventListener('DOMContentLoaded', function() {
           fetch('/api/manager/buildings')
             .then(response => response.json())
             .then(buildings => {
-              buildingSelect.innerHTML = '';
+              console.log('Загружены данные о корпусах:', buildings);
+              buildingSelect.innerHTML = '<option value="">Выберите корпус</option>';
+              
               buildings.forEach(building => {
                 const option = document.createElement('option');
                 option.value = building.BuildingID;
@@ -1180,7 +1326,8 @@ document.addEventListener('DOMContentLoaded', function() {
               
               // Если есть корпуса, загружаем комнаты для первого корпуса
               if (buildings.length > 0) {
-                loadRooms(buildings[0].BuildingID);
+                // НЕ выбираем автоматически первый корпус при добавлении
+                // Пусть пользователь сам выберет нужный корпус
               }
             })
             .catch(error => {
@@ -1199,16 +1346,16 @@ document.addEventListener('DOMContentLoaded', function() {
         loadRooms(this.value);
       } else {
         // Очищаем выпадающие списки комнат и кроватей
-        document.getElementById('patientRoom').innerHTML = '';
-        document.getElementById('patientBed').innerHTML = '';
+        document.getElementById('patientRoom').innerHTML = '<option value="">Выберите комнату</option>';
+        document.getElementById('patientBed').innerHTML = '<option value="">Выберите кровать</option>';
       }
     });
     
     // Обработчик изменения комнаты
     document.getElementById('patientRoom').addEventListener('change', function() {
       const selectedOption = this.options[this.selectedIndex];
-      if (!selectedOption) {
-        document.getElementById('patientBed').innerHTML = '';
+      if (!selectedOption || !selectedOption.value) {
+        document.getElementById('patientBed').innerHTML = '<option value="">Выберите кровать</option>';
         return;
       }
       
@@ -1238,15 +1385,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Функция для загрузки комнат выбранного корпуса
   function loadRooms(buildingId) {
-    fetch(`/api/manager/rooms/${buildingId}`)
+    return fetch(`/api/manager/rooms/${buildingId}`)
       .then(response => response.json())
       .then(rooms => {
         const roomSelect = document.getElementById('patientRoom');
-        roomSelect.innerHTML = '';
+        roomSelect.innerHTML = '<option value="">Выберите комнату</option>';
         
         if (!rooms || rooms.length === 0) {
-          roomSelect.innerHTML = '<option value="">Нет доступных комнат</option>';
-          document.getElementById('patientBed').innerHTML = '';
+          document.getElementById('patientBed').innerHTML = '<option value="">Нет доступных кроватей</option>';
           return;
         }
         
@@ -1276,28 +1422,26 @@ document.addEventListener('DOMContentLoaded', function() {
           roomSelect.appendChild(option);
         });
         
-        // Загружаем кровати для первой комнаты
-        if (rooms.length > 0) {
-          const firstRoom = rooms[0];
-          const firstRoomBeds = firstRoom.AvailableBeds || firstRoom.availableBeds || firstRoom.beds || [];
-          updateAvailableBeds(firstRoomBeds);
-        }
+        // Возвращаем промис для цепочки then
+        return Promise.resolve();
       })
       .catch(error => {
         console.error('Ошибка при загрузке комнат:', error);
         showNotification('Ошибка при загрузке комнат: ' + error.message, 'error');
+        
+        // Возвращаем отклоненный промис для обработки ошибок в цепочке then
+        return Promise.reject(error);
       });
   }
 
   // Функция для обновления списка доступных кроватей
   function updateAvailableBeds(availableBeds) {
     const bedSelect = document.getElementById('patientBed');
-    bedSelect.innerHTML = '';
+    bedSelect.innerHTML = '<option value="">Выберите кровать</option>';
     
     // Проверка, что availableBeds является массивом
     if (!Array.isArray(availableBeds)) {
       console.error('Ошибка: availableBeds не является массивом:', availableBeds);
-      bedSelect.innerHTML = '<option value="">Ошибка загрузки кроватей</option>';
       return;
     }
     
@@ -1379,12 +1523,29 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     }
     
+    // Проверяем, это добавление нового пациента или редактирование существующего
+    const saveButton = document.getElementById('savePatientBtn');
+    const isEditMode = saveButton.dataset.patientId !== undefined;
+    const patientId = isEditMode ? saveButton.dataset.patientId : null;
+    
+    // Формируем запрос в зависимости от режима
+    let url = '/api/manager/patient';
+    let method = 'POST';
+    
+    if (isEditMode) {
+      url = `/api/manager/patient/${patientId}`;
+      method = 'PUT';
+    }
+    
     // Логируем отправляемые данные
-    console.log('Отправка данных пациента:', patient);
+    console.log(`${isEditMode ? 'Обновление' : 'Создание'} пациента:`, patient);
+    
+    // Показываем уведомление о начале сохранения
+    showNotification(`${isEditMode ? 'Обновление' : 'Добавление'} пациента...`, 'info');
     
     // Отправляем данные на сервер
-    fetch('/api/manager/patient', {
-      method: 'POST',
+    fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json'
       },
@@ -1397,17 +1558,21 @@ document.addEventListener('DOMContentLoaded', function() {
           console.log('Текст ошибки:', text);
           try {
             const data = JSON.parse(text);
-            throw new Error(data.message || 'Ошибка при добавлении пациента');
+            throw new Error(data.message || `Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} пациента`);
           } catch (e) {
-            throw new Error('Ошибка при добавлении пациента: ' + text);
+            throw new Error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} пациента: ${text}`);
           }
         });
       }
       return response.json();
     })
     .then(data => {
-      showNotification('Пациент успешно добавлен', 'success');
+      showNotification(`Пациент успешно ${isEditMode ? 'обновлен' : 'добавлен'}`, 'success');
       document.getElementById('patientModal').style.display = 'none';
+      
+      // Сбрасываем атрибут ID пациента и текст кнопки сохранения
+      saveButton.dataset.patientId = '';
+      saveButton.textContent = 'Сохранить';
       
       // Обновляем список пациентов
       loadPatients();
@@ -1418,7 +1583,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     })
     .catch(error => {
-      console.error('Ошибка при добавлении пациента:', error);
+      console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} пациента:`, error);
       showNotification(error.message, 'error');
     });
   }
