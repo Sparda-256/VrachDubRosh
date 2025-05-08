@@ -182,6 +182,214 @@ namespace WebDubRosh.Controllers
             }
         }
 
+        // POST: api/manager/patient
+        [HttpPost("patient")]
+        [Consumes("application/json")]
+        public IActionResult AddPatient([FromBody] PatientModel patient)
+        {
+            try
+            {
+                // Логирование полученных данных
+                Console.WriteLine($"Получены данные пациента: {patient?.FullName}, Тип стационара: {patient?.StayType}");
+                
+                if (patient == null)
+                    return BadRequest(new { success = false, message = "Получен пустой объект пациента" });
+                    
+                if (string.IsNullOrEmpty(patient.FullName))
+                    return BadRequest(new { success = false, message = "ФИО пациента обязательно для заполнения" });
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Добавление пациента
+                            string insertQuery;
+                            if (patient.DischargeDate.HasValue)
+                            {
+                                insertQuery = @"
+                                    INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, DischargeDate, StayType)
+                                    VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @DischargeDate, @StayType);
+                                    SELECT SCOPE_IDENTITY();";
+                            }
+                            else
+                            {
+                                insertQuery = @"
+                                    INSERT INTO Patients (FullName, DateOfBirth, Gender, RecordDate, StayType)
+                                    VALUES (@FullName, @DateOfBirth, @Gender, @RecordDate, @StayType);
+                                    SELECT SCOPE_IDENTITY();";
+                            }
+
+                            int newPatientId;
+                            using (SqlCommand cmd = new SqlCommand(insertQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@FullName", patient.FullName);
+                                cmd.Parameters.AddWithValue("@DateOfBirth", patient.DateOfBirth);
+                                cmd.Parameters.AddWithValue("@Gender", patient.Gender);
+                                cmd.Parameters.AddWithValue("@RecordDate", patient.RecordDate ?? DateTime.Now);
+                                cmd.Parameters.AddWithValue("@StayType", patient.StayType ?? "Дневной");
+                                
+                                if (patient.DischargeDate.HasValue)
+                                    cmd.Parameters.AddWithValue("@DischargeDate", patient.DischargeDate.Value);
+                                
+                                newPatientId = Convert.ToInt32(cmd.ExecuteScalar());
+                                Console.WriteLine($"Добавлен пациент с ID: {newPatientId}");
+                            }
+
+                            // Если пациент размещается в стационаре и информация о размещении присутствует
+                            if (patient.StayType == "Круглосуточный" && patient.AccommodationInfo != null)
+                            {
+                                Console.WriteLine($"Размещение пациента: Комната {patient.AccommodationInfo.RoomID}, Кровать {patient.AccommodationInfo.BedNumber}");
+                                
+                                // Проверка доступности кровати
+                                string checkBedQuery = @"
+                                    SELECT COUNT(*) FROM Accommodations 
+                                    WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                    cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                    int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                    
+                                    if (occupiedCount > 0)
+                                    {
+                                        transaction.Rollback();
+                                        return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                    }
+                                }
+
+                                // Добавление размещения
+                                string insertAccommodationQuery = @"
+                                    INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
+                                    VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
+                                    
+                                using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                    cmd.Parameters.AddWithValue("@PatientID", newPatientId);
+                                    cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                    cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            transaction.Commit();
+                            
+                            return Ok(new { 
+                                success = true, 
+                                message = "Пациент успешно добавлен", 
+                                patientId = newPatientId 
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            Console.WriteLine($"Ошибка при добавлении пациента: {ex.Message}");
+                            throw new Exception("Ошибка при добавлении пациента: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Глобальная ошибка при добавлении пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/manager/rooms/{buildingId}
+        [HttpGet("rooms/{buildingId}")]
+        public IActionResult GetAvailableRooms(int buildingId)
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT r.RoomID, r.RoomNumber, r.IsAvailable,
+                        (SELECT COUNT(*) FROM Accommodations a WHERE a.RoomID = r.RoomID AND a.CheckOutDate IS NULL) AS OccupiedBeds
+                        FROM Rooms r
+                        WHERE r.BuildingID = @BuildingID AND r.IsAvailable = 1
+                        ORDER BY r.RoomNumber";
+                        
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.SelectCommand.Parameters.AddWithValue("@BuildingID", buildingId);
+                    da.Fill(dt);
+                    
+                    var rooms = new List<object>();
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        int occupiedBeds = Convert.ToInt32(row["OccupiedBeds"]);
+                        
+                        // Включаем только комнаты с доступными местами
+                        if (occupiedBeds < 2)
+                        {
+                            var room = new {
+                                RoomID = Convert.ToInt32(row["RoomID"]),
+                                RoomNumber = row["RoomNumber"].ToString(),
+                                AvailableBeds = new List<int>()
+                            };
+                            
+                            // Определяем доступные кровати
+                            if (occupiedBeds > 0)
+                            {
+                                // Запрос для определения, какие конкретно кровати заняты
+                                string bedQuery = @"
+                                    SELECT BedNumber FROM Accommodations 
+                                    WHERE RoomID = @RoomID AND CheckOutDate IS NULL";
+                                
+                                using (SqlCommand bedCmd = new SqlCommand(bedQuery, con))
+                                {
+                                    bedCmd.Parameters.AddWithValue("@RoomID", room.RoomID);
+                                    
+                                    var occupiedBedNumbers = new List<int>();
+                                    using (SqlDataReader bedReader = bedCmd.ExecuteReader())
+                                    {
+                                        while (bedReader.Read())
+                                        {
+                                            occupiedBedNumbers.Add(Convert.ToInt32(bedReader["BedNumber"]));
+                                        }
+                                    }
+                                    
+                                    // Добавляем только свободные кровати
+                                    for (int i = 1; i <= 2; i++)
+                                    {
+                                        if (!occupiedBedNumbers.Contains(i))
+                                        {
+                                            ((List<int>)room.AvailableBeds).Add(i);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Если комната полностью свободна, добавляем обе кровати
+                                ((List<int>)room.AvailableBeds).Add(1);
+                                ((List<int>)room.AvailableBeds).Add(2);
+                            }
+                            
+                            // Добавляем комнату в результат только если есть свободные кровати
+                            if (((List<int>)room.AvailableBeds).Count > 0)
+                            {
+                                rooms.Add(room);
+                            }
+                        }
+                    }
+                    
+                    return Ok(rooms);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         #endregion
 
         #region Сопровождающие лица
@@ -331,7 +539,7 @@ namespace WebDubRosh.Controllers
                         r.RoomNumber,
                         b.BuildingID,
                         b.BuildingNumber,
-                        a.BedNumber,
+                        ISNULL(a.BedNumber, beds.BedNumber) AS BedNumber,
                         CASE 
                             WHEN a.PatientID IS NULL AND a.AccompanyingPersonID IS NULL THEN 'Свободно'
                             ELSE 'Занято'
@@ -399,7 +607,18 @@ namespace WebDubRosh.Controllers
                     da.SelectCommand.Parameters.AddWithValue("@BuildingId", buildingId ?? (object)DBNull.Value);
                     da.Fill(dt);
                 }
-                return Ok(DataTableToList(dt));
+                
+                // Явно преобразуем значения для BedNumber в числа перед возвратом
+                var result = DataTableToList(dt);
+                foreach (var item in (List<Dictionary<string, object>>)result)
+                {
+                    if (item.ContainsKey("BedNumber") && item["BedNumber"] != DBNull.Value)
+                    {
+                        item["BedNumber"] = Convert.ToInt32(item["BedNumber"]);
+                    }
+                }
+                
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -940,6 +1159,23 @@ namespace WebDubRosh.Controllers
     public class AccommodationCheckOutRequest
     {
         public int AccommodationID { get; set; }
+    }
+
+    public class PatientModel
+    {
+        public string FullName { get; set; }
+        public DateTime DateOfBirth { get; set; }
+        public string Gender { get; set; }
+        public string StayType { get; set; }
+        public AccommodationInfoModel? AccommodationInfo { get; set; }
+        public DateTime? RecordDate { get; set; }
+        public DateTime? DischargeDate { get; set; }
+    }
+
+    public class AccommodationInfoModel
+    {
+        public int RoomID { get; set; }
+        public int BedNumber { get; set; }
     }
 
     #endregion

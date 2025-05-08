@@ -78,6 +78,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Инициализация обработчиков событий
     initEventListeners();
+
+    // Инициализация модального окна пациента
+    initPatientModal();
+
+    // Привязываем обработчики к кнопкам
+    document.getElementById('addPatientBtn').addEventListener('click', showAddPatientModal);
+    document.getElementById('savePatientBtn').addEventListener('click', savePatient);
   }
 
   // Инициализация переключателя темы
@@ -325,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
             AccommodationID: typeof item.AccommodationID === 'object' ? 0 : Number(item.AccommodationID) || 0,
             BuildingNumber: typeof item.BuildingNumber === 'object' ? '-' : String(item.BuildingNumber || '-'),
             RoomNumber: typeof item.RoomNumber === 'object' ? '-' : String(item.RoomNumber || '-'),
-            BedNumber: typeof item.BedNumber === 'object' ? '-' : String(item.BedNumber || '-'),
+            BedNumber: item.BedNumber === null ? '-' : (typeof item.BedNumber === 'object' ? '-' : String(item.BedNumber)),
             Status: typeof item.Status === 'object' ? 'Свободно' : String(item.Status || 'Свободно'),
             PersonName: typeof item.PersonName === 'object' ? '-' : String(item.PersonName || '-'),
             PersonType: typeof item.PersonType === 'object' ? '-' : String(item.PersonType || '-'),
@@ -442,17 +449,14 @@ document.addEventListener('DOMContentLoaded', function() {
         row.dataset.id = item.AccommodationID;
       }
       
-      // Преобразуем номер места, который, судя по ошибке, может быть объектом
-      let bedNumberDisplay = item.BedNumber;
-      if (typeof bedNumberDisplay === 'object') {
-        bedNumberDisplay = '-';
-      }
+      // Логируем данные для отладки
+      console.log(`Отображение кровати: ${item.BedNumber}, тип: ${typeof item.BedNumber}`);
       
       // Создаем содержимое строки
       row.innerHTML = `
         <td>${item.BuildingNumber}</td>
         <td>${item.RoomNumber}</td>
-        <td>${bedNumberDisplay}</td>
+        <td>${item.BedNumber}</td>
         <td>${getStatusBadge(item.Status)}</td>
         <td>${item.PersonName}</td>
         <td>${item.PersonType}</td>
@@ -681,8 +685,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Показать модальное окно добавления пациента
   function showAddPatientModal() {
-    // TODO: Реализовать отображение модального окна добавления пациента
-    alert('Функция добавления пациента будет реализована в будущих версиях.');
+    // Очищаем форму
+    document.getElementById('patientFullName').value = '';
+    document.getElementById('patientDateOfBirth').value = '';
+    document.getElementById('patientGender').value = 'Мужской';
+    document.getElementById('patientStayType').value = 'Дневной';
+    document.getElementById('patientRecordDate').valueAsDate = new Date();
+    document.getElementById('patientDischargeDate').value = '';
+    
+    // Скрываем секцию размещения
+    document.getElementById('accommodationSection').style.display = 'none';
+    
+    // Отображаем модальное окно
+    document.getElementById('patientModal').style.display = 'block';
   }
 
   // Показать модальное окно редактирования пациента
@@ -1052,5 +1067,304 @@ document.addEventListener('DOMContentLoaded', function() {
     return `<svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: ${color};">
               <path d="${icon}"></path>
             </svg>`;
+  }
+
+  // Инициализация обработчика смены типа стационара
+  function initPatientModal() {
+    // Устанавливаем текущую дату по умолчанию для даты записи
+    document.getElementById('patientRecordDate').valueAsDate = new Date();
+    
+    // Обработчик изменения типа стационара
+    document.getElementById('patientStayType').addEventListener('change', function() {
+      const accommodationSection = document.getElementById('accommodationSection');
+      
+      if (this.value === 'Круглосуточный') {
+        accommodationSection.style.display = 'block';
+        
+        // Загружаем список корпусов, если еще не загружены
+        const buildingSelect = document.getElementById('patientBuilding');
+        if (buildingSelect.options.length === 0) {
+          fetch('/api/manager/buildings')
+            .then(response => response.json())
+            .then(buildings => {
+              buildingSelect.innerHTML = '';
+              buildings.forEach(building => {
+                const option = document.createElement('option');
+                option.value = building.BuildingID;
+                option.textContent = `Корпус ${building.BuildingNumber}`;
+                buildingSelect.appendChild(option);
+              });
+              
+              // Если есть корпуса, загружаем комнаты для первого корпуса
+              if (buildings.length > 0) {
+                loadRooms(buildings[0].BuildingID);
+              }
+            })
+            .catch(error => {
+              console.error('Ошибка загрузки корпусов:', error);
+              showNotification('Не удалось загрузить список корпусов', 'error');
+            });
+        }
+      } else {
+        accommodationSection.style.display = 'none';
+      }
+    });
+    
+    // Обработчик изменения корпуса
+    document.getElementById('patientBuilding').addEventListener('change', function() {
+      if (this.value) {
+        loadRooms(this.value);
+      } else {
+        // Очищаем выпадающие списки комнат и кроватей
+        document.getElementById('patientRoom').innerHTML = '';
+        document.getElementById('patientBed').innerHTML = '';
+      }
+    });
+    
+    // Обработчик изменения комнаты
+    document.getElementById('patientRoom').addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      if (!selectedOption) {
+        document.getElementById('patientBed').innerHTML = '';
+        return;
+      }
+      
+      try {
+        let availableBeds = [];
+        if (selectedOption.dataset.availableBeds) {
+          try {
+            availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+          } catch (e) {
+            console.error('Ошибка при парсинге JSON доступных кроватей:', e);
+            console.log('Исходные данные:', selectedOption.dataset.availableBeds);
+          }
+        }
+        
+        // Проверяем наличие данных о кроватях
+        if (!Array.isArray(availableBeds) || availableBeds.length === 0) {
+          console.warn('Нет доступных кроватей для комнаты или данные некорректны');
+        }
+        
+        updateAvailableBeds(availableBeds);
+      } catch (error) {
+        console.error('Ошибка при обработке изменения комнаты:', error);
+        showNotification('Ошибка при загрузке кроватей', 'error');
+      }
+    });
+  }
+
+  // Функция для загрузки комнат выбранного корпуса
+  function loadRooms(buildingId) {
+    fetch(`/api/manager/rooms/${buildingId}`)
+      .then(response => response.json())
+      .then(rooms => {
+        const roomSelect = document.getElementById('patientRoom');
+        roomSelect.innerHTML = '';
+        
+        if (!rooms || rooms.length === 0) {
+          roomSelect.innerHTML = '<option value="">Нет доступных комнат</option>';
+          document.getElementById('patientBed').innerHTML = '';
+          return;
+        }
+        
+        // Выводим в консоль первый элемент для анализа структуры
+        console.log("Пример данных комнаты:", rooms[0]);
+        
+        rooms.forEach(room => {
+          const option = document.createElement('option');
+          
+          // Получаем ID комнаты с учетом возможных разных имен свойств
+          const roomId = room.RoomID || room.roomID || room.roomId || room.id;
+          
+          // Получаем номер комнаты
+          const roomNumber = room.RoomNumber || room.roomNumber || room.number || '';
+          
+          // Получаем список доступных кроватей
+          const availableBeds = room.AvailableBeds || room.availableBeds || room.beds || [];
+          
+          if (!roomId) {
+            console.error("Не удалось определить ID комнаты:", room);
+            return; // Пропускаем эту комнату
+          }
+          
+          option.value = roomId;
+          option.textContent = `Комната ${roomNumber}`;
+          option.dataset.availableBeds = JSON.stringify(availableBeds);
+          roomSelect.appendChild(option);
+        });
+        
+        // Загружаем кровати для первой комнаты
+        if (rooms.length > 0) {
+          const firstRoom = rooms[0];
+          const firstRoomBeds = firstRoom.AvailableBeds || firstRoom.availableBeds || firstRoom.beds || [];
+          updateAvailableBeds(firstRoomBeds);
+        }
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке комнат:', error);
+        showNotification('Ошибка при загрузке комнат: ' + error.message, 'error');
+      });
+  }
+
+  // Функция для обновления списка доступных кроватей
+  function updateAvailableBeds(availableBeds) {
+    const bedSelect = document.getElementById('patientBed');
+    bedSelect.innerHTML = '';
+    
+    // Проверка, что availableBeds является массивом
+    if (!Array.isArray(availableBeds)) {
+      console.error('Ошибка: availableBeds не является массивом:', availableBeds);
+      bedSelect.innerHTML = '<option value="">Ошибка загрузки кроватей</option>';
+      return;
+    }
+    
+    if (availableBeds.length === 0) {
+      bedSelect.innerHTML = '<option value="">Нет доступных кроватей</option>';
+      return;
+    }
+    
+    console.log("Доступные кровати:", availableBeds);
+    
+    availableBeds.forEach(bedNumber => {
+      const option = document.createElement('option');
+      option.value = bedNumber;
+      option.textContent = `Кровать ${bedNumber}`;
+      bedSelect.appendChild(option);
+    });
+  }
+
+  // Функция для сохранения пациента
+  function savePatient() {
+    // Валидация формы
+    const fullName = document.getElementById('patientFullName').value.trim();
+    const dateOfBirth = document.getElementById('patientDateOfBirth').value;
+    const gender = document.getElementById('patientGender').value;
+    const stayType = document.getElementById('patientStayType').value;
+    const recordDate = document.getElementById('patientRecordDate').value;
+    const dischargeDate = document.getElementById('patientDischargeDate').value || null;
+    
+    if (!fullName) {
+      showNotification('Пожалуйста, введите ФИО пациента', 'error');
+      return;
+    }
+    
+    if (!dateOfBirth) {
+      showNotification('Пожалуйста, выберите дату рождения', 'error');
+      return;
+    }
+    
+    if (!recordDate) {
+      showNotification('Пожалуйста, выберите дату записи', 'error');
+      return;
+    }
+    
+    // Создаем объект пациента
+    const patient = {
+      FullName: fullName,
+      DateOfBirth: dateOfBirth,
+      Gender: gender,
+      StayType: stayType,
+      RecordDate: recordDate,
+      DischargeDate: dischargeDate,
+      AccommodationInfo: null // Инициализируем AccommodationInfo как null
+    };
+    
+    // Заполняем информацию о размещении только для круглосуточного стационара
+    if (stayType === 'Круглосуточный') {
+      const buildingSelect = document.getElementById('patientBuilding');
+      const roomSelect = document.getElementById('patientRoom');
+      const bedSelect = document.getElementById('patientBed');
+      
+      if (!buildingSelect.value) {
+        showNotification('Пожалуйста, выберите корпус', 'error');
+        return;
+      }
+      
+      if (!roomSelect.value) {
+        showNotification('Пожалуйста, выберите комнату', 'error');
+        return;
+      }
+      
+      if (!bedSelect.value) {
+        showNotification('Пожалуйста, выберите кровать', 'error');
+        return;
+      }
+      
+      patient.AccommodationInfo = {
+        RoomID: parseInt(roomSelect.value),
+        BedNumber: parseInt(bedSelect.value)
+      };
+    }
+    
+    // Логируем отправляемые данные
+    console.log('Отправка данных пациента:', patient);
+    
+    // Отправляем данные на сервер
+    fetch('/api/manager/patient', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(patient)
+    })
+    .then(response => {
+      console.log('Статус ответа:', response.status);
+      if (!response.ok) {
+        return response.text().then(text => {
+          console.log('Текст ошибки:', text);
+          try {
+            const data = JSON.parse(text);
+            throw new Error(data.message || 'Ошибка при добавлении пациента');
+          } catch (e) {
+            throw new Error('Ошибка при добавлении пациента: ' + text);
+          }
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      showNotification('Пациент успешно добавлен', 'success');
+      document.getElementById('patientModal').style.display = 'none';
+      
+      // Обновляем список пациентов
+      loadPatients();
+      
+      // Обновляем статистику размещения если пациент был размещен
+      if (stayType === 'Круглосуточный') {
+        loadAccommodations();
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка при добавлении пациента:', error);
+      showNotification(error.message, 'error');
+    });
+  }
+
+  // Функция для отображения уведомлений
+  function showNotification(message, type = 'info') {
+    // Удаляем предыдущие уведомления
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => {
+      notification.style.animation = 'fadeOut 0.5s';
+      setTimeout(() => {
+        notification.remove();
+      }, 500);
+    });
+    
+    // Создаем новое уведомление
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Добавляем уведомление на страницу
+    document.body.appendChild(notification);
+    
+    // Автоматически удаляем уведомление через 3 секунды
+    setTimeout(() => {
+      notification.style.animation = 'fadeOut 0.5s';
+      setTimeout(() => {
+        notification.remove();
+      }, 500);
+    }, 3000);
   }
 }); 

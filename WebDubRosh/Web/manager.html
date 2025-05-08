@@ -168,7 +168,7 @@
                 <tr>
                   <th>Корпус</th>
                   <th>Комната</th>
-                  <th>Место</th>
+                  <th>Кровать</th>
                   <th>Статус</th>
                   <th>Проживающий</th>
                   <th>Тип</th>
@@ -269,11 +269,11 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="patientFullName">ФИО:</label>
-          <input type="text" id="patientFullName" class="form-input">
+          <input type="text" id="patientFullName" class="form-input" required>
         </div>
         <div class="form-group">
           <label for="patientDateOfBirth">Дата рождения:</label>
-          <input type="date" id="patientDateOfBirth" class="form-input">
+          <input type="date" id="patientDateOfBirth" class="form-input" required>
         </div>
         <div class="form-group">
           <label for="patientGender">Пол:</label>
@@ -288,6 +288,33 @@
             <option value="Дневной">Дневной</option>
             <option value="Круглосуточный">Круглосуточный</option>
           </select>
+        </div>
+      
+        <!-- Секция размещения (скрыта по умолчанию) -->
+        <div id="accommodationSection" style="display: none;">
+          <hr>
+          <h3>Размещение пациента</h3>
+          <div class="form-group">
+            <label for="patientBuilding">Корпус:</label>
+            <select id="patientBuilding" class="form-select"></select>
+          </div>
+          <div class="form-group">
+            <label for="patientRoom">Комната:</label>
+            <select id="patientRoom" class="form-select"></select>
+          </div>
+          <div class="form-group">
+            <label for="patientBed">Кровать:</label>
+            <select id="patientBed" class="form-select"></select>
+          </div>
+        </div>
+      
+        <div class="form-group">
+          <label for="patientRecordDate">Дата записи:</label>
+          <input type="date" id="patientRecordDate" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label for="patientDischargeDate">Дата выписки (необязательно):</label>
+          <input type="date" id="patientDischargeDate" class="form-input">
         </div>
       </div>
       <div class="modal-footer">
@@ -334,52 +361,6 @@
       </div>
       <div class="modal-footer">
         <button id="saveAccompanyingBtn" class="btn btn-accent">Сохранить</button>
-        <button class="btn btn-gray close-modal">Отмена</button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Модальное окно для заселения -->
-  <div id="checkInModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Заселение</h2>
-        <span class="close-modal">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="checkInBuilding">Корпус:</label>
-          <select id="checkInBuilding" class="form-select"></select>
-        </div>
-        <div class="form-group">
-          <label for="checkInRoom">Комната:</label>
-          <select id="checkInRoom" class="form-select"></select>
-        </div>
-        <div class="form-group">
-          <label for="checkInBed">Место:</label>
-          <select id="checkInBed" class="form-select">
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="personType">Тип проживающего:</label>
-          <select id="personType" class="form-select">
-            <option value="patient">Пациент</option>
-            <option value="accompanying">Сопровождающее лицо</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="checkInPerson">Проживающий:</label>
-          <select id="checkInPerson" class="form-select"></select>
-        </div>
-        <div class="form-group">
-          <label for="checkInDate">Дата заселения:</label>
-          <input type="date" id="checkInDate" class="form-input">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="saveCheckInBtn" class="btn btn-accent">Заселить</button>
         <button class="btn btn-gray close-modal">Отмена</button>
       </div>
     </div>
