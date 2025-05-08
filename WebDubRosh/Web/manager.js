@@ -754,22 +754,32 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Преобразуем дату рождения в формат YYYY-MM-DD для поля input[type="date"]
         if (patient.dateOfBirth) {
+          // Используем правильное форматирование даты без смещения часового пояса
           const dob = new Date(patient.dateOfBirth);
-          const dobFormatted = dob.toISOString().split('T')[0];
+          const year = dob.getFullYear();
+          const month = String(dob.getMonth() + 1).padStart(2, '0');
+          const day = String(dob.getDate()).padStart(2, '0');
+          const dobFormatted = `${year}-${month}-${day}`;
           document.getElementById('patientDateOfBirth').value = dobFormatted;
         }
         
         // Устанавливаем дату записи
         if (patient.recordDate) {
           const recordDate = new Date(patient.recordDate);
-          const recordDateFormatted = recordDate.toISOString().split('T')[0];
+          const year = recordDate.getFullYear();
+          const month = String(recordDate.getMonth() + 1).padStart(2, '0');
+          const day = String(recordDate.getDate()).padStart(2, '0');
+          const recordDateFormatted = `${year}-${month}-${day}`;
           document.getElementById('patientRecordDate').value = recordDateFormatted;
         }
         
         // Устанавливаем дату выписки, если есть
         if (patient.dischargeDate) {
           const dischargeDate = new Date(patient.dischargeDate);
-          const dischargeDateFormatted = dischargeDate.toISOString().split('T')[0];
+          const year = dischargeDate.getFullYear();
+          const month = String(dischargeDate.getMonth() + 1).padStart(2, '0');
+          const day = String(dischargeDate.getDate()).padStart(2, '0');
+          const dischargeDateFormatted = `${year}-${month}-${day}`;
           document.getElementById('patientDischargeDate').value = dischargeDateFormatted;
         } else {
           document.getElementById('patientDischargeDate').value = '';
@@ -778,66 +788,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Устанавливаем тип стационара
         document.getElementById('patientStayType').value = patient.stayType;
         
-        // Триггерим изменение типа стационара для показа/скрытия секции размещения
-        const stayTypeEvent = new Event('change');
-        document.getElementById('patientStayType').dispatchEvent(stayTypeEvent);
+        // Показываем или скрываем секцию размещения в зависимости от типа стационара
+        const accommodationSection = document.getElementById('accommodationSection');
+        if (patient.stayType === 'Круглосуточный') {
+          accommodationSection.style.display = 'block';
+        } else {
+          accommodationSection.style.display = 'none';
+        }
         
         // Если пациент в круглосуточном стационаре и есть данные о размещении
         if (patient.stayType === 'Круглосуточный' && patient.accommodationInfo) {
-          // Загружаем корпуса, если не загружены
-          const buildingSelect = document.getElementById('patientBuilding');
-          if (buildingSelect.options.length === 0) {
-            // Ждем загрузки корпусов и затем загружаем комнаты
-            fetch('/api/manager/buildings')
-              .then(response => response.json())
-              .then(buildings => {
-                console.log('Загружены данные о корпусах:', buildings);
-                buildingSelect.innerHTML = '<option value="">Выберите корпус</option>';
-                
-                buildings.forEach(building => {
-                  const option = document.createElement('option');
-                  option.value = building.BuildingID;
-                  option.textContent = `Корпус ${building.BuildingNumber}`;
-                  buildingSelect.appendChild(option);
-                });
-                
-                // Находим корпус для выбранной комнаты
-                return fetch(`/api/manager/rooms/${patient.accommodationInfo.roomID}/building`);
-              })
-              .then(response => response.json())
-              .then(data => {
-                // Выбираем корпус
-                const buildingID = data.buildingID;
-                buildingSelect.value = buildingID;
-                
-                // Загружаем комнаты для выбранного корпуса
-                return loadRooms(buildingID);
-              })
-              .then(() => {
-                // Выбираем комнату
-                const roomSelect = document.getElementById('patientRoom');
-                roomSelect.value = patient.accommodationInfo.roomID;
-                
-                // Триггерим изменение комнаты для загрузки кроватей
-                const roomEvent = new Event('change');
-                roomSelect.dispatchEvent(roomEvent);
-                
-                // После загрузки кроватей, выбираем нужную кровать
-                setTimeout(() => {
-                  const bedSelect = document.getElementById('patientBed');
-                  for (let i = 0; i < bedSelect.options.length; i++) {
-                    if (parseInt(bedSelect.options[i].value) === patient.accommodationInfo.bedNumber) {
-                      bedSelect.selectedIndex = i;
-                      break;
-                    }
-                  }
-                }, 500);
-              })
-              .catch(error => {
-                console.error('Ошибка при загрузке данных размещения:', error);
-                showNotification('Не удалось загрузить данные размещения', 'error');
-              });
-          }
+          showNotification('Загрузка данных размещения...', 'info');
+          
+          // Загружаем данные о размещении
+          loadAccommodationData(patient, patientID);
         }
         
         // Меняем текст кнопки сохранения и добавляем атрибут ID пациента
@@ -851,6 +815,126 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(error => {
         console.error('Ошибка при загрузке данных пациента:', error);
         showNotification(error.message, 'error');
+      });
+  }
+
+  // Новая функция для загрузки данных размещения пациента
+  function loadAccommodationData(patient, patientID) {
+    // Загружаем корпуса
+    fetch('/api/manager/buildings')
+      .then(response => response.json())
+      .then(buildings => {
+        console.log('Загружены данные о корпусах:', buildings);
+        const buildingSelect = document.getElementById('patientBuilding');
+        buildingSelect.innerHTML = '<option value="">Выберите корпус</option>';
+        
+        buildings.forEach(building => {
+          const option = document.createElement('option');
+          option.value = building.BuildingID;
+          option.textContent = `Корпус ${building.BuildingNumber}`;
+          buildingSelect.appendChild(option);
+        });
+        
+        // Находим корпус для выбранной комнаты
+        return fetch(`/api/manager/rooms/${patient.accommodationInfo.roomID}/building`);
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          throw new Error('Не удалось получить данные о корпусе');
+        }
+        
+        // Выбираем корпус
+        const buildingID = data.buildingID;
+        const buildingSelect = document.getElementById('patientBuilding');
+        buildingSelect.value = buildingID;
+        
+        // Загружаем комнаты для выбранного корпуса, передавая ID пациента
+        // чтобы на сервере учитывалось, что его кровать должна быть доступна для него
+        return fetch(`/api/manager/rooms/${buildingID}?patientID=${patientID}`);
+      })
+      .then(response => response.json())
+      .then(rooms => {
+        console.log('Загружены комнаты:', rooms);
+        const roomSelect = document.getElementById('patientRoom');
+        roomSelect.innerHTML = '<option value="">Выберите комнату</option>';
+        
+        if (!rooms || rooms.length === 0) {
+          document.getElementById('patientBed').innerHTML = '<option value="">Нет доступных комнат</option>';
+          throw new Error('Нет доступных комнат в выбранном корпусе');
+        }
+        
+        // Заполняем список комнат
+        rooms.forEach(room => {
+          const option = document.createElement('option');
+          
+          // Получаем ID комнаты с учетом возможных разных имен свойств
+          const roomId = room.RoomID || room.roomID || room.roomId || room.id;
+          
+          // Получаем номер комнаты
+          const roomNumber = room.RoomNumber || room.roomNumber || room.number || '';
+          
+          // Получаем список доступных кроватей
+          const availableBeds = room.AvailableBeds || room.availableBeds || room.beds || [];
+          
+          if (!roomId) {
+            console.error("Не удалось определить ID комнаты:", room);
+            return; // Пропускаем эту комнату
+          }
+          
+          option.value = roomId;
+          option.textContent = `Комната ${roomNumber}`;
+          option.dataset.availableBeds = JSON.stringify(availableBeds);
+          roomSelect.appendChild(option);
+        });
+        
+        // Выбираем комнату пациента
+        roomSelect.value = patient.accommodationInfo.roomID;
+        
+        // Получаем доступные кровати для выбранной комнаты
+        const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+        let availableBeds = [];
+        
+        try {
+          if (selectedOption && selectedOption.dataset.availableBeds) {
+            availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+          }
+        } catch (e) {
+          console.error('Ошибка при парсинге JSON доступных кроватей:', e);
+        }
+        
+        // Обновляем список кроватей
+        const bedSelect = document.getElementById('patientBed');
+        bedSelect.innerHTML = '<option value="">Выберите кровать</option>';
+        
+        // Проверяем, что availableBeds является массивом
+        if (!Array.isArray(availableBeds)) {
+          console.error('Ошибка: availableBeds не является массивом:', availableBeds);
+          availableBeds = [];
+        }
+        
+        // Убедимся, что текущая кровать пациента есть в списке
+        const currentBedNumber = patient.accommodationInfo.bedNumber;
+        if (!availableBeds.includes(currentBedNumber)) {
+          availableBeds.push(currentBedNumber);
+        }
+        
+        // Заполняем выпадающий список кроватей
+        availableBeds.forEach(bedNumber => {
+          const option = document.createElement('option');
+          option.value = bedNumber;
+          option.textContent = `Кровать ${bedNumber}`;
+          bedSelect.appendChild(option);
+        });
+        
+        // Выбираем кровать пациента
+        bedSelect.value = currentBedNumber;
+        
+        showNotification('Данные размещения загружены', 'success');
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке данных размещения:', error);
+        showNotification('Ошибка при загрузке данных размещения: ' + error.message, 'error');
       });
   }
 
@@ -1242,12 +1326,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Вспомогательные функции
   function formatDate(date) {
     if (!(date instanceof Date) || isNaN(date)) return '-';
-    return date.toLocaleDateString('ru-RU');
+    // Используем методы getDate, getMonth и getFullYear, чтобы избежать проблем с часовыми поясами
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
   }
   
   function formatDateTime(date) {
     if (!(date instanceof Date) || isNaN(date)) return '-';
-    return `${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}`;
+    // Используем методы getDate, getMonth и getFullYear, getHours и getMinutes
+    // чтобы избежать проблем с часовыми поясами
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
   }
   
   function getStatusBadge(status) {
@@ -1521,12 +1616,16 @@ document.addEventListener('DOMContentLoaded', function() {
         RoomID: parseInt(roomSelect.value),
         BedNumber: parseInt(bedSelect.value)
       };
+      
+      console.log('Данные размещения для сохранения:', patient.AccommodationInfo);
     }
     
     // Проверяем, это добавление нового пациента или редактирование существующего
     const saveButton = document.getElementById('savePatientBtn');
-    const isEditMode = saveButton.dataset.patientId !== undefined;
+    const isEditMode = saveButton.dataset.patientId !== undefined && saveButton.dataset.patientId !== '';
     const patientId = isEditMode ? saveButton.dataset.patientId : null;
+    
+    console.log('Режим редактирования:', isEditMode ? 'да' : 'нет', 'ID пациента:', patientId);
     
     // Формируем запрос в зависимости от режима
     let url = '/api/manager/patient';
@@ -1535,6 +1634,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isEditMode) {
       url = `/api/manager/patient/${patientId}`;
       method = 'PUT';
+      
+      // Если в режиме редактирования, добавляем текущий ID пациента
+      if (patient.AccommodationInfo) {
+        patient.AccommodationInfo.CurrentPatientID = parseInt(patientId);
+        console.log('Добавлен CurrentPatientID:', patient.AccommodationInfo.CurrentPatientID);
+      }
     }
     
     // Логируем отправляемые данные

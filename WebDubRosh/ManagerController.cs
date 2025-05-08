@@ -326,6 +326,9 @@ namespace WebDubRosh.Controllers
             {
                 // Логирование полученных данных
                 Console.WriteLine($"Получены данные пациента: {patient?.FullName}, Тип стационара: {patient?.StayType}");
+                Console.WriteLine($"Даты: Дата рождения = {patient?.DateOfBirth:yyyy-MM-dd}, " +
+                                 $"Дата записи = {patient?.RecordDate:yyyy-MM-dd}, " +
+                                 $"Дата выписки = {(patient?.DischargeDate.HasValue == true ? patient.DischargeDate.Value.ToString("yyyy-MM-dd") : "не указана")}");
                 
                 if (patient == null)
                     return BadRequest(new { success = false, message = "Получен пустой объект пациента" });
@@ -383,34 +386,46 @@ namespace WebDubRosh.Controllers
                                     SELECT COUNT(*) FROM Accommodations 
                                     WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
                                     
-                                using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
-                                {
-                                    cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
-                                    cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
-                                    int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
-                                    
-                                    if (occupiedCount > 0)
+                                    if (patient.AccommodationInfo.CurrentPatientID.HasValue)
                                     {
-                                        transaction.Rollback();
-                                        return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                        // Если это режим редактирования, исключаем текущую кровать пациента из проверки
+                                        checkBedQuery += " AND (PatientID IS NULL OR PatientID != @CurrentPatientID)";
+                                    }
+                                        
+                                    using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                        
+                                        if (patient.AccommodationInfo.CurrentPatientID.HasValue)
+                                        {
+                                            cmd.Parameters.AddWithValue("@CurrentPatientID", patient.AccommodationInfo.CurrentPatientID.Value);
+                                        }
+                                        
+                                        int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                        
+                                        if (occupiedCount > 0)
+                                        {
+                                            transaction.Rollback();
+                                            return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                        }
+                                    }
+
+                                    // Добавление размещения
+                                    string insertAccommodationQuery = @"
+                                        INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
+                                        VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
+                                    
+                                    using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                        cmd.Parameters.AddWithValue("@PatientID", newPatientId);
+                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                        cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                        cmd.ExecuteNonQuery();
                                     }
                                 }
-
-                                // Добавление размещения
-                                string insertAccommodationQuery = @"
-                                    INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
-                                    VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
-                                    
-                                using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
-                                {
-                                    cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
-                                    cmd.Parameters.AddWithValue("@PatientID", newPatientId);
-                                    cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
-                                    cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
-                                    cmd.ExecuteNonQuery();
-                                }
-                            }
-
+                            
                             transaction.Commit();
                             
                             return Ok(new { 
@@ -437,7 +452,7 @@ namespace WebDubRosh.Controllers
 
         // GET: api/manager/rooms/{buildingId}
         [HttpGet("rooms/{buildingId}")]
-        public IActionResult GetAvailableRooms(int buildingId)
+        public IActionResult GetAvailableRooms(int buildingId, [FromQuery] int? patientID = null)
         {
             try
             {
@@ -460,12 +475,13 @@ namespace WebDubRosh.Controllers
                     foreach (DataRow row in dt.Rows)
                     {
                         int occupiedBeds = Convert.ToInt32(row["OccupiedBeds"]);
+                        int roomID = Convert.ToInt32(row["RoomID"]);
                         
-                        // Включаем только комнаты с доступными местами
-                        if (occupiedBeds < 2)
+                        // Включаем комнаты, даже если они полностью заняты, когда указан ID пациента
+                        if (occupiedBeds < 2 || patientID.HasValue)
                         {
                             var room = new {
-                                RoomID = Convert.ToInt32(row["RoomID"]),
+                                RoomID = roomID,
                                 RoomNumber = row["RoomNumber"].ToString(),
                                 AvailableBeds = new List<int>()
                             };
@@ -475,26 +491,33 @@ namespace WebDubRosh.Controllers
                             {
                                 // Запрос для определения, какие конкретно кровати заняты
                                 string bedQuery = @"
-                                    SELECT BedNumber FROM Accommodations 
-                                    WHERE RoomID = @RoomID AND CheckOutDate IS NULL";
+                                    SELECT a.BedNumber, a.PatientID
+                                    FROM Accommodations a
+                                    WHERE a.RoomID = @RoomID AND a.CheckOutDate IS NULL";
                                 
                                 using (SqlCommand bedCmd = new SqlCommand(bedQuery, con))
                                 {
                                     bedCmd.Parameters.AddWithValue("@RoomID", room.RoomID);
                                     
-                                    var occupiedBedNumbers = new List<int>();
+                                    var occupiedBedInfo = new Dictionary<int, int?>(); // кровать -> ID пациента
                                     using (SqlDataReader bedReader = bedCmd.ExecuteReader())
                                     {
                                         while (bedReader.Read())
                                         {
-                                            occupiedBedNumbers.Add(Convert.ToInt32(bedReader["BedNumber"]));
+                                            int bedNumber = Convert.ToInt32(bedReader["BedNumber"]);
+                                            int? patientIDInBed = bedReader["PatientID"] != DBNull.Value 
+                                                ? (int?)Convert.ToInt32(bedReader["PatientID"]) 
+                                                : null;
+                                            
+                                            occupiedBedInfo[bedNumber] = patientIDInBed;
                                         }
                                     }
                                     
-                                    // Добавляем только свободные кровати
+                                    // Добавляем свободные кровати или занятые текущим пациентом
                                     for (int i = 1; i <= 2; i++)
                                     {
-                                        if (!occupiedBedNumbers.Contains(i))
+                                        if (!occupiedBedInfo.ContainsKey(i) || 
+                                            (patientID.HasValue && occupiedBedInfo[i] == patientID.Value))
                                         {
                                             ((List<int>)room.AvailableBeds).Add(i);
                                         }
@@ -589,7 +612,8 @@ namespace WebDubRosh.Controllers
                                     patient.AccommodationInfo = new AccommodationInfoModel
                                     {
                                         RoomID = Convert.ToInt32(reader["RoomID"]),
-                                        BedNumber = Convert.ToInt32(reader["BedNumber"])
+                                        BedNumber = Convert.ToInt32(reader["BedNumber"]),
+                                        CurrentPatientID = id
                                     };
                                 }
                             }
@@ -620,6 +644,9 @@ namespace WebDubRosh.Controllers
 
                 Console.WriteLine($"Запрос на обновление пациента с ID: {id}");
                 Console.WriteLine($"Новые данные: {patient.FullName}, Стационар: {patient.StayType}");
+                Console.WriteLine($"Даты: Дата рождения = {patient.DateOfBirth:yyyy-MM-dd}, " +
+                                  $"Дата записи = {patient.RecordDate:yyyy-MM-dd}, " +
+                                  $"Дата выписки = {(patient.DischargeDate.HasValue ? patient.DischargeDate.Value.ToString("yyyy-MM-dd") : "не указана")}");
                 
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
@@ -713,56 +740,119 @@ namespace WebDubRosh.Controllers
                             // Обработка размещения в зависимости от ситуации
                             if (patient.StayType == "Круглосуточный")
                             {
-                                // Если переход с дневного на круглосуточный ИЛИ изменение размещения
-                                if ((currentStayType != "Круглосуточный" || !hasAccommodation) && patient.AccommodationInfo != null)
+                                Console.WriteLine($"Обрабатываем круглосуточный стационар: hasAccommodation = {hasAccommodation}");
+                                if (patient.AccommodationInfo != null)
                                 {
-                                    // Удаляем предыдущие записи размещения, если они есть
+                                    Console.WriteLine($"Данные размещения: RoomID={patient.AccommodationInfo.RoomID}, BedNumber={patient.AccommodationInfo.BedNumber}");
+                                    
+                                    // Проверяем, изменилось ли размещение пациента
+                                    bool accommodationChanged = false;
+                                    
                                     if (hasAccommodation)
                                     {
-                                        using (SqlCommand cmd = new SqlCommand("DELETE FROM Accommodations WHERE PatientID = @PatientID", con, transaction))
+                                        string getCurrentAccommodationQuery = @"
+                                            SELECT RoomID, BedNumber FROM Accommodations 
+                                            WHERE PatientID = @PatientID AND CheckOutDate IS NULL";
+                                        
+                                        int currentRoomID = 0;
+                                        int currentBedNumber = 0;
+                                        
+                                        using (SqlCommand cmd = new SqlCommand(getCurrentAccommodationQuery, con, transaction))
                                         {
                                             cmd.Parameters.AddWithValue("@PatientID", id);
-                                            cmd.ExecuteNonQuery();
+                                            using (SqlDataReader reader = cmd.ExecuteReader())
+                                            {
+                                                if (reader.Read())
+                                                {
+                                                    currentRoomID = Convert.ToInt32(reader["RoomID"]);
+                                                    currentBedNumber = Convert.ToInt32(reader["BedNumber"]);
+                                                }
+                                            }
                                         }
+                                        
+                                        Console.WriteLine($"Текущее размещение: RoomID={currentRoomID}, BedNumber={currentBedNumber}");
+                                        
+                                        // Если комната или кровать изменились
+                                        accommodationChanged = currentRoomID != patient.AccommodationInfo.RoomID || 
+                                                             currentBedNumber != patient.AccommodationInfo.BedNumber;
                                     }
-                                    
-                                    // Проверка доступности кровати
-                                    string checkBedQuery = @"
-                                        SELECT COUNT(*) FROM Accommodations 
-                                        WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
-                                        
-                                    using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                    else
                                     {
-                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
-                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
-                                        int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
-                                        
-                                        if (occupiedCount > 0)
+                                        accommodationChanged = true; // Раньше не было размещения, теперь есть
+                                    }
+
+                                    Console.WriteLine($"Размещение изменилось: {accommodationChanged}");
+                                    
+                                    // Если переход с дневного на круглосуточный ИЛИ изменение размещения
+                                    if ((currentStayType != "Круглосуточный" || !hasAccommodation) || accommodationChanged)
+                                    {
+                                        if (accommodationChanged && hasAccommodation)
                                         {
-                                            transaction.Rollback();
-                                            return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                            // Закрываем текущее размещение
+                                            string closeCurrentAccommodationQuery = @"
+                                                UPDATE Accommodations 
+                                                SET CheckOutDate = GETDATE() 
+                                                WHERE PatientID = @PatientID AND CheckOutDate IS NULL";
+                                            
+                                            using (SqlCommand cmd = new SqlCommand(closeCurrentAccommodationQuery, con, transaction))
+                                            {
+                                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                                int rowsAffected = cmd.ExecuteNonQuery();
+                                                Console.WriteLine($"Закрыто текущее размещение: {rowsAffected} строк обновлено");
+                                            }
                                         }
-                                    }
-                                    
-                                    // Добавление нового размещения
-                                    string insertAccommodationQuery = @"
-                                        INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
-                                        VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
                                         
-                                    using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
-                                    {
-                                        cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
-                                        cmd.Parameters.AddWithValue("@PatientID", id);
-                                        cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
-                                        cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
-                                        cmd.ExecuteNonQuery();
+                                        // Проверка доступности кровати
+                                        string checkBedQuery = @"
+                                            SELECT COUNT(*) FROM Accommodations 
+                                            WHERE RoomID = @RoomID AND BedNumber = @BedNumber AND CheckOutDate IS NULL";
+                                        
+                                        if (patient.AccommodationInfo.CurrentPatientID.HasValue)
+                                        {
+                                            // Если это режим редактирования, исключаем текущую кровать пациента из проверки
+                                            checkBedQuery += " AND (PatientID IS NULL OR PatientID != @CurrentPatientID)";
+                                        }
+                                            
+                                        using (SqlCommand cmd = new SqlCommand(checkBedQuery, con, transaction))
+                                        {
+                                            cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                            cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                            
+                                            if (patient.AccommodationInfo.CurrentPatientID.HasValue)
+                                            {
+                                                cmd.Parameters.AddWithValue("@CurrentPatientID", patient.AccommodationInfo.CurrentPatientID.Value);
+                                            }
+                                            
+                                            int occupiedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                                            
+                                            if (occupiedCount > 0)
+                                            {
+                                                transaction.Rollback();
+                                                return BadRequest(new { success = false, message = "Выбранное место уже занято" });
+                                            }
+                                        }
+                                        
+                                        // Добавление нового размещения
+                                        string insertAccommodationQuery = @"
+                                            INSERT INTO Accommodations (RoomID, PatientID, BedNumber, CheckInDate)
+                                            VALUES (@RoomID, @PatientID, @BedNumber, @CheckInDate)";
+                                            
+                                        using (SqlCommand cmd = new SqlCommand(insertAccommodationQuery, con, transaction))
+                                        {
+                                            cmd.Parameters.AddWithValue("@RoomID", patient.AccommodationInfo.RoomID);
+                                            cmd.Parameters.AddWithValue("@PatientID", id);
+                                            cmd.Parameters.AddWithValue("@BedNumber", patient.AccommodationInfo.BedNumber);
+                                            cmd.Parameters.AddWithValue("@CheckInDate", DateTime.Now);
+                                            int rowsAffected = cmd.ExecuteNonQuery();
+                                            Console.WriteLine($"Добавлено новое размещение: {rowsAffected} строк вставлено");
+                                        }
                                     }
                                 }
                             }
                             else if (currentStayType == "Круглосуточный" && patient.StayType == "Дневной")
                             {
                                 // Если переход с круглосуточного на дневной - удаляем размещение
-                                using (SqlCommand cmd = new SqlCommand("DELETE FROM Accommodations WHERE PatientID = @PatientID", con, transaction))
+                                using (SqlCommand cmd = new SqlCommand("UPDATE Accommodations SET CheckOutDate = GETDATE() WHERE PatientID = @PatientID AND CheckOutDate IS NULL", con, transaction))
                                 {
                                     cmd.Parameters.AddWithValue("@PatientID", id);
                                     int deleted = cmd.ExecuteNonQuery();
@@ -1621,6 +1711,7 @@ namespace WebDubRosh.Controllers
     {
         public int RoomID { get; set; }
         public int BedNumber { get; set; }
+        public int? CurrentPatientID { get; set; }
     }
 
     #endregion
