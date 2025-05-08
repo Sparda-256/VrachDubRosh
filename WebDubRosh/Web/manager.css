@@ -737,4 +737,59 @@ input:checked + .slider .moon-icon {
 @keyframes fadeOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Стили для документов пациентов */
+.patient-documents-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.patient-info {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+#patientDocumentsTable tbody tr {
+  cursor: pointer;
+}
+
+#patientDocumentsTable tbody tr:hover {
+  background-color: var(--hover-color);
+}
+
+#patientDocumentsTable tbody tr.selected {
+  background-color: var(--selection-color);
+  color: var(--selection-text-color) !important;
+}
+
+/* Иконки для кнопок */
+.upload-icon,
+.view-icon,
+.delete-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  margin-right: 5px;
+  vertical-align: text-bottom;
+}
+
+.upload-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z'/%3E%3C/svg%3E");
+}
+
+.view-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z'/%3E%3C/svg%3E");
+}
+
+.delete-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z'/%3E%3C/svg%3E");
 } 

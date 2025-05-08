@@ -1073,172 +1073,240 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // TODO: Реализовать отображение модального окна управления документами пациента
-    alert('Функция управления документами пациента будет реализована в будущих версиях.');
+    // Загрузка документов пациента
+    loadPatientDocuments(patientID, patient.FullName);
   }
 
-  // Показать модальное окно добавления сопровождающего
-  function showAddAccompanyingModal() {
-    // TODO: Реализовать отображение модального окна добавления сопровождающего
-    alert('Функция добавления сопровождающего будет реализована в будущих версиях.');
-  }
-
-  // Показать модальное окно редактирования сопровождающего
-  function showEditAccompanyingModal() {
-    if (selectedAccompanyingIDs.length !== 1) {
-      alert('Выберите одного сопровождающего для редактирования.');
-      return;
-    }
-    // TODO: Реализовать отображение модального окна редактирования сопровождающего
-    alert('Функция редактирования сопровождающего будет реализована в будущих версиях.');
-  }
-
-  // Удаление сопровождающего
-  function deleteAccompanying() {
-    if (selectedAccompanyingIDs.length === 0) {
-      alert('Выберите сопровождающего для удаления.');
-      return;
-    }
+  // Загрузка документов пациента
+  function loadPatientDocuments(patientID, patientName) {
+    showNotification('Загрузка документов пациента...', 'info');
     
-    if (!confirm(`Вы уверены, что хотите удалить ${selectedAccompanyingIDs.length} сопровождающего(их)?`)) {
-      return;
-    }
-    
-    // Удаляем сопровождающих по очереди
-    const promises = selectedAccompanyingIDs.map(id => {
-      return fetch(`/api/manager/accompanyingperson/${id}`, {
-        method: 'DELETE'
-      })
-      .then(response => response.json());
-    });
-    
-    Promise.all(promises)
-      .then(results => {
-        const successCount = results.filter(r => r.success).length;
-        
-        if (successCount > 0) {
-          alert(`Успешно удалено ${successCount} сопровождающего(их).`);
-          loadAccompanyingPersons();
-          selectedAccompanyingIDs = [];
-        } else {
-          alert('Не удалось удалить сопровождающих.');
-        }
-      })
-      .catch(error => {
-        console.error('Error deleting accompanying persons:', error);
-        alert('Ошибка при удалении сопровождающих.');
-      });
-  }
-
-  // Управление документами сопровождающего
-  function manageAccompanyingDocuments() {
-    if (selectedAccompanyingIDs.length !== 1) {
-      alert('Выберите одного сопровождающего для управления документами.');
-      return;
-    }
-    
-    const id = selectedAccompanyingIDs[0];
-    const person = accompanyingPersons.find(p => p.AccompanyingPersonID === id);
-    
-    if (!person) {
-      alert('Сопровождающий не найден.');
-      return;
-    }
-    
-    // TODO: Реализовать отображение модального окна управления документами сопровождающего
-    alert('Функция управления документами сопровождающего будет реализована в будущих версиях.');
-  }
-
-  // Выселение человека
-  function checkOutPerson() {
-    if (selectedAccommodationIDs.length === 0) {
-      alert('Выберите размещение для выселения.');
-      return;
-    }
-    
-    const selectedItems = accommodations.filter(a => selectedAccommodationIDs.includes(a.AccommodationID));
-    const occupiedItems = selectedItems.filter(a => a.Status === 'Занято');
-    
-    if (occupiedItems.length === 0) {
-      alert('Среди выбранных размещений нет занятых.');
-      return;
-    }
-    
-    if (!confirm(`Вы уверены, что хотите выселить ${occupiedItems.length} человека(ов)?`)) {
-      return;
-    }
-    
-    // Выселяем людей по очереди
-    const promises = occupiedItems.map(item => {
-      return fetch(`/api/manager/accommodation/${item.AccommodationID}/checkout`, {
-        method: 'POST'
-      })
-      .then(response => response.json());
-    });
-    
-    Promise.all(promises)
-      .then(results => {
-        const successCount = results.filter(r => r.success).length;
-        
-        if (successCount > 0) {
-          alert(`Успешно выселено ${successCount} человека(ов).`);
-          loadAccommodations();
-          selectedAccommodationIDs = [];
-        } else {
-          alert('Не удалось выселить людей.');
-        }
-      })
-      .catch(error => {
-        console.error('Error checking out:', error);
-        alert('Ошибка при выселении.');
-      });
-  }
-
-  // Показать модальное окно загрузки документа
-  function showUploadDocumentModal() {
-    // Очищаем значения модального окна
-    document.getElementById('documentName').value = '';
-    document.getElementById('documentFile').value = '';
-    document.getElementById('documentDescription').value = '';
-    document.getElementById('documentCategory').value = 'Медицинские документы'; // Значение по умолчанию
+    // Устанавливаем заголовок модального окна
+    document.getElementById('patientDocumentsModalTitle').textContent = `Документы пациента: ${patientName}`;
     
     // Показываем модальное окно
-    const modal = document.getElementById('uploadDocumentModal');
-    modal.style.display = 'block';
+    document.getElementById('patientDocumentsModal').style.display = 'block';
     
-    // Добавляем обработчик для кнопки загрузки
-    const saveButton = document.getElementById('saveDocumentBtn');
+    // Очищаем таблицу
+    const tbody = document.getElementById('patientDocumentsTable').querySelector('tbody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Загрузка данных...</td></tr>';
     
-    // Удаляем существующие обработчики, чтобы избежать дублирования
-    const newSaveButton = saveButton.cloneNode(true);
-    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-    
-    // Добавляем новый обработчик
-    newSaveButton.addEventListener('click', uploadDocument);
+    // Загружаем документы пациента с сервера
+    fetch(`/api/manager/patient/${patientID}/documents`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.message || 'Не удалось загрузить документы пациента');
+        }
+        
+        // Обновляем информацию о возрасте
+        document.getElementById('patientDocumentsAgeInfo').textContent = `Возраст: ${data.patientAge} лет`;
+        
+        // Обновляем статус документов
+        const statusElement = document.getElementById('patientDocumentsStatus');
+        statusElement.textContent = data.documentStatus;
+        
+        // Меняем цвет в зависимости от статуса
+        if (data.documentStatus === 'Полный комплект') {
+          statusElement.style.color = '#4CAF50'; // Зеленый
+        } else if (data.documentStatus === 'Нет обязательных документов') {
+          statusElement.style.color = '#757575'; // Серый
+        } else {
+          statusElement.style.color = '#F44336'; // Красный
+        }
+        
+        // Очищаем таблицу
+        tbody.innerHTML = '';
+        
+        if (data.documents.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Нет документов, соответствующих возрасту пациента</td></tr>';
+          return;
+        }
+        
+        // Заполняем таблицу документами
+        data.documents.forEach(doc => {
+          const row = document.createElement('tr');
+          row.dataset.documentTypeId = doc.DocumentTypeID;
+          row.dataset.documentId = doc.DocumentID !== null ? doc.DocumentID : '';
+          
+          // Создаем ячейки таблицы
+          row.innerHTML = `
+            <td>${doc.DocumentName}</td>
+            <td>${doc.Status}</td>
+            <td>${doc.UploadDate ? formatDate(new Date(doc.UploadDate)) : '-'}</td>
+            <td>${doc.IsRequired ? 'Да' : 'Нет'}</td>
+          `;
+          
+          // Стилизуем строку в зависимости от статуса
+          if (doc.Status === 'Проверен') {
+            row.style.color = '#4CAF50'; // Зеленый
+          } else if (doc.Status === 'Загружен') {
+            row.style.color = '#2196F3'; // Синий
+          }
+          
+          tbody.appendChild(row);
+        });
+        
+        // Инициализируем обработчики событий для таблицы
+        initPatientDocumentsTableListeners();
+        
+        // Сохраняем ID пациента для дальнейшего использования
+        const uploadPatientIDInput = document.getElementById('uploadPatientID');
+        if (uploadPatientIDInput) {
+          uploadPatientIDInput.value = patientID;
+        }
+        
+        showNotification('Документы пациента загружены', 'success');
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке документов пациента:', error);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Ошибка: ${error.message}</td></tr>`;
+        showNotification('Ошибка при загрузке документов пациента', 'error');
+      });
   }
-  
-  // Загрузка документа
-  function uploadDocument() {
-    const documentName = document.getElementById('documentName').value;
-    const documentCategory = document.getElementById('documentCategory').value;
-    const documentFile = document.getElementById('documentFile').files[0];
-    const documentDescription = document.getElementById('documentDescription').value;
+
+  // Инициализация обработчиков событий таблицы документов пациента
+  function initPatientDocumentsTableListeners() {
+    const table = document.getElementById('patientDocumentsTable');
     
-    // Проверка заполнения обязательных полей
-    if (!documentName || !documentFile) {
-      alert('Пожалуйста, заполните название документа и выберите файл.');
+    // Очищаем предыдущие обработчики
+    const newTable = table.cloneNode(true);
+    table.parentNode.replaceChild(newTable, table);
+    
+    // Добавляем обработчик клика по строкам таблицы
+    newTable.addEventListener('click', function(e) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      // Удаляем выделение со всех строк
+      this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      
+      // Выделяем текущую строку
+      row.classList.add('selected');
+      
+      // Проверяем наличие документа для включения/отключения кнопок
+      const documentId = row.dataset.documentId;
+      const viewBtn = document.getElementById('viewPatientDocumentBtn');
+      const deleteBtn = document.getElementById('deletePatientDocumentBtn');
+      
+      if (documentId) {
+        viewBtn.disabled = false;
+        deleteBtn.disabled = false;
+      } else {
+        viewBtn.disabled = true;
+        deleteBtn.disabled = true;
+      }
+    });
+    
+    // Обработчик двойного клика для просмотра документа
+    newTable.addEventListener('dblclick', function(e) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      const documentId = row.dataset.documentId;
+      if (documentId) {
+        viewPatientDocument(documentId);
+      }
+    });
+    
+    // Инициализация кнопок управления документами
+    document.getElementById('uploadPatientDocumentBtn').addEventListener('click', function() {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      
+      if (!selectedRow) {
+        showNotification('Выберите тип документа для загрузки', 'error');
+        return;
+      }
+      
+      const documentTypeId = selectedRow.dataset.documentTypeId;
+      const documentName = selectedRow.cells[0].textContent;
+      const patientId = document.getElementById('uploadPatientID').value;
+      
+      showUploadPatientDocumentModal(patientId, documentTypeId, documentName);
+    });
+    
+    document.getElementById('viewPatientDocumentBtn').addEventListener('click', function() {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      
+      if (!selectedRow || !selectedRow.dataset.documentId) {
+        showNotification('Выберите загруженный документ для просмотра', 'error');
+        return;
+      }
+      
+      viewPatientDocument(selectedRow.dataset.documentId);
+    });
+    
+    document.getElementById('deletePatientDocumentBtn').addEventListener('click', function() {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      
+      if (!selectedRow || !selectedRow.dataset.documentId) {
+        showNotification('Выберите загруженный документ для удаления', 'error');
+        return;
+      }
+      
+      if (confirm('Вы действительно хотите удалить этот документ?')) {
+        deletePatientDocument(selectedRow.dataset.documentId);
+      }
+    });
+    
+    // По умолчанию отключаем кнопки просмотра и удаления
+    document.getElementById('viewPatientDocumentBtn').disabled = true;
+    document.getElementById('deletePatientDocumentBtn').disabled = true;
+  }
+
+  // Показать модальное окно загрузки документа пациента
+  function showUploadPatientDocumentModal(patientId, documentTypeId, documentName) {
+    // Заполняем поля модального окна
+    document.getElementById('uploadDocumentTypeID').value = documentTypeId;
+    document.getElementById('uploadPatientID').value = patientId;
+    document.getElementById('uploadDocumentName').value = documentName;
+    document.getElementById('uploadDocumentFile').value = '';
+    document.getElementById('uploadDocumentNotes').value = '';
+    
+    // Устанавливаем заголовок
+    document.getElementById('uploadPatientDocumentModalTitle').textContent = `Загрузка документа: ${documentName}`;
+    
+    // Показываем модальное окно
+    document.getElementById('uploadPatientDocumentModal').style.display = 'block';
+    
+    // Обработчик для кнопки сохранения
+    const saveBtn = document.getElementById('savePatientDocumentBtn');
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    
+    newSaveBtn.addEventListener('click', uploadPatientDocument);
+  }
+
+  // Загрузка документа пациента
+  function uploadPatientDocument() {
+    const documentTypeId = document.getElementById('uploadDocumentTypeID').value;
+    const patientId = document.getElementById('uploadPatientID').value;
+    const documentFile = document.getElementById('uploadDocumentFile').files[0];
+    const notes = document.getElementById('uploadDocumentNotes').value;
+    
+    if (!documentFile) {
+      showNotification('Выберите файл для загрузки', 'error');
+      return;
+    }
+    
+    // Проверяем тип файла
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(documentFile.type)) {
+      showNotification('Поддерживаемые форматы файлов: JPEG, PNG, PDF', 'error');
       return;
     }
     
     // Создаем FormData для отправки файла
     const formData = new FormData();
     formData.append('file', documentFile);
-    formData.append('documentName', documentName);
-    formData.append('category', documentCategory);
-    formData.append('description', documentDescription);
+    formData.append('documentTypeID', documentTypeId);
+    if (notes) formData.append('notes', notes);
     
-    // Отправляем запрос на загрузку
-    fetch('/api/manager/document/upload', {
+    // Показываем уведомление о загрузке
+    showNotification('Загрузка документа...', 'info');
+    
+    // Отправляем запрос
+    fetch(`/api/manager/patient/${patientId}/document`, {
       method: 'POST',
       body: formData
     })
@@ -1246,81 +1314,54 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(result => {
       if (result.success) {
         // Закрываем модальное окно
-        const modal = document.getElementById('uploadDocumentModal');
-        modal.style.display = 'none';
+        document.getElementById('uploadPatientDocumentModal').style.display = 'none';
         
-        // Перезагружаем список документов
-        loadDocuments();
+        // Обновляем список документов
+        loadPatientDocuments(patientId, patients.find(p => p.PatientID == patientId).FullName);
         
-        alert('Документ успешно загружен.');
+        showNotification('Документ успешно загружен', 'success');
       } else {
-        alert(`Ошибка при загрузке документа: ${result.message}`);
+        showNotification(`Ошибка при загрузке документа: ${result.message}`, 'error');
       }
     })
     .catch(error => {
-      console.error('Error uploading document:', error);
-      alert('Ошибка при загрузке документа.');
+      console.error('Ошибка при загрузке документа:', error);
+      showNotification('Ошибка при загрузке документа', 'error');
     });
   }
 
-  // Просмотр документа
-  function viewDocument() {
-    if (selectedDocumentIDs.length !== 1) {
-      alert('Выберите один документ для просмотра.');
-      return;
-    }
-    
-    const documentID = selectedDocumentIDs[0];
-    window.open(`/api/manager/document/${documentID}/view`, '_blank');
+  // Просмотр документа пациента
+  function viewPatientDocument(documentId) {
+    window.open(`/api/manager/patient/document/${documentId}/view`, '_blank');
   }
 
-  // Скачивание документа
-  function downloadDocument() {
-    if (selectedDocumentIDs.length === 0) {
-      alert('Выберите документ для скачивания.');
-      return;
-    }
+  // Удаление документа пациента
+  function deletePatientDocument(documentId) {
+    // Получаем ID пациента
+    const patientId = document.getElementById('uploadPatientID').value;
     
-    selectedDocumentIDs.forEach(documentID => {
-      window.open(`/api/manager/document/${documentID}/download`, '_blank');
-    });
-  }
-
-  // Удаление документа
-  function deleteDocument() {
-    if (selectedDocumentIDs.length === 0) {
-      alert('Выберите документ для удаления.');
-      return;
-    }
+    // Показываем уведомление
+    showNotification('Удаление документа...', 'info');
     
-    if (!confirm(`Вы уверены, что хотите удалить ${selectedDocumentIDs.length} документ(ов)?`)) {
-      return;
-    }
-    
-    // Удаляем документы по очереди
-    const promises = selectedDocumentIDs.map(documentID => {
-      return fetch(`/api/manager/document/${documentID}`, {
-        method: 'DELETE'
-      })
-      .then(response => response.json());
-    });
-    
-    Promise.all(promises)
-      .then(results => {
-        const successCount = results.filter(r => r.success).length;
+    // Отправляем запрос на удаление
+    fetch(`/api/manager/patient/document/${documentId}`, {
+      method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        // Обновляем список документов
+        loadPatientDocuments(patientId, patients.find(p => p.PatientID == patientId).FullName);
         
-        if (successCount > 0) {
-          alert(`Успешно удалено ${successCount} документ(ов).`);
-          loadDocuments();
-          selectedDocumentIDs = [];
-        } else {
-          alert('Не удалось удалить документы.');
-        }
-      })
-      .catch(error => {
-        console.error('Error deleting documents:', error);
-        alert('Ошибка при удалении документов.');
-      });
+        showNotification('Документ успешно удален', 'success');
+      } else {
+        showNotification(`Ошибка при удалении документа: ${result.message}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка при удалении документа:', error);
+      showNotification('Ошибка при удалении документа', 'error');
+    });
   }
 
   // Вспомогательные функции
@@ -1719,5 +1760,250 @@ document.addEventListener('DOMContentLoaded', function() {
         notification.remove();
       }, 500);
     }, 3000);
+  }
+
+  // Показать модальное окно добавления сопровождающего
+  function showAddAccompanyingModal() {
+    // TODO: Реализовать отображение модального окна добавления сопровождающего
+    alert('Функция добавления сопровождающего будет реализована в будущих версиях.');
+  }
+  
+  // Показать модальное окно редактирования сопровождающего
+  function showEditAccompanyingModal() {
+    if (selectedAccompanyingIDs.length !== 1) {
+      alert('Выберите одного сопровождающего для редактирования.');
+      return;
+    }
+    // TODO: Реализовать отображение модального окна редактирования сопровождающего
+    alert('Функция редактирования сопровождающего будет реализована в будущих версиях.');
+  }
+
+  // Удаление сопровождающего
+  function deleteAccompanying() {
+    if (selectedAccompanyingIDs.length === 0) {
+      alert('Выберите сопровождающего для удаления.');
+      return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите удалить ${selectedAccompanyingIDs.length} сопровождающего(их)?`)) {
+      return;
+    }
+    
+    // Удаляем сопровождающих по очереди
+    const promises = selectedAccompanyingIDs.map(id => {
+      return fetch(`/api/manager/accompanyingperson/${id}`, {
+        method: 'DELETE'
+      })
+      .then(response => response.json());
+    });
+    
+    Promise.all(promises)
+      .then(results => {
+        const successCount = results.filter(r => r.success).length;
+        
+        if (successCount > 0) {
+          alert(`Успешно удалено ${successCount} сопровождающего(их).`);
+          loadAccompanyingPersons();
+          selectedAccompanyingIDs = [];
+        } else {
+          alert('Не удалось удалить сопровождающих.');
+        }
+      })
+      .catch(error => {
+        console.error('Error deleting accompanying persons:', error);
+        alert('Ошибка при удалении сопровождающих.');
+      });
+  }
+  
+  // Управление документами сопровождающего
+  function manageAccompanyingDocuments() {
+    if (selectedAccompanyingIDs.length !== 1) {
+      alert('Выберите одного сопровождающего для управления документами.');
+      return;
+    }
+    
+    const id = selectedAccompanyingIDs[0];
+    const person = accompanyingPersons.find(p => p.AccompanyingPersonID === id);
+    
+    if (!person) {
+      alert('Сопровождающий не найден.');
+      return;
+    }
+    
+    // TODO: Реализовать отображение модального окна управления документами сопровождающего
+    alert('Функция управления документами сопровождающего будет реализована в будущих версиях.');
+  }
+  
+  // Выселение человека
+  function checkOutPerson() {
+    if (selectedAccommodationIDs.length === 0) {
+      alert('Выберите размещение для выселения.');
+      return;
+    }
+    
+    const selectedItems = accommodations.filter(a => selectedAccommodationIDs.includes(a.AccommodationID));
+    const occupiedItems = selectedItems.filter(a => a.Status === 'Занято');
+    
+    if (occupiedItems.length === 0) {
+      alert('Среди выбранных размещений нет занятых.');
+      return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите выселить ${occupiedItems.length} человека(ов)?`)) {
+      return;
+    }
+    
+    // Выселяем людей по очереди
+    const promises = occupiedItems.map(item => {
+      return fetch(`/api/manager/accommodation/${item.AccommodationID}/checkout`, {
+        method: 'POST'
+      })
+      .then(response => response.json());
+    });
+    
+    Promise.all(promises)
+      .then(results => {
+        const successCount = results.filter(r => r.success).length;
+        
+        if (successCount > 0) {
+          alert(`Успешно выселено ${successCount} человека(ов).`);
+          loadAccommodations();
+          selectedAccommodationIDs = [];
+        } else {
+          alert('Не удалось выселить людей.');
+        }
+      })
+      .catch(error => {
+        console.error('Error checking out:', error);
+        alert('Ошибка при выселении.');
+      });
+  }
+  
+  // Показать модальное окно загрузки документа
+  function showUploadDocumentModal() {
+    // Очищаем значения модального окна
+    document.getElementById('documentName').value = '';
+    document.getElementById('documentFile').value = '';
+    document.getElementById('documentDescription').value = '';
+    document.getElementById('documentCategory').value = 'Медицинские документы'; // Значение по умолчанию
+    
+    // Показываем модальное окно
+    const modal = document.getElementById('uploadDocumentModal');
+    modal.style.display = 'block';
+    
+    // Добавляем обработчик для кнопки загрузки
+    const saveButton = document.getElementById('saveDocumentBtn');
+    
+    // Удаляем существующие обработчики, чтобы избежать дублирования
+    const newSaveButton = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+    
+    // Добавляем новый обработчик
+    newSaveButton.addEventListener('click', uploadDocument);
+  }
+  
+  // Загрузка документа
+  function uploadDocument() {
+    const documentName = document.getElementById('documentName').value;
+    const documentCategory = document.getElementById('documentCategory').value;
+    const documentFile = document.getElementById('documentFile').files[0];
+    const documentDescription = document.getElementById('documentDescription').value;
+    
+    // Проверка заполнения обязательных полей
+    if (!documentName || !documentFile) {
+      alert('Пожалуйста, заполните название документа и выберите файл.');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', documentFile);
+    formData.append('documentName', documentName);
+    formData.append('category', documentCategory);
+    formData.append('description', documentDescription);
+    
+    // Отправляем запрос на загрузку
+    fetch('/api/manager/document/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        // Закрываем модальное окно
+        const modal = document.getElementById('uploadDocumentModal');
+        modal.style.display = 'none';
+        
+        // Перезагружаем список документов
+        loadDocuments();
+        
+        alert('Документ успешно загружен.');
+      } else {
+        alert(`Ошибка при загрузке документа: ${result.message}`);
+      }
+    })
+    .catch(error => {
+      console.error('Error uploading document:', error);
+      alert('Ошибка при загрузке документа.');
+    });
+  }
+  
+  // Просмотр документа
+  function viewDocument() {
+    if (selectedDocumentIDs.length !== 1) {
+      alert('Выберите один документ для просмотра.');
+      return;
+    }
+    
+    const documentID = selectedDocumentIDs[0];
+    window.open(`/api/manager/document/${documentID}/view`, '_blank');
+  }
+  
+  // Скачивание документа
+  function downloadDocument() {
+    if (selectedDocumentIDs.length === 0) {
+      alert('Выберите документ для скачивания.');
+      return;
+    }
+    
+    selectedDocumentIDs.forEach(documentID => {
+      window.open(`/api/manager/document/${documentID}/download`, '_blank');
+    });
+  }
+  
+  // Удаление документа
+  function deleteDocument() {
+    if (selectedDocumentIDs.length === 0) {
+      alert('Выберите документ для удаления.');
+      return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите удалить ${selectedDocumentIDs.length} документ(ов)?`)) {
+      return;
+    }
+    
+    // Удаляем документы по очереди
+    const promises = selectedDocumentIDs.map(documentID => {
+      return fetch(`/api/manager/document/${documentID}`, {
+        method: 'DELETE'
+      })
+      .then(response => response.json());
+    });
+    
+    Promise.all(promises)
+      .then(results => {
+        const successCount = results.filter(r => r.success).length;
+        
+        if (successCount > 0) {
+          alert(`Успешно удалено ${successCount} документ(ов).`);
+          loadDocuments();
+          selectedDocumentIDs = [];
+        } else {
+          alert('Не удалось удалить документы.');
+        }
+      })
+      .catch(error => {
+        console.error('Error deleting documents:', error);
+        alert('Ошибка при удалении документов.');
+      });
   }
 }); 

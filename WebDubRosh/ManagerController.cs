@@ -1337,7 +1337,7 @@ namespace WebDubRosh.Controllers
                 // Добавляем заголовок для просмотра с правильно закодированным именем файла
                 Response.Headers.Add("Content-Disposition", $"inline; filename=\"{encodedFileName}\"; filename*=UTF-8''{encodedFileName}");
                 
-                return File(fileBytes, mimeType);
+                return new FileContentResult(fileBytes, mimeType);
             }
             catch (Exception ex)
             {
@@ -1399,7 +1399,7 @@ namespace WebDubRosh.Controllers
                 // Явно указываем, что файл должен быть скачан, а не просмотрен
                 Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{encodedFileName}\"; filename*=UTF-8''{encodedFileName}");
                 
-                return File(fileBytes, mimeType);
+                return new FileContentResult(fileBytes, mimeType);
             }
             catch (Exception ex)
             {
@@ -1460,7 +1460,7 @@ namespace WebDubRosh.Controllers
                 // Добавляем заголовок для печати с правильно закодированным именем файла
                 Response.Headers.Add("Content-Disposition", $"inline; filename=\"{encodedFileName}\"; filename*=UTF-8''{encodedFileName}");
                 
-                return File(fileBytes, mimeType);
+                return new FileContentResult(fileBytes, mimeType);
             }
             catch (Exception ex)
             {
@@ -1636,6 +1636,407 @@ namespace WebDubRosh.Controllers
                         return extension;
                     else
                         return "dat"; // Общее неспецифическое расширение
+            }
+        }
+
+        #endregion
+
+        #region Документы пациентов
+
+        // GET: api/manager/patient/{id}/documents
+        [HttpGet("patient/{id}/documents")]
+        public IActionResult GetPatientDocuments(int id)
+        {
+            try
+            {
+                // Сначала получаем возраст пациента
+                int patientAge = 0;
+                DateTime? dateOfBirth = null;
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string ageQuery = "SELECT DateOfBirth FROM Patients WHERE PatientID = @PatientID";
+                    using (SqlCommand cmd = new SqlCommand(ageQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", id);
+                        object result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            dateOfBirth = (DateTime)result;
+                            patientAge = DateTime.Today.Year - dateOfBirth.Value.Year;
+                            if (dateOfBirth.Value.Date > DateTime.Today.AddYears(-patientAge)) patientAge--;
+                        }
+                    }
+                }
+                
+                // Затем получаем список требуемых документов и их статус
+                DataTable dt = new DataTable();
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT dt.DocumentTypeID, dt.DocumentName, dt.IsRequired,
+                               pd.DocumentID, pd.DocumentPath, pd.UploadDate, pd.IsVerified, pd.Notes,
+                               CASE 
+                                   WHEN pd.DocumentID IS NULL THEN 'Не загружен'
+                                   WHEN pd.IsVerified = 1 THEN 'Проверен'
+                                   ELSE 'Загружен'
+                               END AS Status
+                        FROM DocumentTypes dt
+                        LEFT JOIN PatientDocuments pd ON dt.DocumentTypeID = pd.DocumentTypeID AND pd.PatientID = @PatientID
+                        WHERE dt.ForAccompanyingPerson = 0
+                          AND @PatientAge BETWEEN dt.MinimumAge AND dt.MaximumAge
+                        ORDER BY dt.IsRequired DESC, dt.DocumentName";
+                        
+                        SqlDataAdapter adapter = new SqlDataAdapter(query, con);
+                        adapter.SelectCommand.Parameters.AddWithValue("@PatientID", id);
+                        adapter.SelectCommand.Parameters.AddWithValue("@PatientAge", patientAge);
+                        adapter.Fill(dt);
+                }
+                
+                // Рассчитываем статус документов (полный/неполный комплект)
+                int totalRequired = 0;
+                int uploadedRequired = 0;
+                string documentStatus = "Неполный комплект";
+                
+                foreach (DataRow row in dt.Rows)
+                {
+                    bool isRequired = Convert.ToBoolean(row["IsRequired"]);
+                    string status = row["Status"].ToString();
+                    
+                    if (isRequired)
+                    {
+                        totalRequired++;
+                        if (status == "Загружен" || status == "Проверен")
+                        {
+                            uploadedRequired++;
+                        }
+                    }
+                }
+                
+                if (totalRequired == 0)
+                {
+                    documentStatus = "Нет обязательных документов";
+                }
+                else if (uploadedRequired == totalRequired)
+                {
+                    documentStatus = "Полный комплект";
+                }
+                else
+                {
+                    documentStatus = $"Неполный комплект ({uploadedRequired}/{totalRequired})";
+                }
+                
+                return Ok(new { 
+                    success = true, 
+                    documents = DataTableToList(dt), 
+                    patientAge = patientAge,
+                    dateOfBirth = dateOfBirth,
+                    documentStatus = documentStatus,
+                    totalRequired = totalRequired,
+                    uploadedRequired = uploadedRequired
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении документов пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: api/manager/patient/{id}/document
+        [HttpPost("patient/{id}/document")]
+        public IActionResult UploadPatientDocument(int id, [FromForm] IFormFile file, [FromForm] int documentTypeID, [FromForm] string notes = null)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "Файл не выбран или пустой." });
+                }
+                
+                // Проверяем, существует ли пациент
+                string patientName = string.Empty;
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string patientQuery = "SELECT FullName FROM Patients WHERE PatientID = @PatientID";
+                    using (SqlCommand cmd = new SqlCommand(patientQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", id);
+                        object result = cmd.ExecuteScalar();
+                        if (result == null || result == DBNull.Value)
+                        {
+                            return NotFound(new { success = false, message = "Пациент не найден." });
+                        }
+                        patientName = result.ToString();
+                    }
+                }
+                
+                // Получаем название типа документа
+                string documentName = string.Empty;
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string docTypeQuery = "SELECT DocumentName FROM DocumentTypes WHERE DocumentTypeID = @DocumentTypeID";
+                    using (SqlCommand cmd = new SqlCommand(docTypeQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                        object result = cmd.ExecuteScalar();
+                        if (result == null || result == DBNull.Value)
+                        {
+                            return NotFound(new { success = false, message = "Тип документа не найден." });
+                        }
+                        documentName = result.ToString();
+                    }
+                }
+                
+                // Проверяем, есть ли уже загруженный документ
+                string existingDocumentPath = null;
+                int? existingDocumentID = null;
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string checkQuery = @"
+                        SELECT DocumentID, DocumentPath 
+                        FROM PatientDocuments 
+                        WHERE PatientID = @PatientID AND DocumentTypeID = @DocumentTypeID";
+                        
+                        using (SqlCommand cmd = new SqlCommand(checkQuery, con))
+                        {
+                            cmd.Parameters.AddWithValue("@PatientID", id);
+                            cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    existingDocumentID = reader.GetInt32(0);
+                                    existingDocumentPath = reader.GetString(1);
+                                }
+                            }
+                        }
+                }
+                
+                // Получаем расширение файла и создаем безопасное имя файла
+                string fileExtension = Path.GetExtension(file.FileName);
+                string safeDocumentName = documentName.Replace('/', '_').Replace('\\', '_')
+                    .Replace(':', '_').Replace('*', '_').Replace('?', '_')
+                    .Replace('"', '_').Replace('<', '_').Replace('>', '_')
+                    .Replace('|', '_');
+                
+                // Создаем директорию для документов пациентов
+                string baseDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Documents", "Пациенты");
+                Directory.CreateDirectory(baseDirectory);
+                
+                // Создаем директорию для конкретного пациента
+                string patientFolder = Path.Combine(baseDirectory, id.ToString() + "_" + patientName.Replace(' ', '_'));
+                Directory.CreateDirectory(patientFolder);
+                
+                // Создаем уникальное имя файла
+                string newFileName = $"{safeDocumentName}_{DateTime.Now.ToString("yyyyMMddHHmmss")}{fileExtension}";
+                string destinationPath = Path.Combine(patientFolder, newFileName);
+                
+                // Сохраняем файл
+                using (var stream = new FileStream(destinationPath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+                
+                // Сохраняем данные в БД
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    if (existingDocumentID.HasValue)
+                    {
+                        // Удаляем старый файл
+                        if (!string.IsNullOrEmpty(existingDocumentPath) && System.IO.File.Exists(existingDocumentPath))
+                        {
+                            try
+                            {
+                                System.IO.File.Delete(existingDocumentPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Ошибка при удалении старого файла: {ex.Message}");
+                            }
+                        }
+                        
+                        // Обновляем запись в БД
+                        string updateQuery = @"
+                            UPDATE PatientDocuments 
+                            SET DocumentPath = @DocumentPath, 
+                                UploadDate = GETDATE(), 
+                                IsVerified = 0,
+                                Notes = @Notes
+                            WHERE DocumentID = @DocumentID";
+                            
+                            using (SqlCommand cmd = new SqlCommand(updateQuery, con))
+                            {
+                                cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
+                                cmd.Parameters.AddWithValue("@DocumentID", existingDocumentID.Value);
+                                cmd.Parameters.AddWithValue("@Notes", string.IsNullOrEmpty(notes) ? (object)DBNull.Value : notes);
+                                cmd.ExecuteNonQuery();
+                            }
+                    }
+                    else
+                    {
+                        // Создаем новую запись в БД
+                        string insertQuery = @"
+                            INSERT INTO PatientDocuments (PatientID, DocumentTypeID, DocumentPath, UploadDate, IsVerified, Notes)
+                            VALUES (@PatientID, @DocumentTypeID, @DocumentPath, GETDATE(), 0, @Notes);
+                            SELECT SCOPE_IDENTITY();";
+                            
+                            int newDocumentID;
+                            using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                                cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
+                                cmd.Parameters.AddWithValue("@Notes", string.IsNullOrEmpty(notes) ? (object)DBNull.Value : notes);
+                                newDocumentID = Convert.ToInt32(cmd.ExecuteScalar());
+                            }
+                    }
+                }
+                
+                return Ok(new { success = true, message = "Документ успешно загружен." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при загрузке документа пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/manager/patient/document/{id}/view
+        [HttpGet("patient/document/{id}/view")]
+        public IActionResult ViewPatientDocument(int id)
+        {
+            try
+            {
+                string documentPath = string.Empty;
+                string documentName = string.Empty;
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT pd.DocumentPath, dt.DocumentName 
+                        FROM PatientDocuments pd
+                        JOIN DocumentTypes dt ON pd.DocumentTypeID = dt.DocumentTypeID
+                        WHERE pd.DocumentID = @DocumentID";
+                        
+                        using (SqlCommand cmd = new SqlCommand(query, con))
+                        {
+                            cmd.Parameters.AddWithValue("@DocumentID", id);
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    documentPath = reader.GetString(0);
+                                    documentName = reader.GetString(1);
+                                }
+                                else
+                                {
+                                    return NotFound(new { success = false, message = "Документ не найден." });
+                                }
+                            }
+                        }
+                }
+                
+                if (!System.IO.File.Exists(documentPath))
+                {
+                    return NotFound(new { success = false, message = "Файл документа не найден." });
+                }
+                
+                var fileExtension = Path.GetExtension(documentPath).ToLowerInvariant();
+                string contentType;
+                
+                switch (fileExtension)
+                {
+                    case ".pdf":
+                        contentType = "application/pdf";
+                        break;
+                    case ".jpg":
+                    case ".jpeg":
+                        contentType = "image/jpeg";
+                        break;
+                    case ".png":
+                        contentType = "image/png";
+                        break;
+                    default:
+                        contentType = "application/octet-stream";
+                        break;
+                }
+                
+                var fileBytes = System.IO.File.ReadAllBytes(documentPath);
+                string fileName = Path.GetFileName(documentPath);
+                
+                // Создаем FileContentResult вместо использования метода File
+                return new FileContentResult(fileBytes, contentType)
+                {
+                    FileDownloadName = fileName
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при просмотре документа пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // DELETE: api/manager/patient/document/{id}
+        [HttpDelete("patient/document/{id}")]
+        public IActionResult DeletePatientDocument(int id)
+        {
+            try
+            {
+                string documentPath = string.Empty;
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    // Получаем путь к файлу
+                    string pathQuery = "SELECT DocumentPath FROM PatientDocuments WHERE DocumentID = @DocumentID";
+                    using (SqlCommand cmd = new SqlCommand(pathQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", id);
+                        object result = cmd.ExecuteScalar();
+                        if (result == null || result == DBNull.Value)
+                        {
+                            return NotFound(new { success = false, message = "Документ не найден." });
+                        }
+                        documentPath = result.ToString();
+                    }
+                    
+                    // Удаляем запись из БД
+                    string deleteQuery = "DELETE FROM PatientDocuments WHERE DocumentID = @DocumentID";
+                    using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", id);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected == 0)
+                        {
+                            return NotFound(new { success = false, message = "Документ не найден." });
+                        }
+                    }
+                }
+                
+                // Удаляем файл, если он существует
+                if (!string.IsNullOrEmpty(documentPath) && System.IO.File.Exists(documentPath))
+                {
+                    System.IO.File.Delete(documentPath);
+                }
+                
+                return Ok(new { success = true, message = "Документ успешно удален." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при удалении документа пациента: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
 
