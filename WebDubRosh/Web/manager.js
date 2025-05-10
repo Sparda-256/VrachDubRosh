@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     addAccompanyingBtn.addEventListener('click', showAddAccompanyingModal);
     editAccompanyingBtn.addEventListener('click', showEditAccompanyingModal);
     deleteAccompanyingBtn.addEventListener('click', deleteAccompanying);
-    manageAccompanyingDocumentsBtn.addEventListener('click', manageAccompanyingDocuments);
+    manageAccompanyingDocumentsBtn.addEventListener('click', manageAccompanyingPersonDocuments);
 
     // Кнопки управления размещением
     checkOutBtn.addEventListener('click', checkOutPerson);
@@ -813,10 +813,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Обновление состояния кнопок управления сопровождающими
   function updateAccompanyingButtonStates() {
     const hasSelection = selectedAccompanyingIDs.length > 0;
+    const hasSingleSelection = selectedAccompanyingIDs.length === 1;
     
-    editAccompanyingBtn.disabled = !hasSelection || selectedAccompanyingIDs.length > 1;
+    editAccompanyingBtn.disabled = !hasSingleSelection;
     deleteAccompanyingBtn.disabled = !hasSelection;
-    manageAccompanyingDocumentsBtn.disabled = !hasSelection || selectedAccompanyingIDs.length > 1;
+    if (manageAccompanyingDocumentsBtn) manageAccompanyingDocumentsBtn.disabled = !hasSingleSelection;
   }
 
   // Обновление состояния кнопок управления размещением
@@ -2639,25 +2640,228 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
   
-  // Управление документами сопровождающего
-  function manageAccompanyingDocuments() {
+  // Управление документами сопровождающего (новая функция)
+  function manageAccompanyingPersonDocuments() {
     if (selectedAccompanyingIDs.length !== 1) {
-      alert('Выберите одного сопровождающего для управления документами.');
+      showNotification('Выберите одного сопровождающего для управления документами.', 'error');
       return;
     }
-    
-    const id = selectedAccompanyingIDs[0];
-    const person = accompanyingPersons.find(p => p.AccompanyingPersonID === id);
-    
+
+    const accompanyingPersonID = selectedAccompanyingIDs[0];
+    const person = accompanyingPersons.find(p => p.AccompanyingPersonID === accompanyingPersonID);
+
     if (!person) {
-      alert('Сопровождающий не найден.');
+      showNotification('Сопровождающий не найден.', 'error');
       return;
     }
-    
-    // TODO: Реализовать отображение модального окна управления документами сопровождающего
-    alert('Функция управления документами сопровождающего будет реализована в будущих версиях.');
+
+    loadAccompanyingPersonDocuments(accompanyingPersonID, person.FullName, person.PatientName);
   }
-  
+
+  // Загрузка документов сопровождающего
+  function loadAccompanyingPersonDocuments(accompanyingPersonID, accompanyingPersonName, patientName) {
+    showNotification('Загрузка документов сопровождающего...', 'info');
+
+    document.getElementById('accompanyingPersonDocumentsModalTitle').textContent = `Документы сопровождающего: ${accompanyingPersonName}`;
+    document.getElementById('accompanyingPersonDocumentsInfo').textContent = `Сопровождающий: ${accompanyingPersonName}, Пациент: ${patientName}`;
+    document.getElementById('accompanyingPersonDocumentsModal').style.display = 'block';
+
+    const tbody = document.getElementById('accompanyingPersonDocumentsTable').querySelector('tbody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Загрузка данных...</td></tr>';
+
+    fetch(`/api/manager/accompanyingperson/${accompanyingPersonID}/documents`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          throw new Error(data.message || 'Не удалось загрузить документы сопровождающего');
+        }
+
+        const statusElement = document.getElementById('accompanyingPersonDocumentsStatus');
+        statusElement.textContent = data.documentStatus;
+        statusElement.style.color = data.documentStatus === 'Полный комплект' || data.documentStatus === 'Нет обязательных документов' ? '#4CAF50' : '#F44336';
+
+        tbody.innerHTML = '';
+        if (data.documents.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Нет документов для этого сопровождающего</td></tr>';
+          return;
+        }
+
+        data.documents.forEach(doc => {
+          const row = document.createElement('tr');
+          row.dataset.documentTypeId = doc.DocumentTypeID;
+          row.dataset.documentId = doc.DocumentID !== null ? doc.DocumentID : '';
+          row.innerHTML = `
+            <td>${doc.DocumentName}</td>
+            <td>${doc.Status}</td>
+            <td>${doc.UploadDate ? formatDate(new Date(doc.UploadDate)) : '-'}</td>
+            <td>${doc.IsRequired ? 'Да' : 'Нет'}</td>
+          `;
+          if (doc.Status === 'Проверен') row.style.color = '#4CAF50';
+          else if (doc.Status === 'Загружен') row.style.color = '#2196F3';
+          tbody.appendChild(row);
+        });
+
+        initAccompanyingPersonDocumentsTableListeners(accompanyingPersonID);
+        showNotification('Документы сопровождающего загружены', 'success');
+      })
+      .catch(error => {
+        console.error('Ошибка при загрузке документов сопровождающего:', error);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Ошибка: ${error.message}</td></tr>`;
+        showNotification('Ошибка при загрузке документов сопровождающего', 'error');
+      });
+  }
+
+  // Инициализация обработчиков событий таблицы документов сопровождающего
+  function initAccompanyingPersonDocumentsTableListeners(accompanyingPersonID) {
+    const table = document.getElementById('accompanyingPersonDocumentsTable');
+    const newTable = table.cloneNode(true);
+    table.parentNode.replaceChild(newTable, table);
+
+    newTable.addEventListener('click', function(e) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+      
+      const documentId = row.dataset.documentId;
+      document.getElementById('viewAccompanyingPersonDocumentBtn').disabled = !documentId;
+      document.getElementById('deleteAccompanyingPersonDocumentBtn').disabled = !documentId;
+    });
+
+    newTable.addEventListener('dblclick', function(e) {
+      const row = e.target.closest('tr');
+      if (!row || !row.dataset.documentId) return;
+      viewAccompanyingPersonDocument(row.dataset.documentId);
+    });
+
+    document.getElementById('uploadAccompanyingPersonDocumentBtn').onclick = () => {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      if (!selectedRow) {
+        showNotification('Выберите тип документа для загрузки', 'error');
+        return;
+      }
+      showUploadAccompanyingPersonDocumentModal(accompanyingPersonID, selectedRow.dataset.documentTypeId, selectedRow.cells[0].textContent);
+    };
+
+    document.getElementById('viewAccompanyingPersonDocumentBtn').onclick = () => {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      if (!selectedRow || !selectedRow.dataset.documentId) {
+        showNotification('Выберите загруженный документ для просмотра/скачивания', 'error');
+        return;
+      }
+      viewAccompanyingPersonDocument(selectedRow.dataset.documentId);
+    };
+
+    document.getElementById('deleteAccompanyingPersonDocumentBtn').onclick = () => {
+      const selectedRow = newTable.querySelector('tbody tr.selected');
+      if (!selectedRow || !selectedRow.dataset.documentId) {
+        showNotification('Выберите загруженный документ для удаления', 'error');
+        return;
+      }
+      if (confirm('Вы действительно хотите удалить этот документ?')) {
+        deleteAccompanyingPersonDocument(selectedRow.dataset.documentId, accompanyingPersonID);
+      }
+    };
+    
+    document.getElementById('viewAccompanyingPersonDocumentBtn').disabled = true;
+    document.getElementById('deleteAccompanyingPersonDocumentBtn').disabled = true;
+  }
+
+  // Показать модальное окно загрузки документа сопровождающего
+  function showUploadAccompanyingPersonDocumentModal(accompanyingPersonId, documentTypeId, documentName) {
+    document.getElementById('uploadAccompanyingPersonDocumentTypeID').value = documentTypeId;
+    document.getElementById('uploadAccompanyingPersonID_Doc').value = accompanyingPersonId; // Use the changed ID
+    document.getElementById('uploadAccompanyingPersonDocumentName').value = documentName;
+    document.getElementById('uploadAccompanyingPersonDocumentFile').value = '';
+    document.getElementById('uploadAccompanyingPersonDocumentNotes').value = '';
+    document.getElementById('uploadAccompanyingPersonDocumentModalTitle').textContent = `Загрузка документа: ${documentName}`;
+    document.getElementById('uploadAccompanyingPersonDocumentModal').style.display = 'block';
+
+    const saveBtn = document.getElementById('saveAccompanyingPersonDocumentBtn');
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    newSaveBtn.addEventListener('click', uploadAccompanyingPersonDocument);
+  }
+
+  // Загрузка документа сопровождающего
+  function uploadAccompanyingPersonDocument() {
+    const documentTypeId = document.getElementById('uploadAccompanyingPersonDocumentTypeID').value;
+    const accompanyingPersonId = document.getElementById('uploadAccompanyingPersonID_Doc').value; // Use the changed ID
+    const documentFile = document.getElementById('uploadAccompanyingPersonDocumentFile').files[0];
+    const notes = document.getElementById('uploadAccompanyingPersonDocumentNotes').value;
+
+    if (!documentFile) {
+      showNotification('Выберите файл для загрузки', 'error');
+      return;
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(documentFile.type)) {
+      showNotification('Поддерживаемые форматы: JPEG, PNG, PDF, DOC, DOCX', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', documentFile);
+    formData.append('documentTypeID', documentTypeId);
+    if (notes) formData.append('notes', notes);
+
+    showNotification('Загрузка документа...', 'info');
+    fetch(`/api/manager/accompanyingperson/${accompanyingPersonId}/document`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        document.getElementById('uploadAccompanyingPersonDocumentModal').style.display = 'none';
+        const person = accompanyingPersons.find(p => p.AccompanyingPersonID == accompanyingPersonId);
+        if (person) {
+            loadAccompanyingPersonDocuments(accompanyingPersonId, person.FullName, person.PatientName);
+        } else {
+            loadAccompanyingPersons(); // Fallback if person details not readily available
+        }
+        showNotification('Документ успешно загружен', 'success');
+      } else {
+        showNotification(`Ошибка при загрузке: ${result.message}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка:', error);
+      showNotification('Ошибка при загрузке документа', 'error');
+    });
+  }
+
+  // Просмотр/скачивание документа сопровождающего
+  function viewAccompanyingPersonDocument(documentId) {
+    window.open(`/api/manager/accompanyingperson/document/${documentId}/view`, '_blank');
+  }
+
+  // Удаление документа сопровождающего
+  function deleteAccompanyingPersonDocument(documentId, accompanyingPersonId) {
+    showNotification('Удаление документа...', 'info');
+    fetch(`/api/manager/accompanyingperson/document/${documentId}`, {
+      method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        const person = accompanyingPersons.find(p => p.AccompanyingPersonID == accompanyingPersonId);
+         if (person) {
+            loadAccompanyingPersonDocuments(accompanyingPersonId, person.FullName, person.PatientName);
+        } else {
+            loadAccompanyingPersons(); // Fallback
+        }
+        showNotification('Документ успешно удален', 'success');
+      } else {
+        showNotification(`Ошибка при удалении: ${result.message}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка:', error);
+      showNotification('Ошибка при удалении документа', 'error');
+    });
+  }
+
   // Выселение человека
   function checkOutPerson() {
     if (selectedAccommodationIDs.length === 0) {

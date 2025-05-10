@@ -531,6 +531,90 @@
   <!-- Скрытый input для загрузки файлов доверенности -->
   <input type="file" id="powerOfAttorneyFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
   
+  <!-- Модальное окно для управления документами сопровождающего -->
+  <div id="accompanyingPersonDocumentsModal" class="modal">
+    <div class="modal-content" style="width: 80%; max-width: 1000px;">
+      <div class="modal-header">
+        <h2 id="accompanyingPersonDocumentsModalTitle">Документы сопровождающего</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="patient-documents-header">
+          <div class="patient-info">
+            <span id="accompanyingPersonDocumentsInfo">Сопровождающий: [Имя], Пациент: [Имя]</span>
+            <span style="margin: 0 10px;">|</span>
+            <span>Статус обязательных документов: </span>
+            <span id="accompanyingPersonDocumentsStatus" style="font-weight: bold; color: #F44336;">Неполный комплект</span>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="accompanyingPersonDocumentsTable" class="data-table">
+            <thead>
+              <tr>
+                <th>Наименование документа</th>
+                <th>Статус</th>
+                <th>Дата загрузки</th>
+                <th>Обязательный</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="buttons-group" style="margin-top: 20px;">
+          <button id="uploadAccompanyingPersonDocumentBtn" class="btn btn-accent">
+            <i class="icon upload-icon"></i>
+            <span>Загрузить</span>
+          </button>
+          <button id="viewAccompanyingPersonDocumentBtn" class="btn btn-blue">
+            <i class="icon download-icon"></i>
+            <span>Скачать/Просмотр</span>
+          </button>
+          <button id="deleteAccompanyingPersonDocumentBtn" class="btn btn-red">
+            <i class="icon delete-icon"></i>
+            <span>Удалить</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно для загрузки документа сопровождающего -->
+  <div id="uploadAccompanyingPersonDocumentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="uploadAccompanyingPersonDocumentModalTitle">Загрузка документа сопровождающего</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="uploadAccompanyingPersonDocumentTypeID">
+        <input type="hidden" id="uploadAccompanyingPersonID_Doc">
+
+        <div class="form-group">
+          <label for="uploadAccompanyingPersonDocumentName">Тип документа:</label>
+          <input type="text" id="uploadAccompanyingPersonDocumentName" class="form-input" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="uploadAccompanyingPersonDocumentFile">Файл документа:</label>
+          <input type="file" id="uploadAccompanyingPersonDocumentFile" class="form-file" accept="image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        </div>
+
+        <div class="form-group">
+          <label for="uploadAccompanyingPersonDocumentNotes">Примечания (необязательно):</label>
+          <textarea id="uploadAccompanyingPersonDocumentNotes" class="form-textarea" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveAccompanyingPersonDocumentBtn" class="btn btn-accent">Загрузить</button>
+        <button class="btn btn-gray close-modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+
   <script src="manager.js"></script>
 </body>
 </html> 

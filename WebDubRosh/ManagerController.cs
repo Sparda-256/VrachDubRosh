@@ -2628,6 +2628,321 @@ namespace WebDubRosh.Controllers
 
         #endregion
 
+        #region Документы сопровождающих лиц
+
+        // GET: api/manager/accompanyingperson/{id}/documents
+        [HttpGet("accompanyingperson/{id}/documents")]
+        public IActionResult GetAccompanyingPersonDocuments(int id)
+        {
+            try
+            {
+                // Получаем информацию о сопровождающем и связанном пациенте
+                string accompanyingPersonName = string.Empty;
+                string patientName = string.Empty;
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string personInfoQuery = @"
+                        SELECT ap.FullName AS AccompanyingPersonName, p.FullName AS PatientName
+                        FROM AccompanyingPersons ap
+                        JOIN Patients p ON ap.PatientID = p.PatientID
+                        WHERE ap.AccompanyingPersonID = @AccompanyingPersonID";
+                    using (SqlCommand cmd = new SqlCommand(personInfoQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                accompanyingPersonName = reader["AccompanyingPersonName"].ToString();
+                                patientName = reader["PatientName"].ToString();
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Сопровождающее лицо не найдено." });
+                            }
+                        }
+                    }
+                }
+
+                DataTable dt = new DataTable();
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT dt.DocumentTypeID, dt.DocumentName, dt.IsRequired,
+                               apd.DocumentID, apd.DocumentPath, apd.UploadDate, apd.IsVerified, apd.Notes,
+                               CASE 
+                                   WHEN apd.DocumentID IS NULL THEN 'Не загружен'
+                                   WHEN apd.IsVerified = 1 THEN 'Проверен'
+                                   ELSE 'Загружен'
+                               END AS Status
+                        FROM DocumentTypes dt
+                        LEFT JOIN AccompanyingPersonDocuments apd ON dt.DocumentTypeID = apd.DocumentTypeID AND apd.AccompanyingPersonID = @AccompanyingPersonID
+                        WHERE dt.ForAccompanyingPerson = 1
+                        ORDER BY dt.IsRequired DESC, dt.DocumentName";
+                        
+                    SqlDataAdapter adapter = new SqlDataAdapter(query, con);
+                    adapter.SelectCommand.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                    adapter.Fill(dt);
+                }
+                
+                int totalRequired = 0;
+                int uploadedRequired = 0;
+                string documentStatus = "Неполный комплект";
+                
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (Convert.ToBoolean(row["IsRequired"]))
+                    {
+                        totalRequired++;
+                        if (row["Status"].ToString() == "Загружен" || row["Status"].ToString() == "Проверен")
+                        {
+                            uploadedRequired++;
+                        }
+                    }
+                }
+                
+                if (totalRequired == 0) documentStatus = "Нет обязательных документов";
+                else if (uploadedRequired == totalRequired) documentStatus = "Полный комплект";
+                else documentStatus = $"Неполный комплект ({uploadedRequired}/{totalRequired})";
+                
+                return Ok(new { 
+                    success = true, 
+                    documents = DataTableToList(dt), 
+                    accompanyingPersonName,
+                    patientName,
+                    documentStatus
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: api/manager/accompanyingperson/{id}/document
+        [HttpPost("accompanyingperson/{id}/document")]
+        public IActionResult UploadAccompanyingPersonDocument(int id, [FromForm] IFormFile file, [FromForm] int documentTypeID, [FromForm] string notes = null)
+        {
+            try
+            {
+                if (file == null || file.Length == 0) return BadRequest(new { success = false, message = "Файл не выбран." });
+
+                string accompanyingPersonName = string.Empty;
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlCommand cmd = new SqlCommand("SELECT FullName FROM AccompanyingPersons WHERE AccompanyingPersonID = @AccompanyingPersonID", con))
+                    {
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                        object result = cmd.ExecuteScalar();
+                        if (result == null) return NotFound(new { success = false, message = "Сопровождающее лицо не найдено." });
+                        accompanyingPersonName = result.ToString();
+                    }
+                }
+
+                string documentTypeName = string.Empty;
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlCommand cmd = new SqlCommand("SELECT DocumentName FROM DocumentTypes WHERE DocumentTypeID = @DocumentTypeID AND ForAccompanyingPerson = 1", con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                        object result = cmd.ExecuteScalar();
+                        if (result == null) return NotFound(new { success = false, message = "Тип документа не найден или не предназначен для сопровождающих." });
+                        documentTypeName = result.ToString();
+                    }
+                }
+
+                string baseDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Documents", "Сопровождающие");
+                Directory.CreateDirectory(baseDirectory);
+                string personFolder = Path.Combine(baseDirectory, id.ToString() + "_" + accompanyingPersonName.Replace(' ', '_').Replace(".", ""));
+                Directory.CreateDirectory(personFolder);
+
+                string fileExtension = Path.GetExtension(file.FileName);
+                string safeDocumentTypeName = documentTypeName.Replace('/', '_').Replace('\\', '_');
+                string newFileName = $"{safeDocumentTypeName}_{DateTime.Now:yyyyMMddHHmmss}{fileExtension}";
+                string destinationPath = Path.Combine(personFolder, newFileName);
+
+                using (var stream = new FileStream(destinationPath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string existingDocumentPath = null;
+                    int? existingDocumentID = null;
+
+                    using (SqlCommand cmd = new SqlCommand("SELECT DocumentID, DocumentPath FROM AccompanyingPersonDocuments WHERE AccompanyingPersonID = @AccompanyingPersonID AND DocumentTypeID = @DocumentTypeID", con))
+                    {
+                        cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                        cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                existingDocumentID = reader.GetInt32(0);
+                                existingDocumentPath = reader.IsDBNull(1) ? null : reader.GetString(1);
+                            }
+                        }
+                    }
+
+                    if (existingDocumentID.HasValue)
+                    {
+                        if (!string.IsNullOrEmpty(existingDocumentPath) && System.IO.File.Exists(existingDocumentPath) && existingDocumentPath != destinationPath)
+                        {
+                            try { System.IO.File.Delete(existingDocumentPath); } catch (Exception ex) { Console.WriteLine($"Не удалось удалить старый файл: {ex.Message}"); }
+                        }
+                        using (SqlCommand cmd = new SqlCommand("UPDATE AccompanyingPersonDocuments SET DocumentPath = @DocumentPath, UploadDate = GETDATE(), IsVerified = 0, Notes = @Notes WHERE DocumentID = @DocumentID", con))
+                        {
+                            cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
+                            cmd.Parameters.AddWithValue("@Notes", (object)notes ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@DocumentID", existingDocumentID.Value);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    else
+                    {
+                        using (SqlCommand cmd = new SqlCommand("INSERT INTO AccompanyingPersonDocuments (AccompanyingPersonID, DocumentTypeID, DocumentPath, UploadDate, IsVerified, Notes) VALUES (@AccompanyingPersonID, @DocumentTypeID, @DocumentPath, GETDATE(), 0, @Notes)", con))
+                        {
+                            cmd.Parameters.AddWithValue("@AccompanyingPersonID", id);
+                            cmd.Parameters.AddWithValue("@DocumentTypeID", documentTypeID);
+                            cmd.Parameters.AddWithValue("@DocumentPath", destinationPath);
+                            cmd.Parameters.AddWithValue("@Notes", (object)notes ?? DBNull.Value);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+                return Ok(new { success = true, message = "Документ успешно загружен." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/manager/accompanyingperson/document/{documentId}/view
+        [HttpGet("accompanyingperson/document/{documentId}/view")]
+        public IActionResult ViewAccompanyingPersonDocument(int documentId)
+        {
+            try
+            {
+                string documentPath = string.Empty;
+                string documentName = string.Empty;
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT apd.DocumentPath, dt.DocumentName 
+                        FROM AccompanyingPersonDocuments apd
+                        JOIN DocumentTypes dt ON apd.DocumentTypeID = dt.DocumentTypeID
+                        WHERE apd.DocumentID = @DocumentID";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", documentId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                documentPath = reader.GetString(0);
+                                documentName = reader.GetString(1);
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Документ не найден." });
+                            }
+                        }
+                    }
+                }
+
+                if (!System.IO.File.Exists(documentPath))
+                {
+                    return NotFound(new { success = false, message = "Файл документа не найден на сервере." });
+                }
+
+                var fileExtension = Path.GetExtension(documentPath).ToLowerInvariant().TrimStart('.');
+                string contentType = GetMimeType(fileExtension);
+                var fileBytes = System.IO.File.ReadAllBytes(documentPath);
+                string fileName = Path.GetFileName(documentPath); 
+
+                return new FileContentResult(fileBytes, contentType)
+                {
+                    FileDownloadName = fileName // Suggests download but browser can display inline if capable
+                };
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // DELETE: api/manager/accompanyingperson/document/{documentId}
+        [HttpDelete("accompanyingperson/document/{documentId}")]
+        public IActionResult DeleteAccompanyingPersonDocument(int documentId)
+        {
+            try
+            {
+                string documentPath = string.Empty;
+                int accompanyingPersonID = 0;
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlCommand cmd = new SqlCommand("SELECT DocumentPath, AccompanyingPersonID FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID", con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", documentId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                documentPath = reader.GetString(0);
+                                accompanyingPersonID = reader.GetInt32(1);
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Документ не найден." });
+                            }
+                        }
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand("DELETE FROM AccompanyingPersonDocuments WHERE DocumentID = @DocumentID", con))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", documentId);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(documentPath) && System.IO.File.Exists(documentPath))
+                {
+                    try { System.IO.File.Delete(documentPath); } catch (Exception ex) { Console.WriteLine($"Не удалось удалить файл: {ex.Message}");}
+                }
+                
+                // Проверяем, остались ли другие документы у этого сопровождающего в этой же папке
+                // Если папка пуста, удаляем её
+                if (accompanyingPersonID > 0 && !string.IsNullOrEmpty(documentPath))
+                {
+                    string personFolderPath = Path.GetDirectoryName(documentPath);
+                    if (Directory.Exists(personFolderPath) && !Directory.EnumerateFileSystemEntries(personFolderPath).Any())
+                    {
+                        try { Directory.Delete(personFolderPath); } catch (Exception ex) { Console.WriteLine($"Не удалось удалить папку сопровождающего: {ex.Message}");}
+                    }
+                }
+
+                return Ok(new { success = true, message = "Документ успешно удален." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        #endregion
+
         #region Вспомогательные методы
 
         private string GetMimeType(string fileType)
