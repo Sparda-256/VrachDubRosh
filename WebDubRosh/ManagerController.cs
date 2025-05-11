@@ -1360,12 +1360,10 @@ namespace WebDubRosh.Controllers
                                 cmdDocuments.ExecuteNonQuery();
                             }
 
-                            // 2. Выселяем сопровождающее лицо из комнаты, если оно где-то проживает
-                            string updateAccommodationsQuery = @"
-                            UPDATE Accommodations
-                            SET CheckOutDate = GETDATE()
-                            WHERE AccompanyingPersonID = @AccompanyingPersonID AND CheckOutDate IS NULL";
-                            using (SqlCommand cmdAccommodations = new SqlCommand(updateAccommodationsQuery, con, tran))
+                            // 2. Удаляем записи размещения вместо обновления CheckOutDate
+                            string deleteAccommodationsQuery = @"DELETE FROM Accommodations 
+                                                                WHERE AccompanyingPersonID = @AccompanyingPersonID";
+                            using (SqlCommand cmdAccommodations = new SqlCommand(deleteAccommodationsQuery, con, tran))
                             {
                                 cmdAccommodations.Parameters.AddWithValue("@AccompanyingPersonID", id);
                                 cmdAccommodations.ExecuteNonQuery();
@@ -1386,10 +1384,12 @@ namespace WebDubRosh.Controllers
 
                             tran.Commit();
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             tran.Rollback();
-                            throw;
+                            Console.WriteLine($"Ошибка при удалении сопровождающего лица (ID: {id}): {ex.Message}");
+                            // Перебрасываем исключение выше с более информативным сообщением
+                            throw new Exception($"Не удалось удалить сопровождающее лицо: {ex.Message}");
                         }
                     }
                 }

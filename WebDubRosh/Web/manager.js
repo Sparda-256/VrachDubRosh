@@ -2471,14 +2471,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedOption = patientSelect.options[patientSelect.selectedIndex];
     const stayType = selectedOption?.dataset.stayType;
     
+    // Флаг, указывающий, требуется ли размещение
+    const needAccommodation = stayType === 'Круглосуточный';
+    
     // Данные о размещении (для круглосуточного стационара)
     let accommodationInfo = null;
     
-    if (stayType === 'Круглосуточный') {
+    if (needAccommodation) {
       const buildingID = document.getElementById('accompanyingBuilding').value;
       const roomID = document.getElementById('accompanyingRoom').value;
       const bedNumber = document.getElementById('accompanyingBed').value;
       
+      // Проверяем наличие значений только если нужно размещение
       if (!buildingID || !roomID || !bedNumber) {
         showNotification('Пожалуйста, выберите корпус, комнату и кровать для размещения', 'error');
         return;
@@ -2497,8 +2501,9 @@ document.addEventListener('DOMContentLoaded', function() {
       DateOfBirth: dateOfBirth || null,
       Relationship: relationship,
       HasPowerOfAttorney: hasPowerOfAttorney,
-      NeedAccommodation: stayType === 'Круглосуточный',
-      AccommodationInfo: accommodationInfo
+      NeedAccommodation: needAccommodation,
+      // Если размещение не требуется, передаем пустой объект вместо null
+      AccommodationInfo: needAccommodation && accommodationInfo ? accommodationInfo : { RoomID: 0, BedNumber: 0 }
     };
     
     // Определяем, это добавление нового или редактирование существующего
@@ -2513,6 +2518,8 @@ document.addEventListener('DOMContentLoaded', function() {
           : '/api/manager/accompanyingperson';
         const method = isEditMode ? 'PUT' : 'POST';
         
+        console.log('Отправка данных сопровождающего:', JSON.stringify(accompanyingData, null, 2));
+        
         return fetch(url, {
           method: method,
           headers: {
@@ -2521,9 +2528,19 @@ document.addEventListener('DOMContentLoaded', function() {
           body: JSON.stringify(accompanyingData)
         })
         .then(response => {
+          console.log('Получен ответ со статусом:', response.status);
+          
           if (!response.ok) {
             // Пытаемся получить текст ошибки с сервера
-            return response.json().then(err => { throw new Error(err.message || `Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего`); });
+            return response.text().then(text => {
+              console.error('Текст ошибки от сервера:', text);
+              try {
+                const err = JSON.parse(text);
+                throw new Error(err.message || `Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего`);
+              } catch (parseError) {
+                throw new Error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего: ${text}`);
+              }
+            });
           }
           return response.json();
         });
@@ -2614,30 +2631,86 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Удаляем сопровождающих по очереди
-    const promises = selectedAccompanyingIDs.map(id => {
-      return fetch(`/api/manager/accompanyingperson/${id}`, {
-        method: 'DELETE'
-      })
-      .then(response => response.json());
+    showNotification('Выполняется удаление...', 'info');
+    
+    // Удаляем сопровождающих последовательно, а не параллельно
+    let successCount = 0;
+    let failureMessages = [];
+    
+    // Создаем последовательный promise chain
+    let promise = Promise.resolve();
+    
+    selectedAccompanyingIDs.forEach(id => {
+      promise = promise.then(() => {
+        return fetch(`/api/manager/accompanyingperson/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => {
+              try {
+                const data = JSON.parse(text);
+                throw new Error(data.message || `Ошибка при удалении сопровождающего (ID: ${id})`);
+              } catch (e) {
+                throw new Error(`Ошибка при удалении сопровождающего (ID: ${id}): ${text}`);
+              }
+            });
+          }
+          return response.json();
+        })
+        .then(result => {
+          if (result.success) {
+            successCount++;
+            return true;
+          } else {
+            failureMessages.push(`ID ${id}: ${result.message || 'Неизвестная ошибка'}`);
+            return false;
+          }
+        })
+        .catch(error => {
+          console.error(`Ошибка при удалении сопровождающего ID ${id}:`, error);
+          failureMessages.push(`ID ${id}: ${error.message}`);
+          return false;
+        });
+      });
     });
     
-    Promise.all(promises)
-      .then(results => {
-        const successCount = results.filter(r => r.success).length;
+    // Обработка результатов после выполнения всех операций удаления
+    promise.then(() => {
+      if (successCount > 0) {
+        // Формируем текст уведомления
+        let message = `Успешно удалено: ${successCount} сопровождающих`;
+        showNotification(message, 'success');
         
-        if (successCount > 0) {
-          alert(`Успешно удалено ${successCount} сопровождающего(их).`);
-          loadAccompanyingPersons();
-          selectedAccompanyingIDs = [];
-        } else {
-          alert('Не удалось удалить сопровождающих.');
-        }
-      })
-      .catch(error => {
-        console.error('Error deleting accompanying persons:', error);
-        alert('Ошибка при удалении сопровождающих.');
-      });
+        // Обновляем списки
+        loadAccompanyingPersons();
+        
+        // Всегда обновляем таблицу размещения, так как 
+        // сложно надежно определить, был ли у сопровождающего размещение
+        loadAccommodations();
+        
+        // Очищаем выбранные ID
+        selectedAccompanyingIDs = [];
+        updateAccompanyingButtonStates();
+      } else {
+        showNotification('Не удалось удалить ни одного сопровождающего', 'error');
+      }
+      
+      // Если были ошибки, показываем их в диалоговом окне
+      if (failureMessages.length > 0) {
+        let errorMessage = 'Не удалось удалить некоторых сопровождающих:\n\n';
+        errorMessage += failureMessages.join('\n');
+        alert(errorMessage);
+      }
+    })
+    .catch(error => {
+      console.error('Общая ошибка при удалении сопровождающих:', error);
+      showNotification('Произошла ошибка при удалении сопровождающих', 'error');
+      alert('Ошибка при удалении сопровождающих: ' + error.message);
+    });
   }
   
   // Управление документами сопровождающего (новая функция)
