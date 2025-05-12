@@ -812,4 +812,46 @@ th[data-sort="asc"] {
 
 th[data-sort="desc"] {
   background-color: var(--selection-color);
+}
+
+/* Стили для таблиц с фиксированной высотой и скроллингом */
+.table-container.scrollable {
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.table-container.scrollable .data-table {
+  border: none;
+  width: 100%;
+}
+
+.table-container.scrollable table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--background-color);
+}
+
+/* Добавляем поддержку темной темы для заголовков таблицы */
+.dark-theme .table-container.scrollable table thead {
+  background-color: var(--background-color);
+}
+
+.dark-theme .table-container.scrollable table th {
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Добавляем небольшую тень к заголовку, чтобы визуально его отделить при скролле */
+.table-container.scrollable table thead:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--border-color);
 } 

@@ -70,16 +70,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const headers = table.querySelectorAll('thead th');
     
-    // Добавляем иконки и обработчики для заголовков таблицы
+    // Сохраняем текущее состояние сортировки, если оно есть
+    const currentSortColumn = table.getAttribute('data-sort-column');
+    const currentSortDirection = table.getAttribute('data-sort-direction');
+    
+    // Удаляем существующие обработчики путем клонирования и замены заголовков
     headers.forEach((header, index) => {
+      const clonedHeader = header.cloneNode(true);
+      header.parentNode.replaceChild(clonedHeader, header);
+      
+      // Если у заголовка есть атрибут data-sort, сохраняем его
+      if (header.hasAttribute('data-sort')) {
+        clonedHeader.setAttribute('data-sort', header.getAttribute('data-sort'));
+      }
+    });
+    
+    // Получаем новые заголовки после замены
+    const newHeaders = table.querySelectorAll('thead th');
+    
+    // Добавляем иконки и обработчики для заголовков таблицы
+    newHeaders.forEach((header, index) => {
       // Добавляем класс для стилизации и указатель, что можно кликнуть
       header.classList.add('sortable');
       header.style.cursor = 'pointer';
       
-      // Добавляем контейнер для иконки сортировки
-      const iconSpan = document.createElement('span');
-      iconSpan.className = 'sort-icon';
-      header.appendChild(iconSpan);
+      // Проверяем, есть ли уже иконка сортировки
+      let iconSpan = header.querySelector('.sort-icon');
+      
+      // Если иконки нет, создаем её
+      if (!iconSpan) {
+        iconSpan = document.createElement('span');
+        iconSpan.className = 'sort-icon';
+        header.appendChild(iconSpan);
+      }
+      
+      // Восстанавливаем состояние сортировки, если это колонка, по которой ранее сортировали
+      if (currentSortColumn === index.toString() && currentSortDirection) {
+        header.setAttribute('data-sort', currentSortDirection);
+        iconSpan.textContent = currentSortDirection === 'asc' ? ' ▲' : ' ▼';
+      }
       
       // Добавляем обработчик клика
       header.addEventListener('click', () => {
@@ -88,20 +117,53 @@ document.addEventListener('DOMContentLoaded', function() {
         const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
         
         // Сбрасываем направление сортировки у других столбцов
-        headers.forEach(h => {
+        newHeaders.forEach(h => {
           h.setAttribute('data-sort', 'none');
-          h.querySelector('.sort-icon').textContent = '';
+          const icon = h.querySelector('.sort-icon');
+          if (icon) icon.textContent = '';
         });
         
         // Устанавливаем направление сортировки и иконку
         header.setAttribute('data-sort', newDirection);
         iconSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
         
-        // Сортируем данные
-        sortTable(dataArray, index, newDirection, tableId);
+        // Сохраняем информацию о текущей сортировке
+        table.setAttribute('data-sort-column', index);
+        table.setAttribute('data-sort-direction', newDirection);
+        
+        // Получаем отсортированную копию массива данных
+        const sortedArray = sortTable(dataArray, index, newDirection, tableId);
+        
+        // Определяем, какой массив данных временно заменить для отрисовки в зависимости от таблицы
+        let originalArray;
+        
+        if (tableId === 'patientsTable') {
+          originalArray = patients;
+          patients = sortedArray;
+        } else if (tableId === 'accompanyingTable') {
+          originalArray = accompanyingPersons;
+          accompanyingPersons = sortedArray;
+        } else if (tableId === 'accommodationTable') {
+          originalArray = accommodations;
+          accommodations = sortedArray;
+        } else if (tableId === 'documentsTable') {
+          originalArray = documents;
+          documents = sortedArray;
+        }
         
         // Перерисовываем таблицу
         renderFunction();
+        
+        // Восстанавливаем оригинальный массив
+        if (tableId === 'patientsTable') {
+          patients = originalArray;
+        } else if (tableId === 'accompanyingTable') {
+          accompanyingPersons = originalArray;
+        } else if (tableId === 'accommodationTable') {
+          accommodations = originalArray;
+        } else if (tableId === 'documentsTable') {
+          documents = originalArray;
+        }
       });
     });
   }
@@ -116,11 +178,14 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     const keys = columnMappings[tableId];
-    if (!keys || !keys[columnIndex]) return; // Выходим, если не смогли определить ключ
+    if (!keys || !keys[columnIndex]) return dataArray; // Выходим, если не смогли определить ключ
     
     const key = keys[columnIndex];
     
-    dataArray.sort((a, b) => {
+    // Создаем копию массива для сортировки
+    const sortedArray = [...dataArray];
+    
+    sortedArray.sort((a, b) => {
       let valueA = a[key];
       let valueB = b[key];
       
@@ -148,6 +213,9 @@ document.addEventListener('DOMContentLoaded', function() {
       // Для чисел и дат
       return direction === 'asc' ? valueA - valueB : valueB - valueA;
     });
+    
+    // Возвращаем отсортированный массив
+    return sortedArray;
   }
 
   // Функция инициализации
@@ -173,14 +241,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Привязываем обработчики к кнопкам
     document.getElementById('addPatientBtn').addEventListener('click', showAddPatientModal);
     document.getElementById('savePatientBtn').addEventListener('click', savePatient);
-    
-    // Добавляем инициализацию сортировки таблиц после загрузки данных
-    setTimeout(() => {
-      if (patients.length > 0) addTableSorting('patientsTable', patients, renderPatients);
-      if (accompanyingPersons.length > 0) addTableSorting('accompanyingTable', accompanyingPersons, renderAccompanyingPersons);
-      if (accommodations.length > 0) addTableSorting('accommodationTable', accommodations, renderAccommodations);
-      if (documents.length > 0) addTableSorting('documentsTable', documents, renderDocuments);
-    }, 500);
   }
 
   // Инициализация переключателя темы
@@ -528,13 +588,6 @@ document.addEventListener('DOMContentLoaded', function() {
       loadAccommodations(),
       loadDocuments()
     ])
-    .then(() => {
-      // Инициализируем сортировку таблиц после загрузки данных
-      addTableSorting('patientsTable', patients, renderPatients);
-      addTableSorting('accompanyingTable', accompanyingPersons, renderAccompanyingPersons);
-      addTableSorting('accommodationTable', accommodations, renderAccommodations);
-      addTableSorting('documentsTable', documents, renderDocuments);
-    })
     .catch(error => {
       console.error('Error loading data:', error);
       alert('Ошибка загрузки данных. Пожалуйста, обновите страницу или повторите попытку позже.');
@@ -658,6 +711,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       tbody.appendChild(row);
     });
+    
+    // Повторно инициализируем сортировку после обновления данных
+    addTableSorting('patientsTable', patients, renderPatients);
   }
 
   // Отображение сопровождающих лиц
@@ -679,6 +735,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       tbody.appendChild(row);
     });
+    
+    // Повторно инициализируем сортировку после обновления данных
+    addTableSorting('accompanyingTable', accompanyingPersons, renderAccompanyingPersons);
   }
 
   // Отображение корпусов в фильтре
@@ -724,6 +783,9 @@ document.addEventListener('DOMContentLoaded', function() {
       // Добавляем строку в таблицу
       tbody.appendChild(row);
     });
+    
+    // Повторно инициализируем сортировку после обновления данных
+    addTableSorting('accommodationTable', accommodations, renderAccommodations);
   }
 
   // Обновление статистики по размещению
@@ -775,6 +837,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обновляем состояние кнопок после обновления таблицы
     updateDocumentButtonStates();
+    
+    // Повторно инициализируем сортировку после обновления данных
+    addTableSorting('documentsTable', documents, renderDocuments);
   }
 
   // Функция для получения отображаемого типа файла
@@ -810,33 +875,39 @@ document.addEventListener('DOMContentLoaded', function() {
   // Фильтрация пациентов
   function filterPatients() {
     const searchValue = searchPatients.value.toLowerCase();
-    const tbody = patientsTable.querySelector('tbody');
-    const rows = tbody.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (text.includes(searchValue)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+    const filteredPatients = patients.filter(patient => {
+      const patientText = `${patient.FullName} ${formatDate(new Date(patient.DateOfBirth))} ${patient.Gender} ${formatDate(new Date(patient.RecordDate))} ${patient.DischargeDate ? formatDate(new Date(patient.DischargeDate)) : ''}`.toLowerCase();
+      return patientText.includes(searchValue);
     });
+    
+    // Временно заменяем массив patients на отфильтрованный для отрисовки
+    const originalPatients = patients.slice(); // Создаем копию оригинального массива
+    patients = filteredPatients;
+    
+    // Отрисовываем отфильтрованные данные
+    renderPatients();
+    
+    // Восстанавливаем оригинальный массив
+    patients = originalPatients;
   }
 
   // Фильтрация сопровождающих
   function filterAccompanying() {
     const searchValue = searchAccompanying.value.toLowerCase();
-    const tbody = accompanyingTable.querySelector('tbody');
-    const rows = tbody.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (text.includes(searchValue)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+    const filteredAccompanying = accompanyingPersons.filter(person => {
+      const personText = `${person.FullName} ${person.PatientName} ${person.Relationship || ''}`.toLowerCase();
+      return personText.includes(searchValue);
     });
+    
+    // Временно заменяем массив accompanyingPersons на отфильтрованный для отрисовки
+    const originalAccompanying = accompanyingPersons.slice(); // Создаем копию оригинального массива
+    accompanyingPersons = filteredAccompanying;
+    
+    // Отрисовываем отфильтрованные данные
+    renderAccompanyingPersons();
+    
+    // Восстанавливаем оригинальный массив
+    accompanyingPersons = originalAccompanying;
   }
 
   // Фильтрация размещения
@@ -888,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Количество документов после фильтрации:', filteredDocuments.length);
       
       // Временно заменяем массив документов для отображения
-      const originalDocuments = documents;
+      const originalDocuments = documents.slice(); // Создаем копию оригинального массива
       documents = filteredDocuments;
       
       // Отображаем результаты
