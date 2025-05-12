@@ -63,6 +63,93 @@ document.addEventListener('DOMContentLoaded', function() {
   // Инициализация
   init();
 
+  // Функция для сортировки таблиц
+  function addTableSorting(tableId, dataArray, renderFunction) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('thead th');
+    
+    // Добавляем иконки и обработчики для заголовков таблицы
+    headers.forEach((header, index) => {
+      // Добавляем класс для стилизации и указатель, что можно кликнуть
+      header.classList.add('sortable');
+      header.style.cursor = 'pointer';
+      
+      // Добавляем контейнер для иконки сортировки
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'sort-icon';
+      header.appendChild(iconSpan);
+      
+      // Добавляем обработчик клика
+      header.addEventListener('click', () => {
+        // Определяем направление сортировки
+        const currentDirection = header.getAttribute('data-sort') || 'none';
+        const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        
+        // Сбрасываем направление сортировки у других столбцов
+        headers.forEach(h => {
+          h.setAttribute('data-sort', 'none');
+          h.querySelector('.sort-icon').textContent = '';
+        });
+        
+        // Устанавливаем направление сортировки и иконку
+        header.setAttribute('data-sort', newDirection);
+        iconSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
+        
+        // Сортируем данные
+        sortTable(dataArray, index, newDirection, tableId);
+        
+        // Перерисовываем таблицу
+        renderFunction();
+      });
+    });
+  }
+
+  function sortTable(dataArray, columnIndex, direction, tableId) {
+    // Маппинг индексов столбцов на ключи в объектах данных
+    const columnMappings = {
+      'patientsTable': ['FullName', 'DateOfBirth', 'Gender', 'RecordDate', 'DischargeDate', 'DocumentsStatus'],
+      'accompanyingTable': ['FullName', 'PatientName', 'Relationship', 'HasPowerOfAttorney', 'DocumentsStatus'],
+      'accommodationTable': ['BuildingNumber', 'RoomNumber', 'BedNumber', 'Status', 'PersonName', 'PersonType', 'CheckInDate'],
+      'documentsTable': ['DocumentName', 'Category', 'FileType', 'FileSize', 'UploadDate', 'UploadedBy']
+    };
+    
+    const keys = columnMappings[tableId];
+    if (!keys || !keys[columnIndex]) return; // Выходим, если не смогли определить ключ
+    
+    const key = keys[columnIndex];
+    
+    dataArray.sort((a, b) => {
+      let valueA = a[key];
+      let valueB = b[key];
+      
+      // Обрабатываем разные типы данных
+      if (key.includes('Date')) {
+        // Для дат
+        valueA = valueA ? new Date(valueA) : new Date(0);
+        valueB = valueB ? new Date(valueB) : new Date(0);
+      } else if (typeof valueA === 'string' && typeof valueB === 'string') {
+        // Для строк, используем локальное сравнение
+        return direction === 'asc' 
+          ? valueA.localeCompare(valueB, 'ru', {sensitivity: 'base'})
+          : valueB.localeCompare(valueA, 'ru', {sensitivity: 'base'});
+      } else if (valueA === null || valueA === undefined) {
+        // Пустые значения всегда в конец
+        return direction === 'asc' ? 1 : -1;
+      } else if (valueB === null || valueB === undefined) {
+        return direction === 'asc' ? -1 : 1;
+      } else if (typeof valueA === 'boolean' && typeof valueB === 'boolean') {
+        // Для булевых значений
+        valueA = valueA ? 1 : 0;
+        valueB = valueB ? 1 : 0;
+      }
+      
+      // Для чисел и дат
+      return direction === 'asc' ? valueA - valueB : valueB - valueA;
+    });
+  }
+
   // Функция инициализации
   function init() {
     // Инициализация переключателя темы
@@ -86,6 +173,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Привязываем обработчики к кнопкам
     document.getElementById('addPatientBtn').addEventListener('click', showAddPatientModal);
     document.getElementById('savePatientBtn').addEventListener('click', savePatient);
+    
+    // Добавляем инициализацию сортировки таблиц после загрузки данных
+    setTimeout(() => {
+      if (patients.length > 0) addTableSorting('patientsTable', patients, renderPatients);
+      if (accompanyingPersons.length > 0) addTableSorting('accompanyingTable', accompanyingPersons, renderAccompanyingPersons);
+      if (accommodations.length > 0) addTableSorting('accommodationTable', accommodations, renderAccommodations);
+      if (documents.length > 0) addTableSorting('documentsTable', documents, renderDocuments);
+    }, 500);
   }
 
   // Инициализация переключателя темы
@@ -433,6 +528,13 @@ document.addEventListener('DOMContentLoaded', function() {
       loadAccommodations(),
       loadDocuments()
     ])
+    .then(() => {
+      // Инициализируем сортировку таблиц после загрузки данных
+      addTableSorting('patientsTable', patients, renderPatients);
+      addTableSorting('accompanyingTable', accompanyingPersons, renderAccompanyingPersons);
+      addTableSorting('accommodationTable', accommodations, renderAccommodations);
+      addTableSorting('documentsTable', documents, renderDocuments);
+    })
     .catch(error => {
       console.error('Error loading data:', error);
       alert('Ошибка загрузки данных. Пожалуйста, обновите страницу или повторите попытку позже.');
@@ -2642,12 +2744,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     selectedAccompanyingIDs.forEach(id => {
       promise = promise.then(() => {
-        return fetch(`/api/manager/accompanyingperson/${id}`, {
+      return fetch(`/api/manager/accompanyingperson/${id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
           }
-        })
+      })
         .then(response => {
           if (!response.ok) {
             return response.text().then(text => {
@@ -2680,22 +2782,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обработка результатов после выполнения всех операций удаления
     promise.then(() => {
-      if (successCount > 0) {
+        if (successCount > 0) {
         // Формируем текст уведомления
         let message = `Успешно удалено: ${successCount} сопровождающих`;
         showNotification(message, 'success');
         
         // Обновляем списки
-        loadAccompanyingPersons();
+          loadAccompanyingPersons();
         
         // Всегда обновляем таблицу размещения, так как 
         // сложно надежно определить, был ли у сопровождающего размещение
         loadAccommodations();
         
         // Очищаем выбранные ID
-        selectedAccompanyingIDs = [];
+          selectedAccompanyingIDs = [];
         updateAccompanyingButtonStates();
-      } else {
+        } else {
         showNotification('Не удалось удалить ни одного сопровождающего', 'error');
       }
       
@@ -2704,13 +2806,13 @@ document.addEventListener('DOMContentLoaded', function() {
         let errorMessage = 'Не удалось удалить некоторых сопровождающих:\n\n';
         errorMessage += failureMessages.join('\n');
         alert(errorMessage);
-      }
-    })
-    .catch(error => {
+        }
+      })
+      .catch(error => {
       console.error('Общая ошибка при удалении сопровождающих:', error);
       showNotification('Произошла ошибка при удалении сопровождающих', 'error');
       alert('Ошибка при удалении сопровождающих: ' + error.message);
-    });
+      });
   }
   
   // Управление документами сопровождающего (новая функция)
