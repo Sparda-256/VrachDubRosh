@@ -12,7 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('searchDoctors').addEventListener('input', filterDoctors);
   
   // События кнопок
-  document.getElementById('reportsBtn').addEventListener('click', showReportsModal);
+  document.getElementById('reportsBtn').addEventListener('click', function() {
+    window.location.href = 'report.html';
+  });
   document.getElementById('exitBtn').addEventListener('click', function() {
     window.location.href = 'Login.html';
   });
@@ -360,10 +362,6 @@ function openDoctorProcedures() {
   // Очищаем таблицу процедур
   const proceduresTable = document.getElementById('doctorProceduresTable').querySelector('tbody');
   proceduresTable.innerHTML = '';
-  
-  // Показываем модальное окно
-  const modal = document.getElementById('doctorProceduresModal');
-  modal.style.display = 'block';
   
   // Загружаем процедуры с сервера
   fetch(`/api/chief/doctor/${doctorId}/procedures`)
@@ -957,21 +955,6 @@ function formatDateForServer(dateString) {
   const day = String(date.getDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
-}
-
-// Показать модальное окно отчетов
-function showReportsModal() {
-  const modal = document.getElementById('reportsModal');
-  
-  // Устанавливаем диапазон дат: последний месяц
-  const today = new Date();
-  const lastMonth = new Date(today);
-  lastMonth.setMonth(today.getMonth() - 1);
-  
-  document.getElementById('reportStartDate').valueAsDate = lastMonth;
-  document.getElementById('reportEndDate').valueAsDate = today;
-  
-  modal.style.display = 'block';
 }
 
 // Сохранение врача (добавление или обновление)

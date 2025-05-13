@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Отчеты и аналитика - Дубовая Роща</title>
+  <link rel="stylesheet" href="report.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Дубовая Роща - Отчеты и аналитика</h1>
+      
+      <!-- Верхняя панель с кнопками -->
+      <div class="top-panel">
+        <!-- Переключатель темы -->
+        <div class="theme-toggle-container">
+          <label class="theme-toggle">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider round">
+              <span class="sun-icon"></span>
+              <span class="moon-icon"></span>
+            </span>
+          </label>
+        </div>
+        
+        <div class="buttons-container">
+          <button id="backBtn" class="btn btn-gray">
+            <i class="icon back-icon"></i>
+            <span>Назад</span>
+          </button>
+          <button id="exitBtn" class="btn btn-red">
+            <i class="icon exit-icon"></i>
+            <span>Выход</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Основной контент: TabControl -->
+    <div class="tab-container">
+      <div class="tab-header">
+        <button class="tab-btn active" data-tab="all-procedures">Все процедуры</button>
+        <button class="tab-btn" data-tab="doctor-procedures">Процедуры врача</button>
+        <button class="tab-btn" data-tab="patient-procedures">Процедуры пациента</button>
+        <button class="tab-btn" data-tab="procedure-types">Назначения процедуры</button>
+      </div>
+
+      <!-- Вкладка 1: Все процедуры -->
+      <div id="all-procedures" class="tab-content active">
+        <div class="filter-panel">
+          <div class="date-range">
+            <label for="dpStart_All">Начало:</label>
+            <input type="date" id="dpStart_All" class="form-control">
+            <label for="dpEnd_All">Конец:</label>
+            <input type="date" id="dpEnd_All" class="form-control">
+          </div>
+          <div class="filter-buttons">
+            <button id="btnShowAll" class="btn btn-blue">
+              <i class="icon search-icon"></i>
+            </button>
+            <button id="btnExportAll" class="btn btn-accent">
+              <i class="icon excel-icon"></i>
+              <span>Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="dgReportAll" class="data-table">
+            <thead>
+              <tr>
+                <th>Врач</th>
+                <th>Процедура</th>
+                <th>Пациент</th>
+                <th>Дата и время</th>
+                <th>Статус</th>
+                <th>Длительность (мин)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="summary-panel">
+          <div id="txtAllSummary" class="summary-text"></div>
+        </div>
+      </div>
+
+      <!-- Вкладка 2: Процедуры врача -->
+      <div id="doctor-procedures" class="tab-content">
+        <div class="filter-panel">
+          <div class="doctor-selection">
+            <label for="txtSearchDoctor">Поиск врача:</label>
+            <input type="text" id="txtSearchDoctor" class="form-control" placeholder="Введите ФИО врача">
+            <select id="cbDoctor" class="form-control"></select>
+          </div>
+          <div class="date-range">
+            <label for="dpStart_Doctor">Начало:</label>
+            <input type="date" id="dpStart_Doctor" class="form-control">
+            <label for="dpEnd_Doctor">Конец:</label>
+            <input type="date" id="dpEnd_Doctor" class="form-control">
+          </div>
+          <div class="filter-buttons">
+            <button id="btnShowDoctor" class="btn btn-blue">
+              <i class="icon search-icon"></i>
+            </button>
+            <button id="btnExportDoctor" class="btn btn-accent">
+              <i class="icon excel-icon"></i>
+              <span>Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="dgReportDoctor" class="data-table">
+            <thead>
+              <tr>
+                <th>Процедура</th>
+                <th>Пациент</th>
+                <th>Дата и время</th>
+                <th>Статус</th>
+                <th>Длительность (мин)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="summary-panel">
+          <div id="txtDoctorSummary" class="summary-text"></div>
+        </div>
+      </div>
+
+      <!-- Вкладка 3: Процедуры пациента -->
+      <div id="patient-procedures" class="tab-content">
+        <div class="filter-panel">
+          <div class="patient-selection">
+            <label for="txtSearchPatient">Поиск пациента:</label>
+            <input type="text" id="txtSearchPatient" class="form-control" placeholder="Введите ФИО пациента">
+            <select id="cbPatient" class="form-control"></select>
+          </div>
+          <div class="date-range">
+            <label for="dpStart_Patient">Начало:</label>
+            <input type="date" id="dpStart_Patient" class="form-control">
+            <label for="dpEnd_Patient">Конец:</label>
+            <input type="date" id="dpEnd_Patient" class="form-control">
+          </div>
+          <div class="filter-buttons">
+            <button id="btnShowPatient" class="btn btn-blue">
+              <i class="icon search-icon"></i>
+            </button>
+            <button id="btnExportPatient" class="btn btn-accent">
+              <i class="icon excel-icon"></i>
+              <span>Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="dgReportPatient" class="data-table">
+            <thead>
+              <tr>
+                <th>Врач</th>
+                <th>Процедура</th>
+                <th>Дата и время</th>
+                <th>Статус</th>
+                <th>Длительность (мин)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="summary-panel">
+          <div id="txtPatientSummary" class="summary-text"></div>
+        </div>
+      </div>
+
+      <!-- Вкладка 4: Назначения процедуры -->
+      <div id="procedure-types" class="tab-content">
+        <div class="filter-panel">
+          <div class="procedure-selection">
+            <label for="txtSearchProcedure">Поиск процедуры:</label>
+            <input type="text" id="txtSearchProcedure" class="form-control" placeholder="Введите название процедуры">
+            <select id="cbProcedure" class="form-control"></select>
+          </div>
+          <div class="date-range">
+            <label for="dpStart_Procedure">Начало:</label>
+            <input type="date" id="dpStart_Procedure" class="form-control">
+            <label for="dpEnd_Procedure">Конец:</label>
+            <input type="date" id="dpEnd_Procedure" class="form-control">
+          </div>
+          <div class="filter-buttons">
+            <button id="btnShowProcedure" class="btn btn-blue">
+              <i class="icon search-icon"></i>
+            </button>
+            <button id="btnExportProcedure" class="btn btn-accent">
+              <i class="icon excel-icon"></i>
+              <span>Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="dgReportProcedure" class="data-table">
+            <thead>
+              <tr>
+                <th>Пациент</th>
+                <th>Дата и время</th>
+                <th>Статус</th>
+                <th>Длительность (мин)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут загружены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="summary-panel">
+          <div id="txtProcedureSummary" class="summary-text"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="report.js"></script>
+</body>
+</html> 

@@ -239,33 +239,6 @@
       </form>
     </div>
   </div>
-
-  <!-- Модальное окно отчетов -->
-  <div id="reportsModal" class="modal">
-    <div class="modal-content modal-lg">
-      <span class="close-btn">&times;</span>
-      <h2>Отчеты и аналитика</h2>
-      <div class="reports-tabs">
-        <button class="report-tab-btn active" data-report="patient">По пациентам</button>
-        <button class="report-tab-btn" data-report="doctor">По врачам</button>
-        <button class="report-tab-btn" data-report="procedures">По процедурам</button>
-      </div>
-      <div class="report-content" id="patientReport">
-        <div class="form-group">
-          <label for="reportDateRange">Период:</label>
-          <div class="date-range">
-            <input type="date" id="reportStartDate" class="form-control">
-            <span>—</span>
-            <input type="date" id="reportEndDate" class="form-control">
-          </div>
-        </div>
-        <button type="button" id="generatePatientReportBtn" class="btn btn-blue">Сформировать отчет</button>
-        <div class="report-result">
-          <!-- Результаты отчета будут добавлены здесь -->
-        </div>
-      </div>
-    </div>
-  </div>
   
   <!-- В шаблон строки таблицы добавляем кнопку для просмотра санаторной карты -->
   <template id="patientRowTemplate">
