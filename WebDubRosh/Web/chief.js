@@ -361,6 +361,10 @@ function openDoctorProcedures() {
   const proceduresTable = document.getElementById('doctorProceduresTable').querySelector('tbody');
   proceduresTable.innerHTML = '';
   
+  // Показываем модальное окно
+  const modal = document.getElementById('doctorProceduresModal');
+  modal.style.display = 'block';
+  
   // Загружаем процедуры с сервера
   fetch(`/api/chief/doctor/${doctorId}/procedures`)
     .then(response => {
