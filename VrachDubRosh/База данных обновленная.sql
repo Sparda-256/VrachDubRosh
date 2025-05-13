@@ -234,9 +234,11 @@ CREATE TABLE DischargeDocuments (
     RehabilitationGoal NVARCHAR(MAX),
     GoalAchieved BIT,
     Recommendations NVARCHAR(MAX),
+    DischargeDate DATE,
+    CreatedDate DATETIME DEFAULT GETDATE(),
     LastUpdated DATETIME DEFAULT GETDATE(),
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
-); 
+);
 
 INSERT INTO Managers(FullName, Password)
 VALUES

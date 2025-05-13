@@ -11,30 +11,30 @@
     <header>
       <h1>Дубовая Роща - Кабинет главного врача</h1>
       
-      <!-- Верхняя панель с кнопками -->
-      <div class="top-panel">
+    <!-- Верхняя панель с кнопками -->
+    <div class="top-panel">
         <!-- Переключатель темы -->
-        <div class="theme-toggle-container">
-          <label class="theme-toggle">
-            <input type="checkbox" id="themeToggle">
-            <span class="slider round">
-              <span class="sun-icon"></span>
-              <span class="moon-icon"></span>
-            </span>
-          </label>
-        </div>
-        
-        <div class="buttons-container">
-          <button id="reportsBtn" class="btn btn-blue">
-            <i class="icon report-icon"></i>
-            <span>Отчеты и аналитика</span>
-          </button>
-          <button id="exitBtn" class="btn btn-red">
-            <i class="icon exit-icon"></i>
-            <span>Выход</span>
-          </button>
-        </div>
+      <div class="theme-toggle-container">
+        <label class="theme-toggle">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider round">
+            <span class="sun-icon"></span>
+            <span class="moon-icon"></span>
+          </span>
+        </label>
       </div>
+        
+      <div class="buttons-container">
+        <button id="reportsBtn" class="btn btn-blue">
+          <i class="icon report-icon"></i>
+          <span>Отчеты и аналитика</span>
+        </button>
+        <button id="exitBtn" class="btn btn-red">
+          <i class="icon exit-icon"></i>
+          <span>Выход</span>
+        </button>
+      </div>
+    </div>
     </header>
 
     <!-- Основной контент: TabControl -->
@@ -52,20 +52,20 @@
         </div>
 
         <div class="table-container">
-          <table id="patientsTable" class="data-table">
-            <thead>
-              <tr>
+        <table id="patientsTable" class="data-table">
+          <thead>
+            <tr>
                 <th data-sort="fullName">ФИО</th>
                 <th data-sort="dateOfBirth">Дата рождения</th>
                 <th data-sort="gender">Пол</th>
                 <th data-sort="recordDate">Дата записи</th>
                 <th data-sort="dischargeDate">Дата выписки</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Данные будут заполнены через JavaScript -->
-            </tbody>
-          </table>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Данные будут заполнены через JavaScript -->
+          </tbody>
+        </table>
         </div>
         
         <div class="bottom-panel">
@@ -88,20 +88,20 @@
         </div>
 
         <div class="table-container">
-          <table id="doctorsTable" class="data-table">
-            <thead>
-              <tr>
+        <table id="doctorsTable" class="data-table">
+          <thead>
+            <tr>
                 <th data-sort="fullName">ФИО</th>
                 <th data-sort="specialty">Специальность</th>
                 <th data-sort="generalName">Общее наименование</th>
                 <th data-sort="officeNumber">Номер кабинета</th>
                 <th data-sort="workExperience">Стаж</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Данные будут заполнены через JavaScript -->
-            </tbody>
-          </table>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Данные будут заполнены через JavaScript -->
+          </tbody>
+        </table>
         </div>
 
         <div class="bottom-panel">
@@ -181,20 +181,47 @@
   <div id="dischargeModal" class="modal">
     <div class="modal-content modal-lg">
       <span class="close-btn">&times;</span>
-      <h2>Создание выписного эпикриза</h2>
+      <h2>Выписной эпикриз</h2>
       <p id="dischargePatientName" class="modal-subtitle"></p>
       <form id="dischargeForm">
         <div class="form-group">
-          <label for="dischargeDiagnosis">Диагноз:</label>
-          <textarea id="dischargeDiagnosis" class="form-control" required></textarea>
+          <label for="dischargePatientInfo">Информация о пациенте:</label>
+          <div id="dischargePatientInfo" class="info-text"></div>
+        </div>
+        <div class="form-group">
+          <label for="dischargeDiagnoses">Диагнозы:</label>
+          <div id="dischargeDiagnoses" class="info-text"></div>
+        </div>
+        <div class="form-group">
+          <label for="dischargeComplaints">Поступил с жалобами на:</label>
+          <textarea id="dischargeComplaints" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeDiseaseHistory">Из анамнеза заболевания:</label>
+          <textarea id="dischargeDiseaseHistory" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeInitialCondition">Общее состояние при поступлении:</label>
+          <textarea id="dischargeInitialCondition" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>В составе мультидисциплинарной команды консультирован специалистами:</label>
+          <div id="dischargeDoctorsList" class="doctor-list-display"></div>
+        </div>
+        <div class="form-group">
+          <label for="dischargeRehabGoal">Цель реабилитации:</label>
+          <textarea id="dischargeRehabGoal" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeGoalAchieved">Цель реабилитации достигнута:</label>
+          <select id="dischargeGoalAchieved" class="form-control">
+            <option value="true">Да</option>
+            <option value="false">Нет</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="dischargeRecommendations">Рекомендации:</label>
           <textarea id="dischargeRecommendations" class="form-control" required></textarea>
-        </div>
-        <div class="form-group">
-          <label for="dischargeResults">Результаты лечения:</label>
-          <textarea id="dischargeResults" class="form-control" required></textarea>
         </div>
         <div class="form-group">
           <label for="dischargeDate">Дата выписки:</label>
@@ -202,6 +229,7 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+          <button type="button" id="dischargeSaveBtn" class="btn btn-blue">Сохранить</button>
           <button type="submit" class="btn btn-accent">Создать документ</button>
         </div>
       </form>

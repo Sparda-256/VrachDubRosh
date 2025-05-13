@@ -722,7 +722,7 @@ namespace WebDubRosh.Controllers
             try
             {
                 var procedures = new List<object>();
-
+                
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
                     con.Open();
@@ -731,7 +731,7 @@ namespace WebDubRosh.Controllers
                         FROM Procedures 
                         WHERE DoctorID = @DoctorID
                         ORDER BY ProcedureName";
-
+                    
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
                         cmd.Parameters.AddWithValue("@DoctorID", id);
@@ -973,7 +973,7 @@ namespace WebDubRosh.Controllers
                                     {
                                         cmd.Parameters.AddWithValue("@PatientID", assignment.PatientId);
                                         cmd.Parameters.AddWithValue("@DoctorID", doctorId);
-                                        cmd.ExecuteNonQuery();
+                                cmd.ExecuteNonQuery();
                                     }
                                 }
                             }
@@ -1077,7 +1077,7 @@ namespace WebDubRosh.Controllers
                         cmd.ExecuteNonQuery();
                     }
                     
-                    return Ok(new { success = true });
+                return Ok(new { success = true });
                 }
             }
             catch (Exception ex)
@@ -1086,21 +1086,88 @@ namespace WebDubRosh.Controllers
             }
         }
 
-        // POST: api/chief/discharge
-        [HttpPost("discharge")]
-        public IActionResult CreateDischargeDocument([FromBody] DischargeModel discharge)
+        // GET: api/chief/patient/{id}/discharge
+        [HttpGet("patient/{id}/discharge")]
+        public IActionResult GetPatientDischargeDocument(int id)
         {
             try
             {
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT 
+                            DischargeID,
+                            Complaints,
+                            DiseaseHistory,
+                            InitialCondition,
+                            RehabilitationGoal,
+                            GoalAchieved,
+                            Recommendations,
+                            DischargeDate,
+                            CreatedDate
+                        FROM DischargeDocuments
+                        WHERE PatientID = @PatientID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                var document = new
+                                {
+                                    DischargeId = Convert.ToInt32(reader["DischargeID"]),
+                                    Complaints = reader["Complaints"] != DBNull.Value ? reader["Complaints"].ToString() : null,
+                                    DiseaseHistory = reader["DiseaseHistory"] != DBNull.Value ? reader["DiseaseHistory"].ToString() : null,
+                                    InitialCondition = reader["InitialCondition"] != DBNull.Value ? reader["InitialCondition"].ToString() : null,
+                                    RehabilitationGoal = reader["RehabilitationGoal"] != DBNull.Value ? reader["RehabilitationGoal"].ToString() : null,
+                                    GoalAchieved = reader["GoalAchieved"] != DBNull.Value && Convert.ToBoolean(reader["GoalAchieved"]),
+                                    Recommendations = reader["Recommendations"] != DBNull.Value ? reader["Recommendations"].ToString() : null,
+                                    DischargeDate = reader["DischargeDate"] != DBNull.Value ? Convert.ToDateTime(reader["DischargeDate"]) : (DateTime?)null,
+                                    CreatedDate = Convert.ToDateTime(reader["CreatedDate"])
+                                };
+
+                                return Ok(document);
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Выписной эпикриз не найден" });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Ошибка при получении выписного эпикриза: " + ex.Message });
+            }
+        }
+
+        // POST: api/chief/discharge
+        [HttpPost("discharge")]
+        public IActionResult CreateDischargeDocument([FromBody] DischargeModel discharge)
+                    {
+                        try
+                        {
                 if (discharge == null || discharge.PatientId <= 0)
                 {
                     return BadRequest(new { success = false, message = "Некорректные данные для выписного эпикриза" });
                 }
 
-                if (string.IsNullOrEmpty(discharge.Diagnosis) || string.IsNullOrEmpty(discharge.Recommendations) || 
-                    string.IsNullOrEmpty(discharge.Results) || string.IsNullOrEmpty(discharge.DischargeDate))
+                if (string.IsNullOrEmpty(discharge.Complaints) || string.IsNullOrEmpty(discharge.DiseaseHistory) ||
+                    string.IsNullOrEmpty(discharge.InitialCondition) || string.IsNullOrEmpty(discharge.RehabilitationGoal) ||
+                    string.IsNullOrEmpty(discharge.Recommendations) || string.IsNullOrEmpty(discharge.DischargeDate))
                 {
                     return BadRequest(new { success = false, message = "Все поля выписного эпикриза обязательны" });
+                }
+
+                // Parse discharge date with proper error handling
+                DateTime dischargeDate;
+                if (!DateTime.TryParse(discharge.DischargeDate, out dischargeDate))
+                {
+                    return BadRequest(new { success = false, message = "Некорректный формат даты выписки" });
                 }
 
                 using (SqlConnection con = new SqlConnection(_connectionString))
@@ -1123,51 +1190,431 @@ namespace WebDubRosh.Controllers
                                 }
                             }
 
-                            // Создаем выписной эпикриз
-                            string insertDocumentQuery = @"
-                                INSERT INTO DischargeDocuments (PatientID, Diagnosis, Recommendations, Results, DischargeDate, CreatedDate)
-                                VALUES (@PatientID, @Diagnosis, @Recommendations, @Results, @DischargeDate, GETDATE());
-                                SELECT SCOPE_IDENTITY();";
-
-                            int documentId;
-                            using (SqlCommand cmd = new SqlCommand(insertDocumentQuery, con, transaction))
+                            // Проверяем существует ли уже эпикриз
+                            string checkDocumentQuery = "SELECT COUNT(*) FROM DischargeDocuments WHERE PatientID = @PatientID";
+                            bool documentExists = false;
+                            using (SqlCommand cmd = new SqlCommand(checkDocumentQuery, con, transaction))
                             {
                                 cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
-                                cmd.Parameters.AddWithValue("@Diagnosis", discharge.Diagnosis);
+                                documentExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                            }
+
+                            string query;
+                            if (documentExists)
+                            {
+                                // Обновляем существующий документ
+                                query = @"
+                                    UPDATE DischargeDocuments
+                                    SET Complaints = @Complaints,
+                                        DiseaseHistory = @DiseaseHistory,
+                                        InitialCondition = @InitialCondition,
+                                        RehabilitationGoal = @RehabilitationGoal,
+                                        GoalAchieved = @GoalAchieved,
+                                        Recommendations = @Recommendations,
+                                        DischargeDate = @DischargeDate,
+                                        LastUpdated = GETDATE()
+                                    WHERE PatientID = @PatientID;
+                                    SELECT DischargeID FROM DischargeDocuments WHERE PatientID = @PatientID;";
+                            }
+                            else
+                            {
+                                // Создаем новый документ
+                                query = @"
+                                    INSERT INTO DischargeDocuments (
+                                        PatientID, Complaints, DiseaseHistory, InitialCondition, RehabilitationGoal, 
+                                        GoalAchieved, Recommendations, DischargeDate, CreatedDate, LastUpdated
+                                    ) VALUES (
+                                        @PatientID, @Complaints, @DiseaseHistory, @InitialCondition, @RehabilitationGoal, 
+                                        @GoalAchieved, @Recommendations, @DischargeDate, GETDATE(), GETDATE()
+                                    );
+                                    SELECT SCOPE_IDENTITY();";
+                            }
+
+                            int documentId;
+                            using (SqlCommand cmd = new SqlCommand(query, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
+                                cmd.Parameters.AddWithValue("@Complaints", discharge.Complaints);
+                                cmd.Parameters.AddWithValue("@DiseaseHistory", discharge.DiseaseHistory);
+                                cmd.Parameters.AddWithValue("@InitialCondition", discharge.InitialCondition);
+                                cmd.Parameters.AddWithValue("@RehabilitationGoal", discharge.RehabilitationGoal);
+                                cmd.Parameters.AddWithValue("@GoalAchieved", discharge.GoalAchieved);
                                 cmd.Parameters.AddWithValue("@Recommendations", discharge.Recommendations);
-                                cmd.Parameters.AddWithValue("@Results", discharge.Results);
-                                cmd.Parameters.AddWithValue("@DischargeDate", DateTime.Parse(discharge.DischargeDate));
+                                cmd.Parameters.AddWithValue("@DischargeDate", dischargeDate);
 
                                 documentId = Convert.ToInt32(cmd.ExecuteScalar());
                             }
 
-                            // Обновляем дату выписки пациента
-                            string updatePatientQuery = @"
-                                UPDATE Patients
-                                SET DischargeDate = @DischargeDate
-                                WHERE PatientID = @PatientID";
-
-                            using (SqlCommand cmd = new SqlCommand(updatePatientQuery, con, transaction))
+                            // Обновляем дату выписки пациента, если указано
+                            if (discharge.SetDischargeDate)
                             {
-                                cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
-                                cmd.Parameters.AddWithValue("@DischargeDate", DateTime.Parse(discharge.DischargeDate));
+                                string updatePatientQuery = @"
+                                    UPDATE Patients
+                                    SET DischargeDate = @DischargeDate
+                                    WHERE PatientID = @PatientID";
+
+                                using (SqlCommand cmd = new SqlCommand(updatePatientQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
+                                    cmd.Parameters.AddWithValue("@DischargeDate", dischargeDate);
                                 cmd.ExecuteNonQuery();
+                                }
                             }
 
                             transaction.Commit();
                             return Ok(new { success = true, documentId });
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             transaction.Rollback();
-                            throw;
+                            return StatusCode(500, new { success = false, message = "Ошибка при создании выписного эпикриза: " + ex.Message });
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "Ошибка при создании выписного эпикриза: " + ex.Message });
+            }
+        }
+
+        // POST: api/chief/discharge/save
+        [HttpPost("discharge/save")]
+        public IActionResult SaveDischargeDocument([FromBody] DischargeModel discharge)
+        {
+            try
+            {
+                if (discharge == null || discharge.PatientId <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Некорректные данные для выписного эпикриза" });
+                }
+
+                if (string.IsNullOrEmpty(discharge.Complaints) || string.IsNullOrEmpty(discharge.DiseaseHistory) ||
+                    string.IsNullOrEmpty(discharge.InitialCondition) || string.IsNullOrEmpty(discharge.RehabilitationGoal) ||
+                    string.IsNullOrEmpty(discharge.Recommendations) || string.IsNullOrEmpty(discharge.DischargeDate))
+                {
+                    return BadRequest(new { success = false, message = "Все поля выписного эпикриза обязательны" });
+                }
+
+                // Parse discharge date with proper error handling
+                DateTime dischargeDate;
+                if (!DateTime.TryParse(discharge.DischargeDate, out dischargeDate))
+                {
+                    return BadRequest(new { success = false, message = "Некорректный формат даты выписки" });
+                }
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+
+                    // Проверяем существование пациента
+                    string checkQuery = "SELECT COUNT(*) FROM Patients WHERE PatientID = @PatientID";
+                    using (SqlCommand cmd = new SqlCommand(checkQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
+                        int patientCount = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (patientCount == 0)
+                        {
+                            return NotFound(new { success = false, message = "Пациент не найден" });
+                        }
+                    }
+
+                    // Проверяем существует ли уже эпикриз
+                    string checkDocumentQuery = "SELECT COUNT(*) FROM DischargeDocuments WHERE PatientID = @PatientID";
+                    bool documentExists = false;
+                    using (SqlCommand cmd = new SqlCommand(checkDocumentQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
+                        documentExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                    }
+
+                    string query;
+                    if (documentExists)
+                    {
+                        // Обновляем существующий документ
+                        query = @"
+                            UPDATE DischargeDocuments
+                            SET Complaints = @Complaints,
+                                DiseaseHistory = @DiseaseHistory,
+                                InitialCondition = @InitialCondition,
+                                RehabilitationGoal = @RehabilitationGoal,
+                                GoalAchieved = @GoalAchieved,
+                                Recommendations = @Recommendations,
+                                DischargeDate = @DischargeDate,
+                                LastUpdated = GETDATE()
+                            WHERE PatientID = @PatientID;
+                            SELECT DischargeID FROM DischargeDocuments WHERE PatientID = @PatientID;";
+                    }
+                    else
+                    {
+                        // Создаем новый документ
+                        query = @"
+                            INSERT INTO DischargeDocuments (
+                                PatientID, Complaints, DiseaseHistory, InitialCondition, RehabilitationGoal, 
+                                GoalAchieved, Recommendations, DischargeDate, CreatedDate, LastUpdated
+                            ) VALUES (
+                                @PatientID, @Complaints, @DiseaseHistory, @InitialCondition, @RehabilitationGoal, 
+                                @GoalAchieved, @Recommendations, @DischargeDate, GETDATE(), GETDATE()
+                            );
+                            SELECT SCOPE_IDENTITY();";
+                    }
+
+                    int documentId;
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", discharge.PatientId);
+                        cmd.Parameters.AddWithValue("@Complaints", discharge.Complaints);
+                        cmd.Parameters.AddWithValue("@DiseaseHistory", discharge.DiseaseHistory);
+                        cmd.Parameters.AddWithValue("@InitialCondition", discharge.InitialCondition);
+                        cmd.Parameters.AddWithValue("@RehabilitationGoal", discharge.RehabilitationGoal);
+                        cmd.Parameters.AddWithValue("@GoalAchieved", discharge.GoalAchieved);
+                        cmd.Parameters.AddWithValue("@Recommendations", discharge.Recommendations);
+                        cmd.Parameters.AddWithValue("@DischargeDate", dischargeDate);
+
+                        documentId = Convert.ToInt32(cmd.ExecuteScalar());
+                    }
+
+                    return Ok(new { success = true, documentId });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Ошибка при сохранении выписного эпикриза: " + ex.Message });
+            }
+        }
+
+        // GET: api/chief/discharge/{id}/print
+        [HttpGet("discharge/{id}/print")]
+        public IActionResult PrintDischargeDocument(int id)
+        {
+            try
+            {
+                int patientId = 0;
+                string fullName = "";
+                DateTime dateOfBirth = DateTime.MinValue;
+                DateTime recordDate = DateTime.MinValue;
+                DateTime? dischargeDate = null;
+                string complaints = "";
+                string diseaseHistory = "";
+                string initialCondition = "";
+                string rehabilitationGoal = "";
+                bool goalAchieved = false;
+                string recommendations = "";
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    // 1. Получаем основные данные выписного эпикриза
+                    string query = @"
+                        SELECT 
+                            d.PatientID,
+                            p.FullName,
+                            p.DateOfBirth,
+                            p.RecordDate,
+                            p.DischargeDate,
+                            d.Complaints,
+                            d.DiseaseHistory,
+                            d.InitialCondition,
+                            d.RehabilitationGoal,
+                            d.GoalAchieved,
+                            d.Recommendations
+                        FROM DischargeDocuments d
+                        JOIN Patients p ON d.PatientID = p.PatientID
+                        WHERE d.DischargeID = @DischargeID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DischargeID", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                patientId = reader["PatientID"] != DBNull.Value ? Convert.ToInt32(reader["PatientID"]) : 0;
+                                fullName = reader["FullName"] != DBNull.Value ? reader["FullName"].ToString() : "Нет данных";
+                                dateOfBirth = reader["DateOfBirth"] != DBNull.Value ? Convert.ToDateTime(reader["DateOfBirth"]) : DateTime.MinValue;
+                                recordDate = reader["RecordDate"] != DBNull.Value ? Convert.ToDateTime(reader["RecordDate"]) : DateTime.MinValue;
+                                dischargeDate = reader["DischargeDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["DischargeDate"]) : null;
+                                
+                                complaints = reader["Complaints"] != DBNull.Value ? reader["Complaints"].ToString() : "Нет данных";
+                                diseaseHistory = reader["DiseaseHistory"] != DBNull.Value ? reader["DiseaseHistory"].ToString() : "Нет данных";
+                                initialCondition = reader["InitialCondition"] != DBNull.Value ? reader["InitialCondition"].ToString() : "Нет данных";
+                                rehabilitationGoal = reader["RehabilitationGoal"] != DBNull.Value ? reader["RehabilitationGoal"].ToString() : "Нет данных";
+                                goalAchieved = reader["GoalAchieved"] != DBNull.Value && Convert.ToBoolean(reader["GoalAchieved"]);
+                                recommendations = reader["Recommendations"] != DBNull.Value ? reader["Recommendations"].ToString() : "Нет данных";
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Выписной эпикриз не найден" });
+                            }
+                        }
+                    }
+                    
+                    // Генерируем HTML для печати
+                    List<string> diagnoses = new List<string>();
+                    List<string> doctors = new List<string>();
+                    
+                    // 2. Получаем диагнозы
+                    string diagnosesQuery = @"
+                        SELECT d.DiagnosisName
+                        FROM PatientDiagnoses pd
+                        JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
+                        WHERE pd.PatientID = @PatientID";
+                    
+                    using (SqlCommand cmd = new SqlCommand(diagnosesQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string diagnosisName = reader["DiagnosisName"] != DBNull.Value ? reader["DiagnosisName"].ToString() : "Не указан";
+                                diagnoses.Add(diagnosisName);
+                            }
+                        }
+                    }
+                    
+                    // 3. Получаем врачей напрямую из представления с проверкой каждого поля
+                    string doctorsQuery = @"
+                        SELECT d.FullName, d.Specialty
+                        FROM Doctors d
+                        INNER JOIN PatientDoctorAssignments pda ON d.DoctorID = pda.DoctorID
+                        WHERE pda.PatientID = @PatientID
+                        ORDER BY d.FullName";
+                    
+                    using (SqlCommand cmd = new SqlCommand(doctorsQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string doctorName = "Не указано";
+                                string specialty = "Не указана специальность";
+                                
+                                if (reader["FullName"] != DBNull.Value && reader["FullName"] != null)
+                                {
+                                    doctorName = reader["FullName"].ToString();
+                                }
+                                
+                                if (reader["Specialty"] != DBNull.Value && reader["Specialty"] != null)
+                                {
+                                    specialty = reader["Specialty"].ToString();
+                                }
+                                
+                                doctors.Add($"{doctorName} ({specialty})");
+                            }
+                        }
+                    }
+                    
+                    // 4. Формируем HTML документ
+                    string html = $@"
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset=""UTF-8"">
+                            <title>Выписной эпикриз - {fullName}</title>
+                            <style>
+                                body {{
+                                    font-family: Arial, sans-serif;
+                                    margin: 40px;
+                                    line-height: 1.6;
+                                    color: #333;
+                                }}
+                                h1, h2 {{
+                                    text-align: center;
+                                    color: #2c3e50;
+                                }}
+                                .section {{
+                                    margin-bottom: 20px;
+                                }}
+                                .label {{
+                                    font-weight: bold;
+                                    margin-right: 10px;
+                                }}
+                                .patient-info {{
+                                    margin-bottom: 30px;
+                                }}
+                                .doctors-list {{
+                                    margin-left: 20px;
+                                }}
+                                .footer {{
+                                    margin-top: 50px;
+                                    text-align: right;
+                                }}
+                                @media print {{
+                                    body {{
+                                        margin: 0.5cm;
+                                    }}
+                                    .no-print {{
+                                        display: none;
+                                    }}
+                                }}
+                            </style>
+                        </head>
+                        <body>
+                            <div class=""no-print"" style=""text-align: center; margin-bottom: 20px;"">
+                                <button onclick=""window.print()"" style=""padding: 10px 20px; font-size: 16px; cursor: pointer;"">Печать</button>
+                            </div>
+                            
+                            <h1>ВЫПИСНОЙ ЭПИКРИЗ</h1>
+                            
+                            <div class=""patient-info"">
+                                <p><span class=""label"">ФИО:</span> {fullName}, {dateOfBirth:dd.MM.yyyy}</p>
+                                <p><span class=""label"">Находился на лечении в отделении реабилитации с:</span> {recordDate:dd.MM.yyyy} {(dischargeDate.HasValue ? $"по {dischargeDate.Value:dd.MM.yyyy}" : "")}</p>
+                                <p><span class=""label"">С:</span> {(diagnoses.Count > 0 ? string.Join(", ", diagnoses) : "Нет установленных диагнозов")}</p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">Поступил с жалобами на:</span></p>
+                                <p>{complaints}</p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">Из анамнеза заболевания:</span></p>
+                                <p>{diseaseHistory}</p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">Общее состояние при поступлении:</span></p>
+                                <p>{initialCondition}</p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">В составе мультидисциплинарной команды консультирован специалистами:</span></p>
+                                <div class=""doctors-list"">
+                                    {(doctors.Count > 0 ? string.Join("<br>", doctors) : "Не назначены")}
+                                </div>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">Цель реабилитации:</span></p>
+                                <p>{rehabilitationGoal}</p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">{(goalAchieved ? "Цель реабилитации достигнута. Лечение закончено." : "Цель реабилитации не достигнута.")}</span></p>
+                            </div>
+                            
+                            <div class=""section"">
+                                <p><span class=""label"">Рекомендации:</span></p>
+                                <p>{recommendations}</p>
+                            </div>
+                            
+                            <div class=""footer"">
+                                <p>Главный врач</p>
+                                <p style=""margin-top: 30px;"">М.П.</p>
+                            </div>
+                        </body>
+                        </html>
+                    ";
+                    
+                    return Content(html, "text/html");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Ошибка при печати выписного эпикриза: " + ex.Message });
             }
         }
 
@@ -1240,148 +1687,6 @@ namespace WebDubRosh.Controllers
             }
         }
 
-        // DELETE: api/chief/patient/{id}
-        [HttpDelete("patient/{id}")]
-        public IActionResult DeletePatient(int id)
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(_connectionString))
-                {
-                    con.Open();
-                    using (SqlTransaction tran = con.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Удаляем процедуры, назначенные пациенту
-                            string deleteProcedureAppointments = "DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
-                            using (SqlCommand cmd = new SqlCommand(deleteProcedureAppointments, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем описания пациента
-                            string deleteDescriptions = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
-                            using (SqlCommand cmd = new SqlCommand(deleteDescriptions, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем связи пациента с врачами
-                            string deleteAssignments = "DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                            using (SqlCommand cmd = new SqlCommand(deleteAssignments, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем пациента
-                            string deletePatient = "DELETE FROM Patients WHERE PatientID = @PatientID";
-                            using (SqlCommand cmd = new SqlCommand(deletePatient, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", id);
-                                int rowsAffected = cmd.ExecuteNonQuery();
-                                if (rowsAffected == 0)
-                                {
-                                    tran.Rollback();
-                                    return NotFound(new { success = false, message = "Пациент не найден." });
-                                }
-                            }
-                            
-                            tran.Commit();
-                        }
-                        catch
-                        {
-                            tran.Rollback();
-                            throw;
-                        }
-                    }
-                }
-                return Ok(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = ex.Message });
-            }
-        }
-
-        // DELETE: api/chief/doctor/{id}
-        [HttpDelete("doctor/{id}")]
-        public IActionResult DeleteDoctor(int id)
-        {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(_connectionString))
-                {
-                    con.Open();
-                    using (SqlTransaction tran = con.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Удаляем назначенные процедуры
-                            string deleteAppointments = "DELETE FROM ProcedureAppointments WHERE DoctorID = @DoctorID";
-                            using (SqlCommand cmd = new SqlCommand(deleteAppointments, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@DoctorID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем описания пациентов, созданные этим врачом
-                            string deleteDescriptions = "DELETE FROM PatientDescriptions WHERE DoctorID = @DoctorID";
-                            using (SqlCommand cmd = new SqlCommand(deleteDescriptions, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@DoctorID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем связи врача с пациентами
-                            string deleteAssignments = "DELETE FROM PatientDoctorAssignments WHERE DoctorID = @DoctorID";
-                            using (SqlCommand cmd = new SqlCommand(deleteAssignments, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@DoctorID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем процедуры врача
-                            string deleteProcedures = "DELETE FROM Procedures WHERE DoctorID = @DoctorID";
-                            using (SqlCommand cmd = new SqlCommand(deleteProcedures, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@DoctorID", id);
-                                cmd.ExecuteNonQuery();
-                            }
-                            
-                            // Удаляем врача
-                            string deleteDoctor = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
-                            using (SqlCommand cmd = new SqlCommand(deleteDoctor, con, tran))
-                            {
-                                cmd.Parameters.AddWithValue("@DoctorID", id);
-                                int rowsAffected = cmd.ExecuteNonQuery();
-                                if (rowsAffected == 0)
-                                {
-                                    tran.Rollback();
-                                    return NotFound(new { success = false, message = "Врач не найден." });
-                                }
-                            }
-                            
-                            tran.Commit();
-                        }
-                        catch
-                        {
-                            tran.Rollback();
-                            throw;
-                        }
-                    }
-                }
-                return Ok(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = ex.Message });
-            }
-        }
-
         // Вспомогательный метод для преобразования DataTable в список словарей
         private object DataTableToList(DataTable dt)
         {
@@ -1425,10 +1730,14 @@ namespace WebDubRosh.Controllers
     public class DischargeModel
     {
         public int PatientId { get; set; }
-        public string Diagnosis { get; set; }
+        public string Complaints { get; set; }
+        public string DiseaseHistory { get; set; }
+        public string InitialCondition { get; set; }
+        public string RehabilitationGoal { get; set; }
+        public bool GoalAchieved { get; set; }
         public string Recommendations { get; set; }
-        public string Results { get; set; }
         public string DischargeDate { get; set; }
+        public bool SetDischargeDate { get; set; }
     }
 
     public class MultiAssignmentModel
@@ -1470,4 +1779,7 @@ namespace WebDubRosh.Controllers
         public DateTime? PrescribedDate { get; set; }
     }
 }
+
+
+
 

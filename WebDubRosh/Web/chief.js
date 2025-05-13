@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('confirmAssignBtn').addEventListener('click', assignDoctor);
   document.getElementById('generatePatientReportBtn').addEventListener('click', generatePatientReport);
   
+  // Кнопка сохранения эпикриза
+  document.getElementById('dischargeSaveBtn').addEventListener('click', saveDischargeDocument);
+  
   // Закрытие модальных окон
   const closeBtns = document.querySelectorAll('.close-btn, .cancel-btn');
   closeBtns.forEach(btn => {
@@ -182,9 +185,9 @@ function initModals() {
       const modal = this.closest('.modal');
       if (modal) {
         modal.style.display = 'none';
-      }
-    });
+    }
   });
+});
 }
 
 // Загрузка списка пациентов
@@ -357,10 +360,6 @@ function openDoctorProcedures() {
   // Очищаем таблицу процедур
   const proceduresTable = document.getElementById('doctorProceduresTable').querySelector('tbody');
   proceduresTable.innerHTML = '';
-  
-  // Показываем модальное окно
-  const modal = document.getElementById('doctorProceduresModal');
-  modal.style.display = 'block';
   
   // Загружаем процедуры с сервера
   fetch(`/api/chief/doctor/${doctorId}/procedures`)
@@ -646,8 +645,273 @@ function showDischargeModal() {
   document.getElementById('dischargeForm').dataset.patientId = patientId;
   document.getElementById('dischargeDate').valueAsDate = new Date();
   
+  // Очищаем форму
+  document.getElementById('dischargeComplaints').value = '';
+  document.getElementById('dischargeDiseaseHistory').value = '';
+  document.getElementById('dischargeInitialCondition').value = '';
+  document.getElementById('dischargeRehabGoal').value = '';
+  document.getElementById('dischargeGoalAchieved').selectedIndex = 0;
+  document.getElementById('dischargeRecommendations').value = '';
+  
+  // Загружаем информацию о пациенте
+  loadPatientInfoForDischarge(patientId);
+  
+  // Загружаем имеющийся эпикриз, если он есть
+  loadExistingDischargeDocument(patientId);
+  
   const modal = document.getElementById('dischargeModal');
   modal.style.display = 'block';
+}
+
+// Загрузка информации о пациенте для эпикриза
+function loadPatientInfoForDischarge(patientId) {
+  Promise.all([
+    fetch(`/api/chief/patient/${patientId}/medcard`).then(response => response.json()),
+    fetch(`/api/chief/patient/${patientId}/diagnoses`).then(response => response.json()),
+    fetch(`/api/chief/patient/${patientId}/doctors`).then(response => response.json())
+  ])
+  .then(([patientData, diagnosesData, doctorsData]) => {
+    // Заполняем информацию о пациенте
+    const patientInfo = document.getElementById('dischargePatientInfo');
+    patientInfo.innerHTML = `
+      ${patientData.fullName || patientData.FullName || 'Нет данных'}, ${formatDate(patientData.dateOfBirth || patientData.DateOfBirth)}<br>
+      Находился на лечении в отделении реабилитации с ${formatDate(patientData.recordDate || patientData.RecordDate)} 
+      ${(patientData.dischargeDate || patientData.DischargeDate) ? `по ${formatDate(patientData.dischargeDate || patientData.DischargeDate)}` : ''}
+    `;
+    
+    // Заполняем диагнозы
+    const diagnosesElement = document.getElementById('dischargeDiagnoses');
+    if (diagnosesData && diagnosesData.length > 0) {
+      const diagnosesList = diagnosesData.map(d => d.diagnosisName || d.DiagnosisName || 'Название диагноза отсутствует').filter(name => name);
+      diagnosesElement.textContent = diagnosesList.join(', ');
+    } else {
+      diagnosesElement.textContent = 'Нет установленных диагнозов';
+    }
+    
+    // Заполняем список врачей
+    const doctorsList = document.getElementById('dischargeDoctorsList');
+    doctorsList.innerHTML = '';
+    
+    if (doctorsData && doctorsData.length > 0) {
+      doctorsData.forEach(doctor => {
+        // Проверяем наличие данных для врача и устанавливаем значения по умолчанию при необходимости
+        const doctorName = doctor.fullName || doctor.FullName || 'Не указано ФИО';
+        const specialty = doctor.specialty || doctor.Specialty || 'Не указана специальность';
+        
+        const doctorItem = document.createElement('div');
+        doctorItem.className = 'doctor-item';
+        doctorItem.textContent = `${doctorName} (${specialty})`;
+        doctorsList.appendChild(doctorItem);
+      });
+    } else {
+      const emptyItem = document.createElement('div');
+      emptyItem.className = 'doctor-item';
+      emptyItem.textContent = 'Не назначены';
+      doctorsList.appendChild(emptyItem);
+    }
+  })
+  .catch(error => {
+    console.error('Ошибка при загрузке данных для эпикриза:', error);
+    showNotification('Не удалось загрузить данные пациента для эпикриза', 'error');
+    
+    // Добавляем информацию об ошибке в модальное окно
+    document.getElementById('dischargePatientInfo').textContent = 'Ошибка загрузки данных пациента';
+    document.getElementById('dischargeDiagnoses').textContent = 'Ошибка загрузки диагнозов';
+    
+    const doctorsList = document.getElementById('dischargeDoctorsList');
+    doctorsList.innerHTML = '';
+    const errorItem = document.createElement('div');
+    errorItem.className = 'doctor-item';
+    errorItem.textContent = 'Ошибка загрузки данных врачей';
+    doctorsList.appendChild(errorItem);
+  });
+}
+
+// Загрузка существующего выписного эпикриза
+function loadExistingDischargeDocument(patientId) {
+  fetch(`/api/chief/patient/${patientId}/discharge`)
+    .then(response => {
+      if (response.status === 404) {
+        // Эпикриз еще не создан, это нормально
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error('Ошибка при загрузке выписного эпикриза');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data) {
+        // Заполняем форму данными существующего эпикриза
+        document.getElementById('dischargeComplaints').value = data.complaints || '';
+        document.getElementById('dischargeDiseaseHistory').value = data.diseaseHistory || '';
+        document.getElementById('dischargeInitialCondition').value = data.initialCondition || '';
+        document.getElementById('dischargeRehabGoal').value = data.rehabilitationGoal || '';
+        document.getElementById('dischargeGoalAchieved').value = data.goalAchieved ? 'true' : 'false';
+        document.getElementById('dischargeRecommendations').value = data.recommendations || '';
+        
+        if (data.dischargeDate) {
+          document.getElementById('dischargeDate').valueAsDate = new Date(data.dischargeDate);
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка при загрузке выписного эпикриза:', error);
+      // Не показываем ошибку пользователю, так как эпикриз может еще не существовать
+    });
+}
+
+// Сохранение выписного эпикриза без создания документа
+function saveDischargeDocument() {
+  const form = document.getElementById('dischargeForm');
+  const patientId = form.dataset.patientId;
+  const complaints = document.getElementById('dischargeComplaints').value.trim();
+  const diseaseHistory = document.getElementById('dischargeDiseaseHistory').value.trim();
+  const initialCondition = document.getElementById('dischargeInitialCondition').value.trim();
+  const rehabilitationGoal = document.getElementById('dischargeRehabGoal').value.trim();
+  const goalAchieved = document.getElementById('dischargeGoalAchieved').value === 'true';
+  const recommendations = document.getElementById('dischargeRecommendations').value.trim();
+  
+  // Format date as yyyy-MM-dd for server-side parsing
+  const dischargeDateInput = document.getElementById('dischargeDate');
+  if (!dischargeDateInput.value) {
+    showNotification('Пожалуйста, укажите дату выписки', 'error');
+    return;
+  }
+  const dischargeDate = formatDateForServer(dischargeDateInput.value);
+  
+  if (!complaints || !diseaseHistory || !initialCondition || !rehabilitationGoal || !recommendations) {
+    showNotification('Пожалуйста, заполните все поля', 'error');
+    return;
+  }
+  
+  const documentData = {
+    patientId: parseInt(patientId),
+    complaints,
+    diseaseHistory,
+    initialCondition,
+    rehabilitationGoal,
+    goalAchieved,
+    recommendations,
+    dischargeDate
+  };
+  
+  fetch('/api/chief/discharge/save', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(documentData)
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json().then(data => {
+        throw new Error(data.message || 'Ошибка при сохранении выписного эпикриза');
+      });
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      showNotification('Выписной эпикриз успешно сохранен', 'success');
+    } else {
+      showNotification(data.message || 'Произошла ошибка', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Ошибка:', error);
+    showNotification(error.message || 'Не удалось сохранить выписной эпикриз', 'error');
+  });
+}
+
+// Создание выписного эпикриза и установка даты выписки
+function createDischargeDocument(e) {
+  e.preventDefault();
+  
+  const form = document.getElementById('dischargeForm');
+  const patientId = form.dataset.patientId;
+  const complaints = document.getElementById('dischargeComplaints').value.trim();
+  const diseaseHistory = document.getElementById('dischargeDiseaseHistory').value.trim();
+  const initialCondition = document.getElementById('dischargeInitialCondition').value.trim();
+  const rehabilitationGoal = document.getElementById('dischargeRehabGoal').value.trim();
+  const goalAchieved = document.getElementById('dischargeGoalAchieved').value === 'true';
+  const recommendations = document.getElementById('dischargeRecommendations').value.trim();
+  
+  // Format date as yyyy-MM-dd for server-side parsing
+  const dischargeDateInput = document.getElementById('dischargeDate');
+  if (!dischargeDateInput.value) {
+    showNotification('Пожалуйста, укажите дату выписки', 'error');
+    return;
+  }
+  const dischargeDate = formatDateForServer(dischargeDateInput.value);
+  
+  if (!complaints || !diseaseHistory || !initialCondition || !rehabilitationGoal || !recommendations) {
+    showNotification('Пожалуйста, заполните все поля', 'error');
+    return;
+  }
+  
+  const documentData = {
+    patientId: parseInt(patientId),
+    complaints,
+    diseaseHistory,
+    initialCondition,
+    rehabilitationGoal,
+    goalAchieved,
+    recommendations,
+    dischargeDate,
+    setDischargeDate: true
+  };
+  
+  fetch('/api/chief/discharge', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(documentData)
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json().then(data => {
+        throw new Error(data.message || 'Ошибка при создании выписного эпикриза');
+      });
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      const modal = document.getElementById('dischargeModal');
+      modal.style.display = 'none';
+      
+      showNotification('Выписной эпикриз успешно создан', 'success');
+      loadPatients(); // Обновляем список пациентов, чтобы отобразить дату выписки
+      
+      // Предлагаем открыть документ для печати
+      if (confirm('Выписной эпикриз создан. Открыть его для печати?')) {
+        window.open(`/api/chief/discharge/${data.documentId}/print`, '_blank');
+      }
+    } else {
+      showNotification(data.message || 'Произошла ошибка', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Ошибка:', error);
+    showNotification(error.message || 'Не удалось создать выписной эпикриз', 'error');
+  });
+}
+
+// Helper function to format date for server
+function formatDateForServer(dateString) {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return original if invalid
+  }
+  
+  // Format as yyyy-MM-dd
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 }
 
 // Показать модальное окно отчетов
@@ -827,60 +1091,6 @@ function assignDoctor() {
   .catch(error => {
     console.error('Ошибка при назначении врачей:', error);
     showNotification(`Не удалось назначить врачей пациенту: ${error.message}`, 'error');
-  });
-}
-
-// Создание выписного эпикриза
-function createDischargeDocument(e) {
-  e.preventDefault();
-  
-  const form = document.getElementById('dischargeForm');
-  const patientId = form.dataset.patientId;
-  const diagnosis = document.getElementById('dischargeDiagnosis').value.trim();
-  const recommendations = document.getElementById('dischargeRecommendations').value.trim();
-  const results = document.getElementById('dischargeResults').value.trim();
-  const dischargeDate = document.getElementById('dischargeDate').value;
-  
-  if (!diagnosis || !recommendations || !results || !dischargeDate) {
-    showNotification('Пожалуйста, заполните все поля', 'error');
-    return;
-  }
-  
-  const documentData = {
-    patientId: parseInt(patientId),
-    diagnosis,
-    recommendations,
-    results,
-    dischargeDate
-  };
-  
-  fetch('/api/chief/discharge', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(documentData)
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Ошибка при создании выписного эпикриза');
-    }
-    return response.json();
-  })
-  .then(data => {
-    if (data.success) {
-      const modal = document.getElementById('dischargeModal');
-      modal.style.display = 'none';
-      
-      showNotification('Выписной эпикриз успешно создан', 'success');
-      loadPatients(); // Обновляем список пациентов, чтобы отобразить дату выписки
-    } else {
-      showNotification(data.message || 'Произошла ошибка', 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Ошибка:', error);
-    showNotification('Не удалось создать выписной эпикриз', 'error');
   });
 }
 
