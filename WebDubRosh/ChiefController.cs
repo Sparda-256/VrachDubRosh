@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Text;
 
 namespace WebDubRosh.Controllers
 {
@@ -1738,6 +1739,275 @@ namespace WebDubRosh.Controllers
             {
                 return StatusCode(500, new { success = false, message = "Ошибка при печати выписного эпикриза: " + ex.Message });
             }
+        }
+
+        // GET: api/chief/discharge/{id}/download
+        [HttpGet("discharge/{id}/download")]
+        public IActionResult DownloadDischargeDocument(int id)
+        {
+            try
+            {
+                int patientId = 0;
+                string fullName = "";
+                DateTime dateOfBirth = DateTime.MinValue;
+                DateTime recordDate = DateTime.MinValue;
+                DateTime? dischargeDate = null;
+                string complaints = "";
+                string diseaseHistory = "";
+                string initialCondition = "";
+                string rehabilitationGoal = "";
+                bool goalAchieved = false;
+                string recommendations = "";
+                string chiefDoctorName = "";
+                List<string> doctorsList = new List<string>();
+                
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    // 1. Получаем основные данные выписного эпикриза
+                    string query = @"
+                        SELECT 
+                            d.PatientID,
+                            p.FullName,
+                            p.DateOfBirth,
+                            p.RecordDate,
+                            p.DischargeDate,
+                            d.Complaints,
+                            d.DiseaseHistory,
+                            d.InitialCondition,
+                            d.RehabilitationGoal,
+                            d.GoalAchieved,
+                            d.Recommendations
+                        FROM DischargeDocuments d
+                        JOIN Patients p ON d.PatientID = p.PatientID
+                        WHERE d.DischargeID = @DischargeID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DischargeID", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                patientId = reader["PatientID"] != DBNull.Value ? Convert.ToInt32(reader["PatientID"]) : 0;
+                                fullName = reader["FullName"] != DBNull.Value ? reader["FullName"].ToString() : "Нет данных";
+                                dateOfBirth = reader["DateOfBirth"] != DBNull.Value ? Convert.ToDateTime(reader["DateOfBirth"]) : DateTime.MinValue;
+                                recordDate = reader["RecordDate"] != DBNull.Value ? Convert.ToDateTime(reader["RecordDate"]) : DateTime.MinValue;
+                                dischargeDate = reader["DischargeDate"] != DBNull.Value ? (DateTime?)Convert.ToDateTime(reader["DischargeDate"]) : null;
+                                
+                                complaints = reader["Complaints"] != DBNull.Value ? reader["Complaints"].ToString() : "Нет данных";
+                                diseaseHistory = reader["DiseaseHistory"] != DBNull.Value ? reader["DiseaseHistory"].ToString() : "Нет данных";
+                                initialCondition = reader["InitialCondition"] != DBNull.Value ? reader["InitialCondition"].ToString() : "Нет данных";
+                                rehabilitationGoal = reader["RehabilitationGoal"] != DBNull.Value ? reader["RehabilitationGoal"].ToString() : "Нет данных";
+                                goalAchieved = reader["GoalAchieved"] != DBNull.Value && Convert.ToBoolean(reader["GoalAchieved"]);
+                                recommendations = reader["Recommendations"] != DBNull.Value ? reader["Recommendations"].ToString() : "Нет данных";
+                            }
+                            else
+                            {
+                                return NotFound(new { success = false, message = "Выписной эпикриз не найден" });
+                            }
+                        }
+                    }
+                    
+                    // 2. Получаем диагнозы
+                    string diagnosesQuery = @"
+                        SELECT d.DiagnosisName
+                        FROM PatientDiagnoses pd
+                        JOIN Diagnoses d ON pd.DiagnosisID = d.DiagnosisID
+                        WHERE pd.PatientID = @PatientID";
+                    
+                    List<string> diagnoses = new List<string>();
+                    
+                    using (SqlCommand cmd = new SqlCommand(diagnosesQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string diagnosisName = reader["DiagnosisName"] != DBNull.Value ? reader["DiagnosisName"].ToString() : "Не указан";
+                                diagnoses.Add(diagnosisName);
+                            }
+                        }
+                    }
+                    
+                    // Получение основной информации о главвраче
+                    string chiefQuery = "SELECT TOP 1 FullName FROM ChiefDoctors";
+                    using (SqlCommand cmd = new SqlCommand(chiefQuery, con))
+                    {
+                        var result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            chiefDoctorName = result.ToString();
+                        }
+                        else
+                        {
+                            chiefDoctorName = "Главный врач";
+                        }
+                    }
+                    
+                    // 3. Получаем врачей для списка
+                    string doctorsQuery = @"
+                        SELECT d.FullName, d.Specialty
+                        FROM Doctors d
+                        INNER JOIN PatientDoctorAssignments pda ON d.DoctorID = pda.DoctorID
+                        WHERE pda.PatientID = @PatientID
+                        ORDER BY d.FullName";
+                    
+                    using (SqlCommand cmd = new SqlCommand(doctorsQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", patientId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string doctorName = "Не указано";
+                                string specialty = "Не указана специальность";
+                                
+                                if (reader["FullName"] != DBNull.Value && reader["FullName"] != null)
+                                {
+                                    doctorName = reader["FullName"].ToString();
+                                }
+                                
+                                if (reader["Specialty"] != DBNull.Value && reader["Specialty"] != null)
+                                {
+                                    specialty = reader["Specialty"].ToString();
+                                }
+                                
+                                doctorsList.Add($"{doctorName} ({specialty})");
+                            }
+                        }
+                    }
+                    
+                    // 4. Создаем RTF документ
+                    StringBuilder rtf = new StringBuilder();
+                    
+                    // RTF заголовок
+                    rtf.Append(@"{\rtf1\ansi\ansicpg1251\deff0\deflang1049");
+                    
+                    // Определяем шрифты
+                    rtf.Append(@"{\fonttbl{\f0\froman\fprq2\fcharset204 Times New Roman;}}");
+                    
+                    // Начало документа - убираем \sa200 (отступ снизу) и уменьшаем размер заголовка до 28 (14pt)
+                    rtf.Append(@"\viewkind4\uc1\pard\sl276\slmult1\qc\b\f0\fs28 ВЫПИСНОЙ ЭПИКРИЗ\par");
+                    
+                    // Добавляем пустую строку после заголовка
+                    rtf.Append(@"\par");
+                    
+                    // Основной текст - размер 24 (12pt)
+                    // Информация о пациенте (жирный шрифт, выравнивание по левому краю)
+                    rtf.Append(@"\ql\b\fs24 ");
+                    rtf.Append(EscapeRtf($"{fullName}, {dateOfBirth:dd.MM.yyyy}"));
+                    rtf.Append(@"\par");
+                    
+                    // Сведения о пребывании (обычный шрифт)
+                    rtf.Append(@"\b0 ");
+                    rtf.Append(EscapeRtf($"Находился на лечении в отделении реабилитации с {recordDate:dd.MM.yyyy} {(dischargeDate.HasValue ? $"по {dischargeDate.Value:dd.MM.yyyy}" : "")}"));
+                    rtf.Append(@"\par");
+                    
+                    // Диагнозы
+                    rtf.Append(EscapeRtf($"с: {(diagnoses.Count > 0 ? string.Join(", ", diagnoses) : "Нет установленных диагнозов")}"));
+                    rtf.Append(@"\par");
+                    
+                    // Жалобы
+                    rtf.Append(@"\b Поступил с жалобами на:\b0\par ");
+                    rtf.Append(EscapeRtf(complaints));
+                    rtf.Append(@"\par");
+                    
+                    // Анамнез
+                    rtf.Append(@"\b Из анамнеза заболевания:\b0\par ");
+                    rtf.Append(EscapeRtf(diseaseHistory));
+                    rtf.Append(@"\par");
+                    
+                    // Состояние при поступлении
+                    rtf.Append(@"\b Общее состояние при поступлении:\b0\par ");
+                    rtf.Append(EscapeRtf(initialCondition));
+                    rtf.Append(@"\par");
+
+                    // Врачи
+                    rtf.Append(@"\b В составе мультидисциплинарной команды консультирован специалистами:\b0\par");
+                    if (doctorsList.Count > 0)
+                    {
+                        foreach (string doctor in doctorsList)
+                        {
+                            rtf.Append(@"\li300 "); // Левый отступ 300 твипов
+                            rtf.Append(EscapeRtf(doctor));
+                            rtf.Append(@"\par");
+                        }
+                        // Сброс отступа после списка
+                        rtf.Append(@"\li0 ");
+                    }
+                    else
+                    {
+                        rtf.Append(@"\li300 Не назначены\par");
+                        rtf.Append(@"\li0 ");
+                    }
+
+                    // После списка специалистов добавляем:
+                    rtf.Append(@"\pard"); // Сбрасываем все форматирования абзаца
+
+                    // Затем продолжаем с обычным форматированием:
+                    rtf.Append(@"\ql\b Цель реабилитации:\b0\par ");
+                    rtf.Append(EscapeRtf(rehabilitationGoal));
+                    rtf.Append(@"\par");
+                    
+                    // Достижение цели
+                    string goalAchievedText = goalAchieved 
+                        ? "Цель реабилитации достигнута. Лечение закончено"
+                        : "Цель реабилитации не достигнута";
+                    rtf.Append(@"\b ");
+                    rtf.Append(EscapeRtf(goalAchievedText));
+                    rtf.Append(@"\b0\par");
+                    
+                    // Рекомендации
+                    rtf.Append(@"\b Рекомендации:\b0\par ");
+                    rtf.Append(EscapeRtf(recommendations));
+                    rtf.Append(@"\par");
+                    
+                    // Пустая строка перед подписью
+                    rtf.Append(@"\par");
+                    
+                    // Подпись (выравнивание по правому краю, жирный шрифт)
+                    rtf.Append(@"\qr\b ");
+                    rtf.Append(EscapeRtf(chiefDoctorName));
+                    rtf.Append(@"\par");
+                    
+                    // Дополнительная пустая строка после ФИО главврача
+                    rtf.Append(@"\par");
+                    
+                    // М.П. (курсив)
+                    rtf.Append(@"\i М.П.\i0\par");
+                    
+                    // Закрытие RTF документа
+                    rtf.Append("}");
+                    
+                    // Формируем имя файла для скачивания
+                    string fileName = $"Выписной_эпикриз_{fullName.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.rtf";
+                    
+                    // Возвращаем RTF файл клиенту для скачивания
+                    return File(System.Text.Encoding.GetEncoding(1251).GetBytes(rtf.ToString()), "application/rtf", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Ошибка при создании RTF документа: " + ex.Message });
+            }
+        }
+
+        // Вспомогательный метод для экранирования символов RTF
+        private string EscapeRtf(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return "";
+            
+            return text
+                .Replace("\\", "\\\\")
+                .Replace("{", "\\{")
+                .Replace("}", "\\}")
+                .Replace("\r\n", "\\par ")
+                .Replace("\n", "\\par ")
+                .Replace("\r", "\\par ");
         }
 
         // GET: api/chief/reports/patients

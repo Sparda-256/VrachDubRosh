@@ -82,7 +82,7 @@ namespace VrachDubRosh
                                 txtPatientInfo.Text = $"{fullName}, {dateOfBirth:dd.MM.yyyy}";
                                 
                                 // Format the stay information
-                                string stayDateInfo = $"находился на лечении в отделении реалилитации с {recordDate:dd.MM.yyyy}";
+                                string stayDateInfo = $"Находился на лечении в отделении реабилитации с {recordDate:dd.MM.yyyy}";
                                 if (dischargeDate.HasValue)
                                 {
                                     stayDateInfo += $" по {dischargeDate.Value:dd.MM.yyyy}";

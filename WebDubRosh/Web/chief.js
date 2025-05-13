@@ -893,10 +893,47 @@ function createDischargeDocument(e) {
       showNotification('Выписной эпикриз успешно создан', 'success');
       loadPatients(); // Обновляем список пациентов, чтобы отобразить дату выписки
       
-      // Предлагаем открыть документ для печати
-      if (confirm('Выписной эпикриз создан. Открыть его для печати?')) {
+      // Предлагаем открыть документ для печати или скачать RTF версию
+      const documentOptions = `
+        <div class="document-options">
+          <p>Выписной эпикриз создан. Выберите формат документа:</p>
+          <button id="viewHtmlBtn" class="btn btn-blue">Просмотр HTML</button>
+          <button id="downloadRtfBtn" class="btn btn-accent">Скачать RTF</button>
+        </div>
+      `;
+      
+      // Создаем модальное окно для выбора формата документа
+      const optionsModal = document.createElement('div');
+      optionsModal.className = 'modal';
+      optionsModal.style.display = 'block';
+      
+      const modalContent = document.createElement('div');
+      modalContent.className = 'modal-content';
+      modalContent.style.maxWidth = '400px';
+      
+      const closeBtn = document.createElement('span');
+      closeBtn.className = 'close-btn';
+      closeBtn.innerHTML = '&times;';
+      closeBtn.addEventListener('click', function() {
+        document.body.removeChild(optionsModal);
+      });
+      
+      modalContent.appendChild(closeBtn);
+      modalContent.innerHTML += documentOptions;
+      
+      optionsModal.appendChild(modalContent);
+      document.body.appendChild(optionsModal);
+      
+      // Обработчики кнопок
+      document.getElementById('viewHtmlBtn').addEventListener('click', function() {
+        document.body.removeChild(optionsModal);
         window.open(`/api/chief/discharge/${data.documentId}/print`, '_blank');
-      }
+      });
+      
+      document.getElementById('downloadRtfBtn').addEventListener('click', function() {
+        document.body.removeChild(optionsModal);
+        window.location.href = `/api/chief/discharge/${data.documentId}/download`;
+      });
     } else {
       showNotification(data.message || 'Произошла ошибка', 'error');
     }

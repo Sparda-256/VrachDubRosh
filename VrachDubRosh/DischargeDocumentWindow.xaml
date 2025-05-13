@@ -129,7 +129,7 @@
                         <TextBlock x:Name="txtPatientInfo" Text="ФИО: Иванов Иван Иванович, Дата рождения: 01.01.1980" 
                                    FontSize="16" FontWeight="SemiBold" 
                                    Foreground="{DynamicResource ForegroundBrush}"/>
-                        <TextBlock x:Name="txtStayInfo" Text="находился на лечении в отделении реалилитации с 01.01.2023 по 15.01.2023" 
+                        <TextBlock x:Name="txtStayInfo" Text="Находился на лечении в отделении реабилитации с 01.01.2023 по 15.01.2023" 
                                    FontSize="14" Margin="0,5,0,0" 
                                    Foreground="{DynamicResource ForegroundBrush}"/>
                         <TextBlock x:Name="txtDiagnoses" Text="с: Остеохондроз позвоночника" 
