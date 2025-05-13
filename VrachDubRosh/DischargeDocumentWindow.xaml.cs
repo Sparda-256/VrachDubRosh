@@ -172,7 +172,7 @@ namespace VrachDubRosh
                     
                     string query = @"
                         SELECT Complaints, DiseaseHistory, InitialCondition, 
-                               RehabilitationGoal, GoalAchieved, Recommendations, DischargeDate
+                               RehabilitationGoal, GoalAchieved, Recommendations
                         FROM DischargeDocuments
                         WHERE PatientID = @PatientID";
                     
@@ -215,19 +215,6 @@ namespace VrachDubRosh
                     
                     bool goalAchieved = cmbGoalAchieved.SelectedIndex == 0;
                     
-                    // First, get the patient's discharge date from Patients table
-                    DateTime? dischargeDate = null;
-                    string getDateQuery = "SELECT DischargeDate FROM Patients WHERE PatientID = @PatientID";
-                    using (SqlCommand dateCommand = new SqlCommand(getDateQuery, connection))
-                    {
-                        dateCommand.Parameters.AddWithValue("@PatientID", patientID);
-                        var result = dateCommand.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                        {
-                            dischargeDate = Convert.ToDateTime(result);
-                        }
-                    }
-                    
                     // Check if a discharge document already exists for this patient
                     string checkQuery = "SELECT COUNT(*) FROM DischargeDocuments WHERE PatientID = @PatientID";
                     bool documentExists = false;
@@ -247,16 +234,15 @@ namespace VrachDubRosh
                                 RehabilitationGoal = @RehabilitationGoal,
                                 GoalAchieved = @GoalAchieved,
                                 Recommendations = @Recommendations,
-                                DischargeDate = @DischargeDate,
                                 LastUpdated = GETDATE()
                             WHERE PatientID = @PatientID"
                         : @"
                             INSERT INTO DischargeDocuments
                             (PatientID, Complaints, DiseaseHistory, InitialCondition, 
-                             RehabilitationGoal, GoalAchieved, Recommendations, DischargeDate, LastUpdated, CreatedDate)
+                             RehabilitationGoal, GoalAchieved, Recommendations, LastUpdated)
                             VALUES
                             (@PatientID, @Complaints, @DiseaseHistory, @InitialCondition, 
-                             @RehabilitationGoal, @GoalAchieved, @Recommendations, @DischargeDate, GETDATE(), GETDATE())";
+                             @RehabilitationGoal, @GoalAchieved, @Recommendations, GETDATE())";
                     
                     using (SqlCommand command = new SqlCommand(query, connection))
                     {
@@ -267,7 +253,6 @@ namespace VrachDubRosh
                         command.Parameters.AddWithValue("@RehabilitationGoal", txtRehabilitationGoal.Text ?? (object)DBNull.Value);
                         command.Parameters.AddWithValue("@GoalAchieved", goalAchieved);
                         command.Parameters.AddWithValue("@Recommendations", txtRecommendations.Text ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@DischargeDate", dischargeDate ?? (object)DBNull.Value);
                         
                         command.ExecuteNonQuery();
                     }
