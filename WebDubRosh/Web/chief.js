@@ -562,6 +562,9 @@ function showDoctorModal(mode, doctorId) {
   // Сбрасываем форму
   form.reset();
   
+  // Всегда очищаем поле пароля
+  document.getElementById('doctorPassword').value = '';
+  
   if (mode === 'add') {
     title.textContent = 'Добавление врача';
     document.getElementById('doctorId').value = '';
@@ -577,6 +580,7 @@ function showDoctorModal(mode, doctorId) {
       document.getElementById('doctorGeneralName').value = doctor.GeneralName || doctor.generalName || '';
       document.getElementById('doctorOfficeNumber').value = doctor.OfficeNumber || doctor.officeNumber || '';
       document.getElementById('doctorWorkExperience').value = doctor.WorkExperience || doctor.workExperience || '';
+      // Не загружаем пароль в форму по соображениям безопасности
     }
   }
   
@@ -943,6 +947,7 @@ function saveDoctor(e) {
   const generalName = document.getElementById('doctorGeneralName').value.trim();
   const officeNumber = document.getElementById('doctorOfficeNumber').value.trim();
   const workExperience = document.getElementById('doctorWorkExperience').value.trim();
+  const password = document.getElementById('doctorPassword').value.trim();
   
   if (!fullName || !specialty || !officeNumber || !workExperience) {
     showNotification('Пожалуйста, заполните все обязательные поля', 'error');
@@ -954,7 +959,8 @@ function saveDoctor(e) {
     specialty,
     generalName,
     officeNumber: parseInt(officeNumber),
-    workExperience: parseInt(workExperience)
+    workExperience: parseInt(workExperience),
+    password
   };
   
   let url, method;

@@ -778,8 +778,8 @@ namespace WebDubRosh.Controllers
                 {
                     con.Open();
                     string query = @"
-                        INSERT INTO Doctors (FullName, Specialty, GeneralName, OfficeNumber, WorkExperience)
-                        VALUES (@FullName, @Specialty, @GeneralName, @OfficeNumber, @WorkExperience);
+                        INSERT INTO Doctors (FullName, Specialty, GeneralName, OfficeNumber, WorkExperience, Password)
+                        VALUES (@FullName, @Specialty, @GeneralName, @OfficeNumber, @WorkExperience, @Password);
                         SELECT SCOPE_IDENTITY();";
 
                     using (SqlCommand cmd = new SqlCommand(query, con))
@@ -789,6 +789,7 @@ namespace WebDubRosh.Controllers
                         cmd.Parameters.AddWithValue("@GeneralName", string.IsNullOrEmpty(doctor.GeneralName) ? DBNull.Value : (object)doctor.GeneralName);
                         cmd.Parameters.AddWithValue("@OfficeNumber", doctor.OfficeNumber);
                         cmd.Parameters.AddWithValue("@WorkExperience", doctor.WorkExperience);
+                        cmd.Parameters.AddWithValue("@Password", string.IsNullOrEmpty(doctor.Password) ? "1" : doctor.Password);
 
                         int newDoctorId = Convert.ToInt32(cmd.ExecuteScalar());
                         return Ok(new { success = true, doctorId = newDoctorId });
@@ -826,8 +827,15 @@ namespace WebDubRosh.Controllers
                             Specialty = @Specialty,
                             GeneralName = @GeneralName,
                             OfficeNumber = @OfficeNumber,
-                            WorkExperience = @WorkExperience
-                        WHERE DoctorID = @DoctorID";
+                            WorkExperience = @WorkExperience";
+
+                    // Add password update only if a new password is provided
+                    if (!string.IsNullOrEmpty(doctor.Password))
+                    {
+                        query += ", Password = @Password";
+                    }
+                
+                    query += " WHERE DoctorID = @DoctorID";
 
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
@@ -837,6 +845,11 @@ namespace WebDubRosh.Controllers
                         cmd.Parameters.AddWithValue("@GeneralName", string.IsNullOrEmpty(doctor.GeneralName) ? DBNull.Value : (object)doctor.GeneralName);
                         cmd.Parameters.AddWithValue("@OfficeNumber", doctor.OfficeNumber);
                         cmd.Parameters.AddWithValue("@WorkExperience", doctor.WorkExperience);
+                        
+                        if (!string.IsNullOrEmpty(doctor.Password))
+                        {
+                            cmd.Parameters.AddWithValue("@Password", doctor.Password);
+                        }
 
                         int rowsAffected = cmd.ExecuteNonQuery();
                         if (rowsAffected == 0)
@@ -845,6 +858,115 @@ namespace WebDubRosh.Controllers
                         }
 
                         return Ok(new { success = true });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // DELETE: api/chief/doctor/{id}
+        [HttpDelete("doctor/{id}")]
+        public IActionResult DeleteDoctor(int id)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    
+                    // Проверяем, есть ли назначения этого врача пациентам
+                    string checkQuery = @"
+                        SELECT COUNT(*) FROM PatientDoctorAssignments 
+                        WHERE DoctorID = @DoctorID";
+                    
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, con))
+                    {
+                        checkCmd.Parameters.AddWithValue("@DoctorID", id);
+                        int assignmentsCount = (int)checkCmd.ExecuteScalar();
+                        
+                        if (assignmentsCount > 0)
+                        {
+                            // Есть пациенты с назначениями к этому врачу, удаляем сначала их
+                            string deleteAssignmentsQuery = @"
+                                DELETE FROM PatientDoctorAssignments 
+                                WHERE DoctorID = @DoctorID";
+                            
+                            using (SqlCommand deleteAssignmentsCmd = new SqlCommand(deleteAssignmentsQuery, con))
+                            {
+                                deleteAssignmentsCmd.Parameters.AddWithValue("@DoctorID", id);
+                                deleteAssignmentsCmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    
+                    // Проверяем, есть ли процедуры у врача
+                    string checkProceduresQuery = @"
+                        SELECT COUNT(*) FROM Procedures 
+                        WHERE DoctorID = @DoctorID";
+                    
+                    using (SqlCommand checkProcCmd = new SqlCommand(checkProceduresQuery, con))
+                    {
+                        checkProcCmd.Parameters.AddWithValue("@DoctorID", id);
+                        int proceduresCount = (int)checkProcCmd.ExecuteScalar();
+                        
+                        if (proceduresCount > 0)
+                        {
+                            // Есть процедуры у этого врача, нужно проверить нет ли назначений этих процедур
+                            string checkAppointmentsQuery = @"
+                                SELECT COUNT(*) FROM ProcedureAppointments pa
+                                JOIN Procedures p ON pa.ProcedureID = p.ProcedureID
+                                WHERE p.DoctorID = @DoctorID";
+                            
+                            using (SqlCommand checkAppCmd = new SqlCommand(checkAppointmentsQuery, con))
+                            {
+                                checkAppCmd.Parameters.AddWithValue("@DoctorID", id);
+                                int appointmentsCount = (int)checkAppCmd.ExecuteScalar();
+                                
+                                if (appointmentsCount > 0)
+                                {
+                                    // Есть назначения процедур этого врача, удаляем сначала их
+                                    string deleteAppointmentsQuery = @"
+                                        DELETE FROM ProcedureAppointments
+                                        WHERE ProcedureID IN (SELECT ProcedureID FROM Procedures WHERE DoctorID = @DoctorID)";
+                                    
+                                    using (SqlCommand deleteAppCmd = new SqlCommand(deleteAppointmentsQuery, con))
+                                    {
+                                        deleteAppCmd.Parameters.AddWithValue("@DoctorID", id);
+                                        deleteAppCmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                            
+                            // Удаляем процедуры врача
+                            string deleteProceduresQuery = @"
+                                DELETE FROM Procedures 
+                                WHERE DoctorID = @DoctorID";
+                            
+                            using (SqlCommand deleteProcCmd = new SqlCommand(deleteProceduresQuery, con))
+                            {
+                                deleteProcCmd.Parameters.AddWithValue("@DoctorID", id);
+                                deleteProcCmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    
+                    // Теперь удаляем самого врача
+                    string deleteQuery = "DELETE FROM Doctors WHERE DoctorID = @DoctorID";
+                    
+                    using (SqlCommand cmd = new SqlCommand(deleteQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@DoctorID", id);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        
+                        if (rowsAffected == 0)
+                        {
+                            return NotFound(new { success = false, message = "Врач не найден" });
+                        }
+                        
+                        return Ok(new { success = true, message = "Врач успешно удален" });
                     }
                 }
             }
@@ -1719,6 +1841,7 @@ namespace WebDubRosh.Controllers
         public string GeneralName { get; set; }
         public int OfficeNumber { get; set; }
         public int WorkExperience { get; set; }
+        public string Password { get; set; }
     }
 
     public class AssignmentModel
