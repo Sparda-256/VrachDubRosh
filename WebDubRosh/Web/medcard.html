@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Санаторная книжка - Дубовая Роща</title>
+  <link rel="stylesheet" href="medcard.css">
+  <link rel="stylesheet" href="chief.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="patientTitle">Санаторная книжка</h1>
+      
+      <!-- Верхняя панель с кнопками -->
+      <div class="top-panel">
+        <!-- Переключатель темы -->
+        <div class="theme-toggle-container">
+          <label class="theme-toggle">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider round">
+              <span class="sun-icon"></span>
+              <span class="moon-icon"></span>
+            </span>
+          </label>
+        </div>
+        
+        <div class="buttons-container">
+          <button id="printBtn" class="btn btn-blue">
+            <i class="icon print-icon"></i>
+            <span>Печать</span>
+          </button>
+          <button id="exitBtn" class="btn btn-red">
+            <i class="icon exit-icon"></i>
+            <span>Закрыть</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Основной контент: TabControl -->
+    <div class="tab-container">
+      <div class="tab-header">
+        <button class="tab-btn active" data-tab="title-page">Титульный лист</button>
+        <button class="tab-btn" data-tab="anthropometry">Антропометрия и медикаменты</button>
+        <!-- Динамические вкладки для врачей будут добавляться здесь -->
+      </div>
+
+      <!-- Вкладка "Титульный лист" -->
+      <div id="title-page" class="tab-content active">
+        <div class="title-page-container">
+          <h2 class="accent-title centered-title">САНАТОРНАЯ КНИЖКА</h2>
+          
+          <div class="info-group">
+            <div class="info-row">
+              <div class="info-label">ФИО:</div>
+              <div class="info-value" id="patientFullName">-</div>
+            </div>
+            
+            <div class="info-row">
+              <div class="info-label">Дата рождения:</div>
+              <div class="info-value" id="patientDateOfBirth">-</div>
+            </div>
+            
+            <div class="info-row">
+              <div class="info-label">Срок лечения:</div>
+              <div class="info-value">
+                с <span id="patientRecordDate">-</span> по <span id="patientDischargeDate">-</span>
+              </div>
+            </div>
+            
+            <div class="info-row">
+              <div class="info-label">Тип размещения:</div>
+              <div class="info-value" id="stayType">-</div>
+            </div>
+            
+            <div class="info-row">
+              <div class="info-label">Проживание:</div>
+              <div class="info-value" id="accommodation">-</div>
+            </div>
+          </div>
+          
+          <h3 class="section-title centered-title">ДИАГНОЗЫ</h3>
+          
+          <div class="diagnoses-container">
+            <div class="table-tools">
+              <button id="addDiagnosis" class="btn btn-accent">
+                <i class="icon add-icon"></i>
+                <span>Добавить</span>
+              </button>
+              <button id="removeDiagnosis" class="btn btn-accent">
+                <i class="icon delete-icon"></i>
+                <span>Удалить</span>
+              </button>
+            </div>
+            
+            <div class="table-container">
+              <table id="diagnosesTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Наименование</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Данные будут заполнены через JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладка "Антропометрия и медикаменты" -->
+      <div id="anthropometry" class="tab-content">
+        <h3 class="section-title centered-title">АНТРОПОМЕТРИЧЕСКИЕ ИЗМЕРЕНИЯ</h3>
+        
+        <div class="measurements-container">
+          <!-- Три группы антропометрических измерений -->
+          <div class="measurement-column">
+            <div class="measurement-group">
+              <h4 class="group-title">При поступлении</h4>
+              <div class="form-group">
+                <label for="admissionHeight">Рост (см):</label>
+                <input type="text" id="admissionHeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="admissionWeight">Вес (кг):</label>
+                <input type="text" id="admissionWeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="admissionBP">Давление:</label>
+                <input type="text" id="admissionBP" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="admissionDate">Дата:</label>
+                <input type="date" id="admissionDate" class="form-control">
+              </div>
+            </div>
+          </div>
+          
+          <div class="measurement-column">
+            <div class="measurement-group">
+              <h4 class="group-title">В процессе лечения</h4>
+              <div class="form-group">
+                <label for="processHeight">Рост (см):</label>
+                <input type="text" id="processHeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="processWeight">Вес (кг):</label>
+                <input type="text" id="processWeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="processBP">Давление:</label>
+                <input type="text" id="processBP" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="processDate">Дата:</label>
+                <input type="date" id="processDate" class="form-control">
+              </div>
+            </div>
+          </div>
+          
+          <div class="measurement-column">
+            <div class="measurement-group">
+              <h4 class="group-title">При выписке</h4>
+              <div class="form-group">
+                <label for="dischargeHeight">Рост (см):</label>
+                <input type="text" id="dischargeHeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="dischargeWeight">Вес (кг):</label>
+                <input type="text" id="dischargeWeight" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="dischargeBP">Давление:</label>
+                <input type="text" id="dischargeBP" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="dischargeDate">Дата:</label>
+                <input type="date" id="dischargeDate" class="form-control">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <h3 class="section-title centered-title">МЕДИКАМЕНТЫ</h3>
+        
+        <div class="medications-container">
+          <div class="table-tools">
+            <button id="addMedication" class="btn btn-accent">
+              <i class="icon add-icon"></i>
+              <span>Добавить</span>
+            </button>
+            <button id="editMedication" class="btn btn-accent">
+              <i class="icon edit-icon"></i>
+              <span>Изменить</span>
+            </button>
+            <button id="removeMedication" class="btn btn-accent">
+              <i class="icon delete-icon"></i>
+              <span>Удалить</span>
+            </button>
+          </div>
+          
+          <div class="table-container">
+            <table id="medicationsTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Наименование</th>
+                  <th>Дозировка</th>
+                  <th>Инструкции</th>
+                  <th>Дата назначения</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут заполнены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Динамические вкладки для врачей будут добавляться здесь -->
+    </div>
+
+    <!-- Нижняя панель с кнопками -->
+    <div class="bottom-panel">
+      <button id="saveAllBtn" class="btn btn-accent">
+        <i class="icon save-icon"></i>
+        <span>Сохранить всё</span>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для добавления диагноза -->
+  <div id="diagnosisModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2>Добавление диагноза</h2>
+      <div class="form-group">
+        <label for="searchDiagnosis">Поиск:</label>
+        <input type="text" id="searchDiagnosis" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="diagnosisList">Диагноз:</label>
+        <select id="diagnosisList" class="form-control">
+          <!-- Список диагнозов будет добавлен динамически -->
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+        <button type="button" id="saveDiagnosisBtn" class="btn btn-accent">Сохранить</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для добавления/редактирования медикамента -->
+  <div id="medicationModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="medicationModalTitle">Добавление медикамента</h2>
+      <input type="hidden" id="medicationId">
+      <div class="form-group">
+        <label for="medicationName">Наименование:</label>
+        <input type="text" id="medicationName" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label for="dosage">Дозировка:</label>
+        <input type="text" id="dosage" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="instructions">Инструкции:</label>
+        <textarea id="instructions" class="form-control" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="prescribedDate">Дата назначения:</label>
+        <input type="date" id="prescribedDate" class="form-control">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+        <button type="button" id="saveMedicationBtn" class="btn btn-accent">Сохранить</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="medcard.js"></script>
+</body>
+</html> 

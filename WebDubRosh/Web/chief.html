@@ -2,33 +2,40 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Главврач - Дубовая Роща</title>
   <link rel="stylesheet" href="chief.css">
 </head>
 <body>
   <div class="container">
-    <!-- Верхняя панель с кнопками -->
-    <div class="top-panel">
-      <div class="theme-toggle-container">
-        <label class="theme-toggle">
-          <input type="checkbox" id="themeToggle">
-          <span class="slider round">
-            <span class="sun-icon"></span>
-            <span class="moon-icon"></span>
-          </span>
-        </label>
+    <header>
+      <h1>Дубовая Роща - Кабинет главного врача</h1>
+      
+      <!-- Верхняя панель с кнопками -->
+      <div class="top-panel">
+        <!-- Переключатель темы -->
+        <div class="theme-toggle-container">
+          <label class="theme-toggle">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider round">
+              <span class="sun-icon"></span>
+              <span class="moon-icon"></span>
+            </span>
+          </label>
+        </div>
+        
+        <div class="buttons-container">
+          <button id="reportsBtn" class="btn btn-blue">
+            <i class="icon report-icon"></i>
+            <span>Отчеты и аналитика</span>
+          </button>
+          <button id="exitBtn" class="btn btn-red">
+            <i class="icon exit-icon"></i>
+            <span>Выход</span>
+          </button>
+        </div>
       </div>
-      <div class="buttons-container">
-        <button id="reportsBtn" class="btn btn-blue">
-          <i class="icon report-icon"></i>
-          <span>Отчеты и аналитика</span>
-        </button>
-        <button id="exitBtn" class="btn btn-red">
-          <i class="icon exit-icon"></i>
-          <span>Выход</span>
-        </button>
-      </div>
-    </div>
+    </header>
 
     <!-- Основной контент: TabControl -->
     <div class="tab-container">
@@ -41,23 +48,25 @@
       <div id="patients" class="tab-content active">
         <div class="search-panel">
           <label for="searchPatients">Поиск:</label>
-          <input type="text" id="searchPatients" placeholder="Введите ФИО">
+          <input type="text" id="searchPatients" placeholder="Введите ФИО пациента">
         </div>
 
-        <table id="patientsTable" class="data-table">
-          <thead>
-            <tr>
-              <th>ФИО</th>
-              <th>Дата рождения</th>
-              <th>Пол</th>
-              <th>Дата записи</th>
-              <th>Дата выписки</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Данные будут заполнены через JavaScript -->
-          </tbody>
-        </table>
+        <div class="table-container">
+          <table id="patientsTable" class="data-table">
+            <thead>
+              <tr>
+                <th data-sort="fullName">ФИО</th>
+                <th data-sort="dateOfBirth">Дата рождения</th>
+                <th data-sort="gender">Пол</th>
+                <th data-sort="recordDate">Дата записи</th>
+                <th data-sort="dischargeDate">Дата выписки</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут заполнены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
         
         <div class="bottom-panel">
           <button id="createDischargeBtn" class="btn btn-blue">
@@ -75,23 +84,25 @@
       <div id="doctors" class="tab-content">
         <div class="search-panel">
           <label for="searchDoctors">Поиск:</label>
-          <input type="text" id="searchDoctors" placeholder="Введите ФИО">
+          <input type="text" id="searchDoctors" placeholder="Введите ФИО врача">
         </div>
 
-        <table id="doctorsTable" class="data-table">
-          <thead>
-            <tr>
-              <th>ФИО</th>
-              <th>Специальность</th>
-              <th>Общее наименование</th>
-              <th>Номер кабинета</th>
-              <th>Стаж</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Данные будут заполнены через JavaScript -->
-          </tbody>
-        </table>
+        <div class="table-container">
+          <table id="doctorsTable" class="data-table">
+            <thead>
+              <tr>
+                <th data-sort="fullName">ФИО</th>
+                <th data-sort="specialty">Специальность</th>
+                <th data-sort="generalName">Общее наименование</th>
+                <th data-sort="officeNumber">Номер кабинета</th>
+                <th data-sort="workExperience">Стаж</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Данные будут заполнены через JavaScript -->
+            </tbody>
+          </table>
+        </div>
 
         <div class="bottom-panel">
           <button id="addDoctorBtn" class="btn btn-accent">
@@ -107,6 +118,152 @@
             <span>Удалить</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно для добавления/редактирования врача -->
+  <div id="doctorModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="doctorModalTitle">Добавление врача</h2>
+      <form id="doctorForm">
+        <input type="hidden" id="doctorId">
+        <div class="form-group">
+          <label for="doctorFullName">ФИО врача:</label>
+          <input type="text" id="doctorFullName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="doctorSpecialty">Специальность:</label>
+          <input type="text" id="doctorSpecialty" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="doctorGeneralName">Общее наименование:</label>
+          <input type="text" id="doctorGeneralName" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="doctorOfficeNumber">Номер кабинета:</label>
+          <input type="number" id="doctorOfficeNumber" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="doctorWorkExperience">Стаж (лет):</label>
+          <input type="number" id="doctorWorkExperience" class="form-control" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+          <button type="submit" class="btn btn-accent">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно для назначения врача пациенту -->
+  <div id="assignDoctorModal" class="modal">
+    <div class="modal-content modal-lg">
+      <span class="close-btn">&times;</span>
+      <h2>Назначение врача</h2>
+      <p id="assignPatientName" class="modal-subtitle"></p>
+      
+      <div class="doctors-list-container">
+        <div id="doctorsAssignmentList" class="doctors-list">
+          <!-- Список врачей будет добавлен динамически -->
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+        <button type="button" id="confirmAssignBtn" class="btn btn-accent">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно для выписного эпикриза -->
+  <div id="dischargeModal" class="modal">
+    <div class="modal-content modal-lg">
+      <span class="close-btn">&times;</span>
+      <h2>Создание выписного эпикриза</h2>
+      <p id="dischargePatientName" class="modal-subtitle"></p>
+      <form id="dischargeForm">
+        <div class="form-group">
+          <label for="dischargeDiagnosis">Диагноз:</label>
+          <textarea id="dischargeDiagnosis" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeRecommendations">Рекомендации:</label>
+          <textarea id="dischargeRecommendations" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeResults">Результаты лечения:</label>
+          <textarea id="dischargeResults" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="dischargeDate">Дата выписки:</label>
+          <input type="date" id="dischargeDate" class="form-control" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-gray cancel-btn">Отмена</button>
+          <button type="submit" class="btn btn-accent">Создать документ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно отчетов -->
+  <div id="reportsModal" class="modal">
+    <div class="modal-content modal-lg">
+      <span class="close-btn">&times;</span>
+      <h2>Отчеты и аналитика</h2>
+      <div class="reports-tabs">
+        <button class="report-tab-btn active" data-report="patient">По пациентам</button>
+        <button class="report-tab-btn" data-report="doctor">По врачам</button>
+        <button class="report-tab-btn" data-report="procedures">По процедурам</button>
+      </div>
+      <div class="report-content" id="patientReport">
+        <div class="form-group">
+          <label for="reportDateRange">Период:</label>
+          <div class="date-range">
+            <input type="date" id="reportStartDate" class="form-control">
+            <span>—</span>
+            <input type="date" id="reportEndDate" class="form-control">
+          </div>
+        </div>
+        <button type="button" id="generatePatientReportBtn" class="btn btn-blue">Сформировать отчет</button>
+        <div class="report-result">
+          <!-- Результаты отчета будут добавлены здесь -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- В шаблон строки таблицы добавляем кнопку для просмотра санаторной карты -->
+  <template id="patientRowTemplate">
+    <tr>
+      <td class="patient-id"></td>
+      <td class="patient-name"></td>
+      <td class="patient-gender"></td>
+      <td class="patient-dateofbirth"></td>
+      <td class="patient-recorddate"></td>
+      <td class="patient-dischargedate"></td>
+    </tr>
+  </template>
+  
+  <!-- Модальное окно для просмотра процедур врача -->
+  <div id="doctorProceduresModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="doctorProceduresTitle">Процедуры врача</h2>
+      <div class="table-container">
+        <table id="doctorProceduresTable" class="data-table">
+          <thead>
+            <tr>
+              <th>Наименование</th>
+              <th>Длительность (мин)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Данные будут заполнены через JavaScript -->
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
