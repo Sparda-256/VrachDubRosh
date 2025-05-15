@@ -189,6 +189,8 @@ input:checked + .slider .moon-icon {
   cursor: pointer;
   transition: background-color 0.2s;
   color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
 }
 
 .btn-accent {
@@ -217,6 +219,7 @@ input:checked + .slider .moon-icon {
 
 .btn-red {
   background-color: var(--red-color);
+  color: white;
 }
 
 .btn-red:hover {
@@ -237,6 +240,21 @@ input:checked + .slider .moon-icon {
 
 .btn-gray:active {
   background-color: var(--gray-pressed-color);
+}
+
+/* Явно принудительно указываем стиль для текста в кнопках и иконок */
+.btn span, .btn i {
+  color: white;
+  font-weight: bold;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+}
+
+.btn.btn-red span, .btn.btn-red i {
+  color: white;
+  font-weight: bold;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
 }
 
 .icon {
@@ -603,6 +621,13 @@ input:checked + .slider .moon-icon {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+}
+
+.modal-footer .btn span, .modal-footer .btn i {
+  color: white;
+  font-weight: bold;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
 }
 
 /* Иконка сохранения */
