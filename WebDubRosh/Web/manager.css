@@ -530,17 +530,21 @@ input:checked + .slider .moon-icon {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
 }
 
 .modal-content {
   position: relative;
   background-color: var(--background-color);
-  margin: 10% auto;
+  margin: 5% auto;
   padding: 0;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   width: 500px;
   max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -549,6 +553,7 @@ input:checked + .slider .moon-icon {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -566,6 +571,7 @@ input:checked + .slider .moon-icon {
 
 .modal-body {
   padding: 20px;
+  overflow-y: auto;
 }
 
 .modal-footer {
@@ -574,6 +580,39 @@ input:checked + .slider .moon-icon {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Кнопки в подвале модальных окон */
+.modal-footer .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 35px;
+  border-radius: 8px;
+  font-weight: bold;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.modal-footer .btn .icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Иконка сохранения */
+.save-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z'/%3E%3C/svg%3E");
+}
+
+/* Иконка отмены */
+.cancel-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'/%3E%3C/svg%3E");
 }
 
 /* Адаптивность */
@@ -601,8 +640,9 @@ input:checked + .slider .moon-icon {
   }
   
   .modal-content {
-    margin: 20% auto;
+    margin: 10% auto;
     width: 95%;
+    max-height: 80vh;
   }
 }
 
@@ -854,4 +894,45 @@ th[data-sort="desc"] {
   bottom: 0;
   height: 2px;
   background-color: var(--border-color);
+}
+
+/* Улучшенный стиль для чекбоксов в таблицах */
+.data-table input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  border: 2px solid var(--accent-color);
+  border-radius: 3px;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  margin: 0 auto;
+  display: block;
+  background-color: var(--input-bg-color);
+}
+
+.data-table input[type="checkbox"]:checked {
+  background-color: var(--accent-color);
+}
+
+.data-table input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.data-table input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--selection-border-color);
+}
+
+/* Центрирование ячеек с чекбоксами в таблице сопровождающих */
+#accompanyingTable td:nth-child(4) {
+  text-align: center;
 } 

@@ -3281,4 +3281,22 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Ошибка при удалении документов.');
       });
   }
+
+  // Обработчик для кнопки отмены в верхней панели
+  document.getElementById('cancelBtn').addEventListener('click', function() {
+    // Очищаем выбранные строки в таблицах
+    const selectedRows = document.querySelectorAll('.data-table tr.selected');
+    selectedRows.forEach(row => {
+      row.classList.remove('selected');
+    });
+    
+    // Можно также сбросить фильтры поиска
+    const searchInputs = document.querySelectorAll('.search-input');
+    searchInputs.forEach(input => {
+      input.value = '';
+    });
+    
+    // Показать уведомление
+    showNotification('Действие отменено', 'info');
+  });
 }); 

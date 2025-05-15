@@ -1,25 +1,59 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="light-theme">
 <head>
   <meta charset="UTF-8">
-  <title>Помощник Поликлиники - Авторизация</title>
+  <title>Санаторий Дубовая Роща - Авторизация</title>
   <link rel="stylesheet" href="Login.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
   <div class="login-container">
-    <h1>Помощник Поликлиники</h1>
+    <!-- Theme toggle -->
+    <div class="theme-toggle-container">
+      <label class="theme-toggle">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider round">
+          <span class="sun-icon"></span>
+          <span class="moon-icon"></span>
+        </span>
+      </label>
+    </div>
+
+    <!-- Logo -->
+    <div class="logo-container">
+      <img src="icodubrosh.png" alt="Логотип санатория" class="logo">
+    </div>
+
+    <!-- Title -->
+    <div class="title-container">
+      <h1>Санаторий Дубовая Роща</h1>
+      <p class="subtitle">Система управления санатория</p>
+    </div>
+
+    <h2 class="auth-title">Авторизация</h2>
+
     <form id="loginForm">
       <div class="input-group">
         <label for="username">Логин</label>
-        <input type="text" id="username" placeholder="Введите логин" required>
+        <input type="text" id="username" required>
       </div>
       <div class="input-group">
         <label for="password">Пароль</label>
-        <input type="password" id="password" placeholder="Введите пароль" required>
+        <input type="password" id="password" required>
       </div>
-      <button type="submit">Войти</button>
+      <button type="submit" class="login-button">
+        <svg class="login-icon" viewBox="0 0 24 24">
+          <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14M12,2A6,6 0 0,0 6,8A6,6 0 0,0 12,14A6,6 0 0,0 18,8A6,6 0 0,0 12,2Z" />
+        </svg>
+        <span>Войти в систему</span>
+      </button>
     </form>
     <div id="loginMessage"></div>
+
+    <!-- Footer -->
+    <div class="footer">
+      © 2025 Санаторий Дубовая Роща
+    </div>
   </div>
   <script src="Login.js"></script>
 </body>
