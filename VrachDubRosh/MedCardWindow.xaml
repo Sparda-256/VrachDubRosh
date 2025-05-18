@@ -5,7 +5,8 @@
         Background="{DynamicResource BackgroundBrush}"
         Icon="/icodubrosh.png"
         WindowStartupLocation="CenterScreen"
-        MinHeight="650" MinWidth="800">
+        MinHeight="650" MinWidth="800"
+        ResizeMode="CanResizeWithGrip">
     <Window.Resources>
         <!-- Кнопка стандартная -->
         <Style x:Key="RoundedButtonStyle" TargetType="Button">
@@ -392,7 +393,8 @@
         </Style>
     </Window.Resources>
     
-    <Grid Margin="20">
+    <Viewbox Stretch="Uniform">
+    <Grid Margin="20" Width="900" Height="814">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -716,7 +718,7 @@
                     <TextBlock Text="Печать" Margin="5,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="btnClose" Style="{StaticResource RoundedButtonStyle}" 
+            <Button x:Name="btnClose" Style="{StaticResource RedButtonStyle}" 
                     Width="120" Height="40" Click="btnClose_Click">
                 <StackPanel Orientation="Horizontal">
                     <Path Width="18" Height="18" 
@@ -727,4 +729,5 @@
             </Button>
         </StackPanel>
     </Grid>
+    </Viewbox>
 </Window>

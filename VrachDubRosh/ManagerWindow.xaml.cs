@@ -935,6 +935,51 @@ namespace VrachDubRosh
                                     cmd.ExecuteNonQuery();
                                 }
                                 
+                                // Удаление записей из ScheduleGeneratedAppointments, связанных с назначениями пациента
+                                string deleteScheduleGeneratedQuery = @"
+                                    DELETE FROM ScheduleGeneratedAppointments
+                                    WHERE AppointmentID IN (
+                                        SELECT AppointmentID FROM ProcedureAppointments
+                                        WHERE PatientID = @PatientID
+                                    )";
+                                using (SqlCommand cmd = new SqlCommand(deleteScheduleGeneratedQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmd.ExecuteNonQuery();
+                                }
+
+                                // Удаление недельных расписаний пациента
+                                string deleteWeeklyScheduleQuery = "DELETE FROM WeeklyScheduleAppointments WHERE PatientID = @PatientID";
+                                using (SqlCommand cmd = new SqlCommand(deleteWeeklyScheduleQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                
+                                // Удаление выписных эпикризов пациента
+                                string deleteDischargeDocsQuery = "DELETE FROM DischargeDocuments WHERE PatientID = @PatientID";
+                                using (SqlCommand cmd = new SqlCommand(deleteDischargeDocsQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                
+                                // Удаление медикаментов пациента
+                                string deleteMedicationsQuery = "DELETE FROM PatientMedications WHERE PatientID = @PatientID";
+                                using (SqlCommand cmd = new SqlCommand(deleteMedicationsQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                
+                                // Удаление измерений пациента
+                                string deleteMeasurementsQuery = "DELETE FROM PatientMeasurements WHERE PatientID = @PatientID";
+                                using (SqlCommand cmd = new SqlCommand(deleteMeasurementsQuery, con, tran))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                
                                 string deleteProcedureAppointmentsQuery = "DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
                                 using (SqlCommand cmd = new SqlCommand(deleteProcedureAppointmentsQuery, con, tran))
                                 {
@@ -1398,7 +1443,17 @@ namespace VrachDubRosh
                 long fileSize = new FileInfo(filePath).Length;
                 
                 // Загружаем файл в память
-                byte[] fileData = File.ReadAllBytes(filePath);
+                byte[] fileData;
+                try
+                {
+                    fileData = File.ReadAllBytes(filePath);
+                }
+                catch (IOException ex) when ((ex.HResult & 0x0000FFFF) == 32) // Error code 32 = ERROR_SHARING_VIOLATION
+                {
+                    MessageBox.Show("Не удалось получить доступ к файлу, так как он используется другим процессом. Закройте файл и попробуйте снова.", 
+                                   "Ошибка доступа к файлу", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
                 
                 // Определяем тип файла на основе расширения для хранения в БД (без точки)
                 string fileExtensionWithoutDot = fileExtension.TrimStart('.');
