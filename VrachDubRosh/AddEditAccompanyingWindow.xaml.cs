@@ -711,10 +711,10 @@ namespace VrachDubRosh
                                 // Автоматически открываем окно документов только для нового сопровождающего
                                 PatientInfo selectedPatientInfo = (PatientInfo)cbPatients.SelectedItem;
                                 AccompanyingDocumentsWindow documentsWindow = new AccompanyingDocumentsWindow(
-                                    selectedPatientInfo.PatientID,
-                                    selectedPatientInfo.FullName,
-                                    newAccompanyingID,
-                                    txtFullName.Text.Trim());
+                                    newAccompanyingID,               // ID сопровождающего
+                                    txtFullName.Text.Trim(),         // Имя сопровождающего
+                                    selectedPatientInfo.PatientID,   // ID пациента
+                                    selectedPatientInfo.FullName);   // Имя пациента
                                 documentsWindow.ShowDialog();
                             }
                             

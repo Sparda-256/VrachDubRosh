@@ -325,6 +325,18 @@ namespace VrachDubRosh
                                     0
                                 )";
                             
+                            // Сначала проверяем существование сопровождающего лица с данным ID
+                            using (SqlCommand checkCmd = new SqlCommand("SELECT COUNT(1) FROM AccompanyingPersons WHERE AccompanyingPersonID = @AccompanyingPersonID", con))
+                            {
+                                checkCmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingPersonID);
+                                int count = Convert.ToInt32(checkCmd.ExecuteScalar());
+                                
+                                if (count == 0)
+                                {
+                                    throw new Exception($"Сопровождающий с ID {accompanyingPersonID} не найден. Возможно, запись была удалена другим пользователем.");
+                                }
+                            }
+                            
                             using (SqlCommand cmd = new SqlCommand(insertQuery, con))
                             {
                                 cmd.Parameters.AddWithValue("@AccompanyingPersonID", accompanyingPersonID);
