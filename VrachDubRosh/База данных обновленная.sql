@@ -47,17 +47,6 @@ CREATE TABLE PatientDoctorAssignments (
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
 );
 
--- Создание таблицы описаний пациентов
-CREATE TABLE PatientDescriptions (
-    PatientDescriptionID INT IDENTITY PRIMARY KEY,
-    PatientID INT NOT NULL,
-    DoctorID INT NOT NULL,
-    Description NVARCHAR(1000),
-    DescriptionDate DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
-);
-
 -- Создание таблицы для диагнозов
 CREATE TABLE Diagnoses (
     DiagnosisID INT IDENTITY PRIMARY KEY,

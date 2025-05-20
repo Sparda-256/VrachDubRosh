@@ -255,20 +255,18 @@ namespace VrachDubRosh
                 LoadDoctorPatients();
             }
         }
-        // Изменённый обработчик двойного щелчка по пациенту
+
+        // Обработчик двойного щелчка по пациенту
         private void dgDoctorPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (dgDoctorPatients.SelectedItem is DataRowView row)
             {
                 int patientID = Convert.ToInt32(row["PatientID"]);
-                // Открываем окно добавления описания для пациента
-                AddPatientDescriptionWindow addDescWindow = new AddPatientDescriptionWindow(patientID, _doctorID);
-                addDescWindow.Owner = this;
-                if (addDescWindow.ShowDialog() == true)
-                {
-                    // При необходимости обновить данные (например, перечень описаний или информацию о пациенте)
-                    LoadDoctorPatients();
-                }
+                string patientName = row["FullName"].ToString();
+                // Открываем окно медицинской карты пациента
+                MedCardWindow medCardWindow = new MedCardWindow(patientID, patientName);
+                medCardWindow.Owner = this;
+                medCardWindow.ShowDialog();
             }
         }
         #endregion
