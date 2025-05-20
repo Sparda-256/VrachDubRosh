@@ -644,8 +644,6 @@ namespace VrachDubRosh
             if (dgAppointments.SelectedItem is DataRowView row)
             {
                 string status = row["Status"].ToString();
-                if (status != "Назначена")
-                {
                     int appointmentID = Convert.ToInt32(row["AppointmentID"]);
                     AddProcedureDescriptionWindow addProcDescWindow = new AddProcedureDescriptionWindow(appointmentID, _doctorID);
                     addProcDescWindow.Owner = this;
@@ -653,11 +651,6 @@ namespace VrachDubRosh
                     {
                         LoadDoctorAppointments();
                     }
-                }
-                else
-                {
-                    MessageBox.Show("Нельзя добавить описание для процедуры со статусом 'Назначена'.", "Неверный статус", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
             }
         }
         private void txtSearchAppointments_TextChanged(object sender, TextChangedEventArgs e)
