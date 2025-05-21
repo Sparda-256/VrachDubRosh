@@ -2470,7 +2470,16 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Загрузка комнат для размещения сопровождающего
   function loadRoomsForAccompanying(buildingID) {
-    return fetch(`/api/manager/rooms/${buildingID}`)
+    // Получаем ID сопровождающего (если мы в режиме редактирования)
+    const accompanyingID = document.getElementById('accompanyingPersonID').value;
+    
+    // Добавляем accompanyingID в параметры запроса, если он есть
+    let url = `/api/manager/rooms/${buildingID}`;
+    if (accompanyingID) {
+      url += `?accompanyingPersonID=${accompanyingID}`;
+    }
+    
+    return fetch(url)
       .then(response => response.json())
       .then(rooms => {
         const roomSelect = document.getElementById('accompanyingRoom');
@@ -2591,6 +2600,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log("Загрузка данных о размещении сопровождающего:", accommodationInfo);
     
+    // Получаем ID сопровождающего
+    const accompanyingID = document.getElementById('accompanyingPersonID').value;
+    
     // Выбираем корпус
     const buildingSelect = document.getElementById('accompanyingBuilding');
     buildingSelect.value = accommodationInfo.BuildingID || accommodationInfo.buildingID || accommodationInfo.buildingId || '';
@@ -2610,7 +2622,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Загружаем комнаты для выбранного корпуса
+    // Загружаем комнаты для выбранного корпуса, передавая ID сопровождающего
     loadRoomsForAccompanying(buildingSelect.value)
       .then(() => {
         // Выбираем комнату
@@ -2620,36 +2632,42 @@ document.addEventListener('DOMContentLoaded', function() {
         // Проверяем, что комната выбрана
         if (!roomSelect.value) {
           console.error("Не удалось выбрать комнату:", roomID);
+          showNotification('Не удалось выбрать комнату. Возможно, она больше не доступна.', 'warning');
           return;
         }
         
         // Обновляем список кроватей
-        const selectedOption = roomSelect.options[roomSelect.selectedIndex];
-        let availableBeds = [];
-        
-        try {
-          if (selectedOption.dataset.availableBeds) {
-            availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+        if (roomSelect.selectedIndex >= 0) {
+          const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+          let availableBeds = [];
+          
+          try {
+            if (selectedOption.dataset.availableBeds) {
+              availableBeds = JSON.parse(selectedOption.dataset.availableBeds);
+            }
+          } catch (e) {
+            console.error('Ошибка при парсинге JSON доступных кроватей:', e);
           }
-        } catch (e) {
-          console.error('Ошибка при парсинге JSON доступных кроватей:', e);
-        }
-        
-        // Добавляем текущую кровать в список доступных, если её там нет
-        if (!availableBeds.includes(bedNumber)) {
-          console.log(`Добавляем текущую кровать ${bedNumber} в список доступных:`, availableBeds);
-          availableBeds.push(bedNumber);
-        }
-        
-        updateAvailableBedsForAccompanying(availableBeds);
-        
-        // Выбираем кровать
-        const bedSelect = document.getElementById('accompanyingBed');
-        bedSelect.value = bedNumber;
-        
-        // Проверяем, что кровать выбрана
-        if (!bedSelect.value) {
-          console.error(`Не удалось выбрать кровать ${bedNumber} из доступных:`, availableBeds);
+          
+          // Убедимся, что текущая кровать в списке доступных
+          if (!availableBeds.includes(bedNumber)) {
+            availableBeds.push(bedNumber);
+          }
+          
+          // Обновляем список кроватей с текущей кроватью
+          updateAvailableBedsForAccompanying(availableBeds);
+          
+          // Выбираем кровать
+          setTimeout(() => {
+            const bedSelect = document.getElementById('accompanyingBed');
+            bedSelect.value = bedNumber.toString();
+            
+            // Проверяем, что кровать выбрана
+            if (!bedSelect.value) {
+              console.error(`Не удалось выбрать кровать ${bedNumber} из доступных:`, availableBeds);
+              showNotification('Не удалось выбрать кровать. Возможно, она занята.', 'warning');
+            }
+          }, 100);
         }
       })
       .catch(error => {

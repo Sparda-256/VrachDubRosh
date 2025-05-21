@@ -488,7 +488,7 @@ namespace WebDubRosh.Controllers
 
         // GET: api/manager/rooms/{buildingId}
         [HttpGet("rooms/{buildingId}")]
-        public IActionResult GetAvailableRooms(int buildingId, [FromQuery] int? patientID = null)
+        public IActionResult GetAvailableRooms(int buildingId, [FromQuery] int? patientID = null, [FromQuery] int? accompanyingPersonID = null)
         {
             try
             {
@@ -513,8 +513,8 @@ namespace WebDubRosh.Controllers
                         int occupiedBeds = Convert.ToInt32(row["OccupiedBeds"]);
                         int roomID = Convert.ToInt32(row["RoomID"]);
                         
-                        // Включаем комнаты, даже если они полностью заняты, когда указан ID пациента
-                        if (occupiedBeds < 2 || patientID.HasValue)
+                        // Включаем комнаты, даже если они полностью заняты, когда указан ID пациента или сопровождающего
+                        if (occupiedBeds < 2 || patientID.HasValue || accompanyingPersonID.HasValue)
                         {
                             var room = new {
                                 RoomID = roomID,
@@ -527,7 +527,7 @@ namespace WebDubRosh.Controllers
                             {
                                 // Запрос для определения, какие конкретно кровати заняты
                                 string bedQuery = @"
-                                    SELECT a.BedNumber, a.PatientID
+                                    SELECT a.BedNumber, a.PatientID, a.AccompanyingPersonID
                                     FROM Accommodations a
                                     WHERE a.RoomID = @RoomID AND a.CheckOutDate IS NULL";
                                 
@@ -535,7 +535,7 @@ namespace WebDubRosh.Controllers
                                 {
                                     bedCmd.Parameters.AddWithValue("@RoomID", room.RoomID);
                                     
-                                    var occupiedBedInfo = new Dictionary<int, int?>(); // кровать -> ID пациента
+                                    var occupiedBedInfo = new Dictionary<int, Tuple<int?, int?>>(); // кровать -> (ID пациента, ID сопровождающего)
                                     using (SqlDataReader bedReader = bedCmd.ExecuteReader())
                                     {
                                         while (bedReader.Read())
@@ -544,16 +544,20 @@ namespace WebDubRosh.Controllers
                                             int? patientIDInBed = bedReader["PatientID"] != DBNull.Value 
                                                 ? (int?)Convert.ToInt32(bedReader["PatientID"]) 
                                                 : null;
+                                            int? accompanyingIDInBed = bedReader["AccompanyingPersonID"] != DBNull.Value 
+                                                ? (int?)Convert.ToInt32(bedReader["AccompanyingPersonID"]) 
+                                                : null;
                                             
-                                            occupiedBedInfo[bedNumber] = patientIDInBed;
+                                            occupiedBedInfo[bedNumber] = new Tuple<int?, int?>(patientIDInBed, accompanyingIDInBed);
                                         }
                                     }
                                     
-                                    // Добавляем свободные кровати или занятые текущим пациентом
+                                    // Добавляем свободные кровати или занятые текущим пациентом/сопровождающим
                                     for (int i = 1; i <= 2; i++)
                                     {
                                         if (!occupiedBedInfo.ContainsKey(i) || 
-                                            (patientID.HasValue && occupiedBedInfo[i] == patientID.Value))
+                                            (patientID.HasValue && occupiedBedInfo[i].Item1 == patientID.Value) ||
+                                            (accompanyingPersonID.HasValue && occupiedBedInfo[i].Item2 == accompanyingPersonID.Value))
                                         {
                                             ((List<int>)room.AvailableBeds).Add(i);
                                         }
