@@ -3018,79 +3018,141 @@ document.addEventListener('DOMContentLoaded', function() {
   // Инициализация обработчиков событий таблицы документов сопровождающего
   function initAccompanyingPersonDocumentsTableListeners(accompanyingPersonID) {
     const table = document.getElementById('accompanyingPersonDocumentsTable');
+    
+    // Массив для хранения выбранных строк
+    const selectedRows = [];
+    
+    // Очищаем предыдущие обработчики
     const newTable = table.cloneNode(true);
     table.parentNode.replaceChild(newTable, table);
 
+    // Добавляем обработчик клика по строкам таблицы
     newTable.addEventListener('click', function(e) {
       const row = e.target.closest('tr');
       if (!row) return;
-      this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
-      row.classList.add('selected');
       
-      const documentId = row.dataset.documentId;
-      document.getElementById('viewAccompanyingPersonDocumentBtn').disabled = !documentId;
-      document.getElementById('deleteAccompanyingPersonDocumentBtn').disabled = !documentId;
+      const isCtrlPressed = e.ctrlKey || e.metaKey;
+      
+      // Если не нажат Ctrl, очищаем выделение
+      if (!isCtrlPressed) {
+        this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+        selectedRows.length = 0; // Очищаем массив
+      }
+      
+      // Если строка уже выбрана и нажат Ctrl, снимаем выделение
+      if (row.classList.contains('selected') && isCtrlPressed) {
+        row.classList.remove('selected');
+        const index = selectedRows.indexOf(row);
+        if (index > -1) selectedRows.splice(index, 1);
+      } else {
+        // Иначе добавляем выделение
+        row.classList.add('selected');
+        if (!selectedRows.includes(row)) {
+          selectedRows.push(row);
+        }
+      }
+      
+      // Обновляем состояние кнопок на основе выбранных строк
+      updateAccompanyingDocumentButtonStates(selectedRows);
     });
 
+    // Обработчик двойного клика для просмотра документа
     newTable.addEventListener('dblclick', function(e) {
       const row = e.target.closest('tr');
       if (!row || !row.dataset.documentId) return;
       viewAccompanyingPersonDocument(row.dataset.documentId);
     });
 
-    document.getElementById('uploadAccompanyingPersonDocumentBtn').onclick = () => {
+    // Инициализация кнопок управления документами
+    document.getElementById('uploadAccompanyingPersonDocumentBtn').addEventListener('click', function() {
       const selectedRow = newTable.querySelector('tbody tr.selected');
       if (!selectedRow) {
         showNotification('Выберите тип документа для загрузки', 'error');
         return;
       }
-      showUploadAccompanyingPersonDocumentModal(accompanyingPersonID, selectedRow.dataset.documentTypeId, selectedRow.cells[0].textContent);
-    };
-
-    document.getElementById('viewAccompanyingPersonDocumentBtn').onclick = () => {
-      const selectedRow = newTable.querySelector('tbody tr.selected');
-      if (!selectedRow || !selectedRow.dataset.documentId) {
-        showNotification('Выберите загруженный документ для просмотра/скачивания', 'error');
-        return;
-      }
-      viewAccompanyingPersonDocument(selectedRow.dataset.documentId);
-    };
-
-    document.getElementById('deleteAccompanyingPersonDocumentBtn').onclick = () => {
-      const selectedRow = newTable.querySelector('tbody tr.selected');
-      if (!selectedRow || !selectedRow.dataset.documentId) {
-        showNotification('Выберите загруженный документ для удаления', 'error');
-        return;
-      }
-      if (confirm('Вы действительно хотите удалить этот документ?')) {
-        deleteAccompanyingPersonDocument(selectedRow.dataset.documentId, accompanyingPersonID);
-      }
-    };
+      
+      // Сохраняем ID сопровождающего и типа документа
+      document.getElementById('uploadAccompanyingPersonDocumentTypeID').value = selectedRow.dataset.documentTypeId;
+      document.getElementById('uploadAccompanyingPersonID').value = accompanyingPersonID;
+      
+      // Вместо показа модального окна сразу открываем выбор файла
+      document.getElementById('uploadAccompanyingPersonDocumentFile').click();
+    });
     
+    // Обработчик события выбора файла
+    document.getElementById('uploadAccompanyingPersonDocumentFile').addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        uploadAccompanyingPersonDocument();
+      }
+    });
+
+    document.getElementById('viewAccompanyingPersonDocumentBtn').addEventListener('click', function() {
+      const selectedRows = newTable.querySelectorAll('tbody tr.selected');
+      if (selectedRows.length !== 1 || !selectedRows[0].dataset.documentId) {
+        showNotification('Выберите один загруженный документ для просмотра/скачивания', 'error');
+        return;
+      }
+      viewAccompanyingPersonDocument(selectedRows[0].dataset.documentId);
+    });
+
+    document.getElementById('deleteAccompanyingPersonDocumentBtn').addEventListener('click', function() {
+      const selectedRows = newTable.querySelectorAll('tbody tr.selected');
+      const documentsToDelete = [];
+      
+      selectedRows.forEach(row => {
+        if (row.dataset.documentId) {
+          documentsToDelete.push(row.dataset.documentId);
+        }
+      });
+      
+      if (documentsToDelete.length === 0) {
+        showNotification('Выберите хотя бы один загруженный документ для удаления', 'error');
+        return;
+      }
+      
+      const confirmMessage = documentsToDelete.length === 1 
+        ? 'Вы действительно хотите удалить этот документ?' 
+        : `Вы действительно хотите удалить ${documentsToDelete.length} выбранных документов?`;
+      
+      if (confirm(confirmMessage)) {
+        deleteAccompanyingPersonDocument(documentsToDelete, accompanyingPersonID);
+      }
+    });
+    
+    // По умолчанию отключаем кнопки просмотра и удаления
     document.getElementById('viewAccompanyingPersonDocumentBtn').disabled = true;
     document.getElementById('deleteAccompanyingPersonDocumentBtn').disabled = true;
+    
+    // Функция обновления состояния кнопок на основе выбранных строк
+    function updateAccompanyingDocumentButtonStates(rows) {
+      const hasUploadableDoc = rows.length === 1;
+      const hasViewableDoc = rows.length === 1 && rows[0].dataset.documentId;
+      const hasDeletableDoc = rows.some(row => row.dataset.documentId);
+      
+      document.getElementById('uploadAccompanyingPersonDocumentBtn').disabled = !hasUploadableDoc;
+      document.getElementById('viewAccompanyingPersonDocumentBtn').disabled = !hasViewableDoc;
+      document.getElementById('deleteAccompanyingPersonDocumentBtn').disabled = !hasDeletableDoc;
+      
+      // Устанавливаем текст кнопки загрузки для одной выбранной строки
+      if (hasUploadableDoc) {
+        const documentStatus = rows[0].cells[1].textContent.trim();
+        const isUploaded = documentStatus !== 'Не загружен';
+        const uploadBtn = document.getElementById('uploadAccompanyingPersonDocumentBtn');
+        
+        // Сохраняем ID типа документа для последующей загрузки
+        document.getElementById('uploadAccompanyingPersonDocumentTypeID').value = rows[0].dataset.documentTypeId;
+        
+        uploadBtn.querySelector('span').textContent = isUploaded ? 'Заменить' : 'Загрузить';
+      }
+    }
   }
 
-  // Показать модальное окно загрузки документа сопровождающего
-  function showUploadAccompanyingPersonDocumentModal(accompanyingPersonId, documentTypeId, documentName) {
-    document.getElementById('uploadAccompanyingPersonDocumentTypeID').value = documentTypeId;
-    document.getElementById('uploadAccompanyingPersonID_Doc').value = accompanyingPersonId; // Use the changed ID
-    document.getElementById('uploadAccompanyingPersonDocumentName').value = documentName;
-    document.getElementById('uploadAccompanyingPersonDocumentFile').value = '';
-    document.getElementById('uploadAccompanyingPersonDocumentNotes').value = '';
-    document.getElementById('uploadAccompanyingPersonDocumentModalTitle').textContent = `Загрузка документа: ${documentName}`;
-    document.getElementById('uploadAccompanyingPersonDocumentModal').style.display = 'block';
-
-    const saveBtn = document.getElementById('saveAccompanyingPersonDocumentBtn');
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-    newSaveBtn.addEventListener('click', uploadAccompanyingPersonDocument);
-  }
+  // Функция showUploadAccompanyingPersonDocumentModal больше не нужна и удаляется
 
   // Загрузка документа сопровождающего
   function uploadAccompanyingPersonDocument() {
     const documentTypeId = document.getElementById('uploadAccompanyingPersonDocumentTypeID').value;
-    const accompanyingPersonId = document.getElementById('uploadAccompanyingPersonID_Doc').value; // Use the changed ID
+    const accompanyingPersonId = document.getElementById('uploadAccompanyingPersonID').value;
     const documentFile = document.getElementById('uploadAccompanyingPersonDocumentFile').files[0];
     const notes = document.getElementById('uploadAccompanyingPersonDocumentNotes').value;
 
@@ -3098,6 +3160,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showNotification('Выберите файл для загрузки', 'error');
       return;
     }
+    
     const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(documentFile.type)) {
       showNotification('Поддерживаемые форматы: JPEG, PNG, PDF, DOC, DOCX', 'error');
@@ -3110,6 +3173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (notes) formData.append('notes', notes);
 
     showNotification('Загрузка документа...', 'info');
+    
     fetch(`/api/manager/accompanyingperson/${accompanyingPersonId}/document`, {
       method: 'POST',
       body: formData
@@ -3117,13 +3181,17 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(result => {
       if (result.success) {
-        document.getElementById('uploadAccompanyingPersonDocumentModal').style.display = 'none';
+        // Очищаем поле выбора файла
+        document.getElementById('uploadAccompanyingPersonDocumentFile').value = '';
+        
+        // Обновляем список документов
         const person = accompanyingPersons.find(p => p.AccompanyingPersonID == accompanyingPersonId);
         if (person) {
             loadAccompanyingPersonDocuments(accompanyingPersonId, person.FullName, person.PatientName);
         } else {
             loadAccompanyingPersons(); // Fallback if person details not readily available
         }
+        
         showNotification('Документ успешно загружен', 'success');
       } else {
         showNotification(`Ошибка при загрузке: ${result.message}`, 'error');
@@ -3140,29 +3208,68 @@ document.addEventListener('DOMContentLoaded', function() {
     window.open(`/api/manager/accompanyingperson/document/${documentId}/view`, '_blank');
   }
 
-  // Удаление документа сопровождающего
-  function deleteAccompanyingPersonDocument(documentId, accompanyingPersonId) {
-    showNotification('Удаление документа...', 'info');
-    fetch(`/api/manager/accompanyingperson/document/${documentId}`, {
-      method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
+  // Удаление документа(ов) сопровождающего
+  function deleteAccompanyingPersonDocument(documentIds, accompanyingPersonId) {
+    // Преобразуем в массив, если передан один ID
+    const idsArray = Array.isArray(documentIds) ? documentIds : [documentIds];
+    
+    // Показываем уведомление
+    const message = idsArray.length === 1 
+      ? 'Удаление документа...' 
+      : `Удаление ${idsArray.length} документов...`;
+    
+    showNotification(message, 'info');
+    
+    // Счетчики для отслеживания прогресса
+    let successCount = 0;
+    let errorCount = 0;
+    let requestsCompleted = 0;
+    
+    // Функция для проверки завершения всех запросов
+    function checkAllRequestsCompleted() {
+      requestsCompleted++;
+      if (requestsCompleted === idsArray.length) {
+        // Все запросы выполнены, выводим итоговое сообщение
+        if (errorCount === 0) {
+          const successMessage = idsArray.length === 1 
+            ? 'Документ успешно удален' 
+            : `${successCount} документов успешно удалено`;
+          showNotification(successMessage, 'success');
+        } else {
+          showNotification(`Удалено ${successCount} из ${idsArray.length} документов. Ошибок: ${errorCount}`, 'warning');
+        }
+        
+        // Обновляем список документов
         const person = accompanyingPersons.find(p => p.AccompanyingPersonID == accompanyingPersonId);
-         if (person) {
+        if (person) {
             loadAccompanyingPersonDocuments(accompanyingPersonId, person.FullName, person.PatientName);
         } else {
-            loadAccompanyingPersons(); // Fallback
+            loadAccompanyingPersons(); // Fallback if person details not readily available
         }
-        showNotification('Документ успешно удален', 'success');
-      } else {
-        showNotification(`Ошибка при удалении: ${result.message}`, 'error');
       }
-    })
-    .catch(error => {
-      console.error('Ошибка:', error);
-      showNotification('Ошибка при удалении документа', 'error');
+    }
+    
+    // Отправляем запросы на удаление для каждого документа
+    idsArray.forEach(documentId => {
+      fetch(`/api/manager/accompanyingperson/document/${documentId}`, {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.error(`Ошибка при удалении документа ${documentId}: ${result.message}`);
+        }
+      })
+      .catch(error => {
+        errorCount++;
+        console.error('Ошибка при удалении документа:', error);
+      })
+      .finally(() => {
+        checkAllRequestsCompleted();
+      });
     });
   }
 
