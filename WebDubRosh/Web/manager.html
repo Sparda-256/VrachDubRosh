@@ -495,6 +495,12 @@
           </table>
         </div>
         
+        <!-- Скрытые элементы для загрузки документов -->
+        <input type="hidden" id="uploadDocumentTypeID">
+        <input type="hidden" id="uploadPatientID">
+        <input type="file" id="uploadDocumentFile" class="form-file" accept="image/jpeg,image/png,application/pdf" style="display: none;">
+        <textarea id="uploadDocumentNotes" style="display: none;" rows="3"></textarea>
+        
         <div class="buttons-group" style="margin-top: 20px;">
           <button id="uploadPatientDocumentBtn" class="btn btn-accent">
             <i class="icon upload-icon"></i>
@@ -512,48 +518,6 @@
       </div>
     </div>
   </div>
-  
-  <!-- Модальное окно для загрузки документа пациента -->
-  <div id="uploadPatientDocumentModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="uploadPatientDocumentModalTitle">Загрузка документа пациента</h2>
-        <span class="close-modal">&times;</span>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="uploadDocumentTypeID">
-        <input type="hidden" id="uploadPatientID">
-        
-        <div class="form-group">
-          <label for="uploadDocumentName">Тип документа:</label>
-          <input type="text" id="uploadDocumentName" class="form-input" readonly>
-        </div>
-        
-        <div class="form-group">
-          <label for="uploadDocumentFile">Файл документа:</label>
-          <input type="file" id="uploadDocumentFile" class="form-file" accept="image/jpeg,image/png,application/pdf">
-        </div>
-        
-        <div class="form-group">
-          <label for="uploadDocumentNotes">Примечания (необязательно):</label>
-          <textarea id="uploadDocumentNotes" class="form-textarea" rows="3"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="savePatientDocumentBtn" class="btn btn-accent">
-          <i class="icon save-icon"></i>
-          <span>Загрузить</span>
-        </button>
-        <button class="btn btn-red close-modal">
-          <i class="icon cancel-icon"></i>
-          <span>Отмена</span>
-        </button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Скрытый input для загрузки файлов доверенности -->
-  <input type="file" id="powerOfAttorneyFileInput" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
   
   <!-- Модальное окно для управления документами сопровождающего -->
   <div id="accompanyingPersonDocumentsModal" class="modal">

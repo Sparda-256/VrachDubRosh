@@ -89,21 +89,19 @@ namespace WebDubRosh.Controllers
                                 return NotFound(new { success = false, message = $"Пациент с ID {id} не найден" });
                             }
                             
-                            // 2. Проверяем, существуют ли зависимые записи назначенных врачей
-                            string checkDoctorsQuery = @"SELECT COUNT(*) FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
-                            int doctorsCount = 0;
+                            // 2. Удаляем зависимые записи назначенных врачей, если они есть
+                            string deleteAssignedDoctorsQuery = @"DELETE FROM PatientDoctorAssignments WHERE PatientID = @PatientID";
+                            int deletedAssignments = 0;
                             
-                            using (SqlCommand checkCmd = new SqlCommand(checkDoctorsQuery, con, tran))
+                            using (SqlCommand deleteCmd = new SqlCommand(deleteAssignedDoctorsQuery, con, tran))
                             {
-                                checkCmd.Parameters.AddWithValue("@PatientID", id);
-                                doctorsCount = Convert.ToInt32(checkCmd.ExecuteScalar());
+                                deleteCmd.Parameters.AddWithValue("@PatientID", id);
+                                deletedAssignments = deleteCmd.ExecuteNonQuery();
                             }
                             
-                            if (doctorsCount > 0)
+                            if (deletedAssignments > 0)
                             {
-                                tran.Rollback();
-                                Console.WriteLine($"Пациент с ID {id} имеет {doctorsCount} назначенных врачей");
-                                return BadRequest(new { success = false, message = "Нельзя удалить пациента, так как у него есть назначенные врачи. Сначала отмените назначения." });
+                                Console.WriteLine($"Удалено {deletedAssignments} назначений врачей для пациента с ID {id}");
                             }
 
                             // 3. Проверяем наличие записей о размещении пациента и удаляем их
@@ -202,19 +200,7 @@ namespace WebDubRosh.Controllers
                             
                             Console.WriteLine($"Удалено документов: {docsDeleted}");
 
-                            // 6. Удаляем описания пациента
-                            string deleteDescriptionsQuery = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
-                            int descsDeleted = 0;
-                            
-                            using (SqlCommand cmdDescriptions = new SqlCommand(deleteDescriptionsQuery, con, tran))
-                            {
-                                cmdDescriptions.Parameters.AddWithValue("@PatientID", id);
-                                descsDeleted = cmdDescriptions.ExecuteNonQuery();
-                            }
-                            
-                            Console.WriteLine($"Удалено описаний: {descsDeleted}");
-
-                            // 7. Удаляем диагнозы пациента
+                            // 6. Удаляем диагнозы пациента
                             string deleteDiagnosesQuery = "DELETE FROM PatientDiagnoses WHERE PatientID = @PatientID";
                             int diagnosesDeleted = 0;
                             
@@ -226,7 +212,57 @@ namespace WebDubRosh.Controllers
                             
                             Console.WriteLine($"Удалено диагнозов: {diagnosesDeleted}");
 
-                            // 8. Удаляем назначения процедур
+                            // 7. Удаляем записи из ScheduleGeneratedAppointments, связанные с назначениями процедур
+                            string findScheduleAppointmentsQuery = @"
+                                SELECT sga.GeneratedAppointmentID 
+                                FROM ScheduleGeneratedAppointments sga
+                                JOIN ProcedureAppointments pa ON sga.AppointmentID = pa.AppointmentID
+                                WHERE pa.PatientID = @PatientID";
+                                
+                            List<int> scheduleGeneratedAppointmentsIDs = new List<int>();
+                            
+                            using (SqlCommand cmdFindSchedule = new SqlCommand(findScheduleAppointmentsQuery, con, tran))
+                            {
+                                cmdFindSchedule.Parameters.AddWithValue("@PatientID", id);
+                                using (SqlDataReader reader = cmdFindSchedule.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        scheduleGeneratedAppointmentsIDs.Add(reader.GetInt32(0));
+                                    }
+                                }
+                            }
+                            
+                            if (scheduleGeneratedAppointmentsIDs.Count > 0)
+                            {
+                                string deleteScheduleGeneratedQuery = "DELETE FROM ScheduleGeneratedAppointments WHERE GeneratedAppointmentID = @GeneratedAppointmentID";
+                                int totalDeleted = 0;
+                                
+                                foreach (int genAppointmentID in scheduleGeneratedAppointmentsIDs)
+                                {
+                                    using (SqlCommand cmdDeleteScheduleGen = new SqlCommand(deleteScheduleGeneratedQuery, con, tran))
+                                    {
+                                        cmdDeleteScheduleGen.Parameters.AddWithValue("@GeneratedAppointmentID", genAppointmentID);
+                                        totalDeleted += cmdDeleteScheduleGen.ExecuteNonQuery();
+                                    }
+                                }
+                                
+                                Console.WriteLine($"Удалено {totalDeleted} связей с регулярными назначениями");
+                            }
+
+                            // 8. Удаляем еженедельные назначения
+                            string deleteWeeklyScheduleQuery = "DELETE FROM WeeklyScheduleAppointments WHERE PatientID = @PatientID";
+                            int weeklySchedulesDeleted = 0;
+                            
+                            using (SqlCommand cmdDeleteWeekly = new SqlCommand(deleteWeeklyScheduleQuery, con, tran))
+                            {
+                                cmdDeleteWeekly.Parameters.AddWithValue("@PatientID", id);
+                                weeklySchedulesDeleted = cmdDeleteWeekly.ExecuteNonQuery();
+                            }
+                            
+                            Console.WriteLine($"Удалено еженедельных расписаний: {weeklySchedulesDeleted}");
+
+                            // 9. Удаляем назначения процедур
                             string deleteProcedureAppointmentsQuery = "DELETE FROM ProcedureAppointments WHERE PatientID = @PatientID";
                             int proceduresDeleted = 0;
                             
@@ -238,7 +274,7 @@ namespace WebDubRosh.Controllers
                             
                             Console.WriteLine($"Удалено назначений процедур: {proceduresDeleted}");
 
-                            // 9. Удаляем медикаменты пациента
+                            // 10. Удаляем медикаменты пациента
                             string deleteMedicationsQuery = "DELETE FROM PatientMedications WHERE PatientID = @PatientID";
                             int medicationsDeleted = 0;
                             
@@ -250,7 +286,7 @@ namespace WebDubRosh.Controllers
                             
                             Console.WriteLine($"Удалено медикаментов: {medicationsDeleted}");
 
-                            // 10. Удаляем измерения пациента
+                            // 11. Удаляем измерения пациента
                             string deleteMeasurementsQuery = "DELETE FROM PatientMeasurements WHERE PatientID = @PatientID";
                             int measurementsDeleted = 0;
                             
@@ -262,58 +298,58 @@ namespace WebDubRosh.Controllers
                             
                             Console.WriteLine($"Удалено измерений: {measurementsDeleted}");
 
-                            // 11. Удаляем выписные документы
-                            string deleteDischargeDocsQuery = "DELETE FROM DischargeDocuments WHERE PatientID = @PatientID";
+                            // 12. Удаляем выписные документы
+                            string deleteDischargeDocumentsQuery = "DELETE FROM DischargeDocuments WHERE PatientID = @PatientID";
                             int dischargeDocsDeleted = 0;
                             
-                            using (SqlCommand cmdDischargeDocs = new SqlCommand(deleteDischargeDocsQuery, con, tran))
+                            using (SqlCommand cmdDischargeDocuments = new SqlCommand(deleteDischargeDocumentsQuery, con, tran))
                             {
-                                cmdDischargeDocs.Parameters.AddWithValue("@PatientID", id);
-                                dischargeDocsDeleted = cmdDischargeDocs.ExecuteNonQuery();
+                                cmdDischargeDocuments.Parameters.AddWithValue("@PatientID", id);
+                                dischargeDocsDeleted = cmdDischargeDocuments.ExecuteNonQuery();
                             }
                             
                             Console.WriteLine($"Удалено выписных документов: {dischargeDocsDeleted}");
 
-                            // 12. Теперь когда все связи удалены, удаляем самого пациента
+                            // 13. Удаляем пациента
                             string deletePatientQuery = "DELETE FROM Patients WHERE PatientID = @PatientID";
-                            int patientDeleted = 0;
+                            int patientsDeleted = 0;
                             
                             using (SqlCommand cmdPatient = new SqlCommand(deletePatientQuery, con, tran))
                             {
                                 cmdPatient.Parameters.AddWithValue("@PatientID", id);
-                                patientDeleted = cmdPatient.ExecuteNonQuery();
+                                patientsDeleted = cmdPatient.ExecuteNonQuery();
+                            }
                                 
-                                if (patientDeleted == 0)
+                            if (patientsDeleted == 0)
                                 {
                                     tran.Rollback();
-                                    Console.WriteLine($"Не удалось удалить пациента с ID {id}");
-                                    return NotFound(new { success = false, message = "Пациент не найден." });
-                                }
+                                return NotFound(new { success = false, message = $"Пациент с ID {id} не найден (возможно, был удален ранее)" });
                             }
                             
-                            Console.WriteLine($"Удален пациент: {patientDeleted}");
+                            Console.WriteLine($"Пациент с ID {id} успешно удален");
 
-                            // Все операции выполнены успешно, фиксируем транзакцию
                             tran.Commit();
-                            Console.WriteLine($"Транзакция успешно завершена, пациент с ID {id} полностью удален");
+                            return Ok(new { success = true, message = $"Пациент с ID {id} успешно удален" });
+                        }
+                        catch (SqlException ex)
+                        {
+                            tran.Rollback();
+                            Console.WriteLine($"Ошибка SQL при удалении пациента с ID {id}: {ex.Message}");
+                            return StatusCode(500, new { success = false, message = $"Ошибка при удалении пациента: {ex.Message}" });
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Ошибка при удалении пациента с ID {id}: {ex.Message}");
-                            Console.WriteLine($"StackTrace: {ex.StackTrace}");
                             tran.Rollback();
-                            throw new Exception($"Ошибка при удалении пациента: {ex.Message}", ex);
+                            Console.WriteLine($"Общая ошибка при удалении пациента с ID {id}: {ex.Message}");
+                            return StatusCode(500, new { success = false, message = $"Ошибка при удалении пациента: {ex.Message}" });
                         }
                     }
                 }
-
-                return Ok(new { success = true, message = "Пациент успешно удален." });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Общая ошибка при удалении пациента: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                return StatusCode(500, new { success = false, message = ex.Message });
+                Console.WriteLine($"Критическая ошибка при удалении пациента с ID {id}: {ex.Message}");
+                return StatusCode(500, new { success = false, message = $"Критическая ошибка при удалении пациента: {ex.Message}" });
             }
         }
 

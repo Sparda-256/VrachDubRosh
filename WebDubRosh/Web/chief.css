@@ -733,4 +733,17 @@ textarea.form-control {
   padding: 4px 0;
   margin-bottom: 2px;
 }
+
+/* Cancel Button Styles */
+.cancel-btn {
+  background-color: var(--red-color) !important;
+}
+
+.cancel-btn:hover {
+  background-color: var(--red-hover-color) !important;
+}
+
+.cancel-btn:active {
+  background-color: var(--red-pressed-color) !important;
+}
   

@@ -190,6 +190,16 @@ function initModals() {
     }
   });
 });
+
+  // Закрытие модальных окон по кнопке отмены
+  document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const modal = this.closest('.modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    });
+  });
 }
 
 // Загрузка списка пациентов

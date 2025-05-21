@@ -28,7 +28,7 @@ namespace WebDubRosh
         /// Если хотите другой - просто замените эту строку.
         /// Например, "warehousemanagementweb2" => warehousemanagementweb2.loca.lt
         /// </summary>
-        private const string Subdomain = "webdubrosh";
+        private const string Subdomain = "webdubroshsdfdeasaassdsssdasdsdsfdas";
 
         private IHost _webHost;
         private Process _ltProcess; // Процесс для localtunnel

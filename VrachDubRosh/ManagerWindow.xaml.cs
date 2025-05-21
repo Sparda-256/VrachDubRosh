@@ -928,12 +928,7 @@ namespace VrachDubRosh
                                     cmd.ExecuteNonQuery();
                                 }
                                 
-                                string deletePatientDescriptionsQuery = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";
-                                using (SqlCommand cmd = new SqlCommand(deletePatientDescriptionsQuery, con, tran))
-                                {
-                                    cmd.Parameters.AddWithValue("@PatientID", patientID);
-                                    cmd.ExecuteNonQuery();
-                                }
+                                // Закомментировано - таблица PatientDescriptions отсутствует в базе данных                                /*                                 string deletePatientDescriptionsQuery = "DELETE FROM PatientDescriptions WHERE PatientID = @PatientID";                                using (SqlCommand cmd = new SqlCommand(deletePatientDescriptionsQuery, con, tran))                                {                                    cmd.Parameters.AddWithValue("@PatientID", patientID);                                    cmd.ExecuteNonQuery();                                }                                */
                                 
                                 // Удаление записей из ScheduleGeneratedAppointments, связанных с назначениями пациента
                                 string deleteScheduleGeneratedQuery = @"

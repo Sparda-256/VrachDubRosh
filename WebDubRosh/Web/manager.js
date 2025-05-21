@@ -1499,6 +1499,9 @@ document.addEventListener('DOMContentLoaded', function() {
   function initPatientDocumentsTableListeners() {
     const table = document.getElementById('patientDocumentsTable');
     
+    // Массив для хранения выбранных строк
+    const selectedRows = [];
+    
     // Очищаем предыдущие обработчики
     const newTable = table.cloneNode(true);
     table.parentNode.replaceChild(newTable, table);
@@ -1508,24 +1511,29 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = e.target.closest('tr');
       if (!row) return;
       
-      // Удаляем выделение со всех строк
-      this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      const isCtrlPressed = e.ctrlKey || e.metaKey;
       
-      // Выделяем текущую строку
-      row.classList.add('selected');
-      
-      // Проверяем наличие документа для включения/отключения кнопок
-      const documentId = row.dataset.documentId;
-      const viewBtn = document.getElementById('viewPatientDocumentBtn');
-      const deleteBtn = document.getElementById('deletePatientDocumentBtn');
-      
-      if (documentId) {
-        viewBtn.disabled = false;
-        deleteBtn.disabled = false;
-      } else {
-        viewBtn.disabled = true;
-        deleteBtn.disabled = true;
+      // Если не нажат Ctrl, очищаем выделение
+      if (!isCtrlPressed) {
+        this.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+        selectedRows.length = 0; // Очищаем массив
       }
+      
+      // Если строка уже выбрана и нажат Ctrl, снимаем выделение
+      if (row.classList.contains('selected') && isCtrlPressed) {
+        row.classList.remove('selected');
+        const index = selectedRows.indexOf(row);
+        if (index > -1) selectedRows.splice(index, 1);
+      } else {
+        // Иначе добавляем выделение
+        row.classList.add('selected');
+        if (!selectedRows.includes(row)) {
+          selectedRows.push(row);
+        }
+      }
+      
+      // Обновляем состояние кнопок на основе выбранных строк
+      updatePatientDocumentButtonStates(selectedRows);
     });
     
     // Обработчик двойного клика для просмотра документа
@@ -1548,63 +1556,141 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      const documentTypeId = selectedRow.dataset.documentTypeId;
-      const documentName = selectedRow.cells[0].textContent;
-      const patientId = document.getElementById('uploadPatientID').value;
-      
-      showUploadPatientDocumentModal(patientId, documentTypeId, documentName);
+      // Вместо показа модального окна сразу открываем выбор файла
+      document.getElementById('uploadDocumentFile').click();
+    });
+    
+    // Обработчик события выбора файла
+    document.getElementById('uploadDocumentFile').addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        uploadPatientDocument();
+      }
     });
     
     document.getElementById('viewPatientDocumentBtn').addEventListener('click', function() {
-      const selectedRow = newTable.querySelector('tbody tr.selected');
+      const selectedRows = newTable.querySelectorAll('tbody tr.selected');
       
-      if (!selectedRow || !selectedRow.dataset.documentId) {
-        showNotification('Выберите загруженный документ для просмотра', 'error');
+      if (selectedRows.length !== 1 || !selectedRows[0].dataset.documentId) {
+        showNotification('Выберите один загруженный документ для просмотра', 'error');
         return;
       }
       
-      viewPatientDocument(selectedRow.dataset.documentId);
+      viewPatientDocument(selectedRows[0].dataset.documentId);
     });
     
     document.getElementById('deletePatientDocumentBtn').addEventListener('click', function() {
-      const selectedRow = newTable.querySelector('tbody tr.selected');
+      const selectedRows = newTable.querySelectorAll('tbody tr.selected');
+      const documentsToDelete = [];
       
-      if (!selectedRow || !selectedRow.dataset.documentId) {
-        showNotification('Выберите загруженный документ для удаления', 'error');
+      selectedRows.forEach(row => {
+        if (row.dataset.documentId) {
+          documentsToDelete.push(row.dataset.documentId);
+        }
+      });
+      
+      if (documentsToDelete.length === 0) {
+        showNotification('Выберите хотя бы один загруженный документ для удаления', 'error');
         return;
       }
       
-      if (confirm('Вы действительно хотите удалить этот документ?')) {
-        deletePatientDocument(selectedRow.dataset.documentId);
+      const confirmMessage = documentsToDelete.length === 1 
+        ? 'Вы действительно хотите удалить этот документ?' 
+        : `Вы действительно хотите удалить ${documentsToDelete.length} выбранных документов?`;
+      
+      if (confirm(confirmMessage)) {
+        deletePatientDocument(documentsToDelete);
       }
     });
     
     // По умолчанию отключаем кнопки просмотра и удаления
     document.getElementById('viewPatientDocumentBtn').disabled = true;
     document.getElementById('deletePatientDocumentBtn').disabled = true;
+    
+    // Функция обновления состояния кнопок на основе выбранных строк
+    function updatePatientDocumentButtonStates(rows) {
+      const hasUploadableDoc = rows.length === 1;
+      const hasViewableDoc = rows.length === 1 && rows[0].dataset.documentId;
+      const hasDeletableDoc = rows.some(row => row.dataset.documentId);
+      
+      document.getElementById('uploadPatientDocumentBtn').disabled = !hasUploadableDoc;
+      document.getElementById('viewPatientDocumentBtn').disabled = !hasViewableDoc;
+      document.getElementById('deletePatientDocumentBtn').disabled = !hasDeletableDoc;
+      
+      // Устанавливаем текст кнопки загрузки для одной выбранной строки
+      if (hasUploadableDoc) {
+        const documentStatus = rows[0].cells[1].textContent.trim();
+        const isUploaded = documentStatus !== 'Не загружен';
+        const uploadBtn = document.getElementById('uploadPatientDocumentBtn');
+        
+        // Сохраняем ID типа документа для последующей загрузки
+        document.getElementById('uploadDocumentTypeID').value = rows[0].dataset.documentTypeId;
+        
+        uploadBtn.querySelector('span').textContent = isUploaded ? 'Заменить' : 'Загрузить';
+      }
+    }
   }
 
-  // Показать модальное окно загрузки документа пациента
-  function showUploadPatientDocumentModal(patientId, documentTypeId, documentName) {
-    // Заполняем поля модального окна
-    document.getElementById('uploadDocumentTypeID').value = documentTypeId;
-    document.getElementById('uploadPatientID').value = patientId;
-    document.getElementById('uploadDocumentName').value = documentName;
-    document.getElementById('uploadDocumentFile').value = '';
-    document.getElementById('uploadDocumentNotes').value = '';
+  // Удаление документа пациента
+  function deletePatientDocument(documentIds) {
+    // Получаем ID пациента
+    const patientId = document.getElementById('uploadPatientID').value;
     
-    // Устанавливаем заголовок
-    document.getElementById('uploadPatientDocumentModalTitle').textContent = `Загрузка документа: ${documentName}`;
+    // Преобразуем в массив, если передан один ID
+    const idsArray = Array.isArray(documentIds) ? documentIds : [documentIds];
     
-    // Показываем модальное окно
-    document.getElementById('uploadPatientDocumentModal').style.display = 'block';
+    // Показываем уведомление
+    const message = idsArray.length === 1 
+      ? 'Удаление документа...' 
+      : `Удаление ${idsArray.length} документов...`;
     
-    // Обработчик для кнопки сохранения
-    const saveBtn = document.getElementById('savePatientDocumentBtn');
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    showNotification(message, 'info');
     
-    newSaveBtn.addEventListener('click', uploadPatientDocument);
+    // Счетчики для отслеживания прогресса
+    let successCount = 0;
+    let errorCount = 0;
+    let requestsCompleted = 0;
+    
+    // Функция для проверки завершения всех запросов
+    function checkAllRequestsCompleted() {
+      requestsCompleted++;
+      if (requestsCompleted === idsArray.length) {
+        // Все запросы выполнены, выводим итоговое сообщение
+        if (errorCount === 0) {
+          const successMessage = idsArray.length === 1 
+            ? 'Документ успешно удален' 
+            : `${successCount} документов успешно удалено`;
+          showNotification(successMessage, 'success');
+        } else {
+          showNotification(`Удалено ${successCount} из ${idsArray.length} документов. Ошибок: ${errorCount}`, 'warning');
+        }
+        
+        // Обновляем список документов
+        loadPatientDocuments(patientId, patients.find(p => p.PatientID == patientId).FullName);
+      }
+    }
+    
+    // Отправляем запросы на удаление для каждого документа
+    idsArray.forEach(documentId => {
+      fetch(`/api/manager/patient/document/${documentId}`, {
+        method: 'DELETE'
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.error(`Ошибка при удалении документа ${documentId}: ${result.message}`);
+        }
+      })
+      .catch(error => {
+        errorCount++;
+        console.error('Ошибка при удалении документа:', error);
+      })
+      .finally(() => {
+        checkAllRequestsCompleted();
+      });
+    });
   }
 
   // Загрузка документа пациента
@@ -1643,8 +1729,8 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(result => {
       if (result.success) {
-        // Закрываем модальное окно
-        document.getElementById('uploadPatientDocumentModal').style.display = 'none';
+        // Очищаем поле выбора файла
+        document.getElementById('uploadDocumentFile').value = '';
         
         // Обновляем список документов
         loadPatientDocuments(patientId, patients.find(p => p.PatientID == patientId).FullName);
@@ -1663,35 +1749,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Просмотр документа пациента
   function viewPatientDocument(documentId) {
     window.open(`/api/manager/patient/document/${documentId}/view`, '_blank');
-  }
-
-  // Удаление документа пациента
-  function deletePatientDocument(documentId) {
-    // Получаем ID пациента
-    const patientId = document.getElementById('uploadPatientID').value;
-    
-    // Показываем уведомление
-    showNotification('Удаление документа...', 'info');
-    
-    // Отправляем запрос на удаление
-    fetch(`/api/manager/patient/document/${documentId}`, {
-      method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
-        // Обновляем список документов
-        loadPatientDocuments(patientId, patients.find(p => p.PatientID == patientId).FullName);
-        
-        showNotification('Документ успешно удален', 'success');
-      } else {
-        showNotification(`Ошибка при удалении документа: ${result.message}`, 'error');
-      }
-    })
-    .catch(error => {
-      console.error('Ошибка при удалении документа:', error);
-      showNotification('Ошибка при удалении документа', 'error');
-    });
   }
 
   // Вспомогательные функции
