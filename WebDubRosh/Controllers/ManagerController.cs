@@ -488,7 +488,7 @@ namespace WebDubRosh.Controllers
 
         // GET: api/manager/rooms/{buildingId}
         [HttpGet("rooms/{buildingId}")]
-        public IActionResult GetAvailableRooms(int buildingId, [FromQuery] int? patientID = null, [FromQuery] int? accompanyingPersonID = null)
+        public IActionResult GetAvailableRooms(int buildingId, [FromQuery] int? patientID = null)
         {
             try
             {
@@ -513,8 +513,8 @@ namespace WebDubRosh.Controllers
                         int occupiedBeds = Convert.ToInt32(row["OccupiedBeds"]);
                         int roomID = Convert.ToInt32(row["RoomID"]);
                         
-                        // Включаем комнаты, даже если они полностью заняты, когда указан ID пациента или сопровождающего
-                        if (occupiedBeds < 2 || patientID.HasValue || accompanyingPersonID.HasValue)
+                        // Включаем комнаты, даже если они полностью заняты, когда указан ID пациента
+                        if (occupiedBeds < 2 || patientID.HasValue)
                         {
                             var room = new {
                                 RoomID = roomID,
@@ -527,7 +527,7 @@ namespace WebDubRosh.Controllers
                             {
                                 // Запрос для определения, какие конкретно кровати заняты
                                 string bedQuery = @"
-                                    SELECT a.BedNumber, a.PatientID, a.AccompanyingPersonID
+                                    SELECT a.BedNumber, a.PatientID
                                     FROM Accommodations a
                                     WHERE a.RoomID = @RoomID AND a.CheckOutDate IS NULL";
                                 
@@ -535,7 +535,7 @@ namespace WebDubRosh.Controllers
                                 {
                                     bedCmd.Parameters.AddWithValue("@RoomID", room.RoomID);
                                     
-                                    var occupiedBedInfo = new Dictionary<int, Tuple<int?, int?>>(); // кровать -> (ID пациента, ID сопровождающего)
+                                    var occupiedBedInfo = new Dictionary<int, int?>(); // кровать -> ID пациента
                                     using (SqlDataReader bedReader = bedCmd.ExecuteReader())
                                     {
                                         while (bedReader.Read())
@@ -544,20 +544,16 @@ namespace WebDubRosh.Controllers
                                             int? patientIDInBed = bedReader["PatientID"] != DBNull.Value 
                                                 ? (int?)Convert.ToInt32(bedReader["PatientID"]) 
                                                 : null;
-                                            int? accompanyingIDInBed = bedReader["AccompanyingPersonID"] != DBNull.Value 
-                                                ? (int?)Convert.ToInt32(bedReader["AccompanyingPersonID"]) 
-                                                : null;
                                             
-                                            occupiedBedInfo[bedNumber] = new Tuple<int?, int?>(patientIDInBed, accompanyingIDInBed);
+                                            occupiedBedInfo[bedNumber] = patientIDInBed;
                                         }
                                     }
                                     
-                                    // Добавляем свободные кровати или занятые текущим пациентом/сопровождающим
+                                    // Добавляем свободные кровати или занятые текущим пациентом
                                     for (int i = 1; i <= 2; i++)
                                     {
                                         if (!occupiedBedInfo.ContainsKey(i) || 
-                                            (patientID.HasValue && occupiedBedInfo[i].Item1 == patientID.Value) ||
-                                            (accompanyingPersonID.HasValue && occupiedBedInfo[i].Item2 == accompanyingPersonID.Value))
+                                            (patientID.HasValue && occupiedBedInfo[i] == patientID.Value))
                                         {
                                             ((List<int>)room.AvailableBeds).Add(i);
                                         }
@@ -711,6 +707,20 @@ namespace WebDubRosh.Controllers
                                 return NotFound(new { success = false, message = $"Пациент с ID {id} не найден" });
                             }
                             
+                            // Сначала получим текущий тип стационара
+                            string currentStayTypeQuery = "SELECT StayType FROM Patients WHERE PatientID = @PatientID";
+                            string currentStayType = string.Empty;
+                            
+                            using (SqlCommand cmd = new SqlCommand(currentStayTypeQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PatientID", id);
+                                object result = cmd.ExecuteScalar();
+                                if (result != null && result != DBNull.Value)
+                                {
+                                    currentStayType = result.ToString();
+                                }
+                            }
+                            
                             // Обновляем основные данные пациента
                             string updateQuery;
                             if (patient.DischargeDate.HasValue)
@@ -754,27 +764,30 @@ namespace WebDubRosh.Controllers
                                 Console.WriteLine($"Обновлено записей пациента: {rowsUpdated}");
                             }
 
-                            // Если изменился тип стационара или данные размещения
-                            // Сначала получим текущий тип стационара
-                            string currentStayTypeQuery = "SELECT StayType FROM Patients WHERE PatientID = @PatientID";
-                            string currentStayType = string.Empty;
-                            
-                            using (SqlCommand cmd = new SqlCommand(currentStayTypeQuery, con, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@PatientID", id);
-                                object result = cmd.ExecuteScalar();
-                                if (result != null && result != DBNull.Value)
-                                {
-                                    currentStayType = result.ToString();
-                                }
-                            }
-                            
                             // Проверяем наличие размещения у пациента
                             bool hasAccommodation = false;
                             using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Accommodations WHERE PatientID = @PatientID AND CheckOutDate IS NULL", con, transaction))
                             {
                                 cmd.Parameters.AddWithValue("@PatientID", id);
                                 hasAccommodation = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                            }
+                            
+                            // Если тип стационара меняется с круглосуточного на дневной, выселяем пациента
+                            Console.WriteLine($"Проверка смены типа стационара: currentStayType={currentStayType}, newStayType={patient.StayType}, hasAccommodation={hasAccommodation}");
+                            if (currentStayType == "Круглосуточный" && patient.StayType == "Дневной" && hasAccommodation)
+                            {
+                                Console.WriteLine("Выполняется выселение пациента при смене типа стационара");
+                                string closeAccommodationQuery = @"
+                                    UPDATE Accommodations 
+                                    SET CheckOutDate = GETDATE() 
+                                    WHERE PatientID = @PatientID AND CheckOutDate IS NULL";
+                                
+                                using (SqlCommand cmd = new SqlCommand(closeAccommodationQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@PatientID", id);
+                                    int rowsAffected = cmd.ExecuteNonQuery();
+                                    Console.WriteLine($"Пациент выселен при смене типа стационара: {rowsAffected} строк обновлено");
+                                }
                             }
                             
                             // Обработка размещения в зависимости от ситуации

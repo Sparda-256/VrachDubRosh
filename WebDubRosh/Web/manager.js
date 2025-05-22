@@ -1992,32 +1992,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const gender = document.getElementById('patientGender').value;
     const stayType = document.getElementById('patientStayType').value;
     const recordDate = document.getElementById('patientRecordDate').value;
-    const dischargeDate = document.getElementById('patientDischargeDate').value || null;
+    const dischargeDate = document.getElementById('patientDischargeDate').value;
     
     if (!fullName) {
-      showNotification('Пожалуйста, введите ФИО пациента', 'error');
-      return;
+        showNotification('Пожалуйста, введите ФИО пациента', 'error');
+        return;
     }
     
     if (!dateOfBirth) {
-      showNotification('Пожалуйста, выберите дату рождения', 'error');
-      return;
+        showNotification('Пожалуйста, укажите дату рождения', 'error');
+        return;
+    }
+
+    // Проверка даты рождения (должна быть не позже текущей даты)
+    if (new Date(dateOfBirth) > new Date()) {
+        showNotification('Дата рождения не может быть в будущем', 'error');
+        return;
     }
     
     if (!recordDate) {
-      showNotification('Пожалуйста, выберите дату записи', 'error');
-      return;
+        showNotification('Пожалуйста, укажите дату записи', 'error');
+        return;
+    }
+
+    // Проверка дат
+    if (dischargeDate && new Date(dischargeDate) <= new Date(recordDate)) {
+        showNotification('Дата выписки должна быть позже даты записи', 'error');
+        return;
     }
     
-    // Создаем объект пациента
+    // Создаем объект с данными пациента
     const patient = {
-      FullName: fullName,
-      DateOfBirth: dateOfBirth,
-      Gender: gender,
-      StayType: stayType,
-      RecordDate: recordDate,
-      DischargeDate: dischargeDate,
-      AccommodationInfo: null // Инициализируем AccommodationInfo как null
+        FullName: fullName,
+        DateOfBirth: dateOfBirth,
+        Gender: gender,
+        StayType: stayType,
+        RecordDate: recordDate,
+        DischargeDate: dischargeDate || null
     };
     
     // Заполняем информацию о размещении только для круглосуточного стационара
@@ -2678,7 +2689,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Сохранение данных сопровождающего
   function saveAccompanyingPerson() {
-    // Собираем данные из формы
+    // Валидация формы
     const accompanyingID = document.getElementById('accompanyingPersonID').value;
     const patientID = document.getElementById('accompanyingPatient').value;
     const fullName = document.getElementById('accompanyingFullName').value.trim();
@@ -2700,21 +2711,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Проверка наличия доверенности, если она требуется
     if (isPowerOfAttorneyRequired && !hasPowerOfAttorney) {
-      showNotification('Для выбранного отношения требуется выбрать файл доверенности', 'error');
-      return;
+        showNotification('Для выбранного отношения требуется выбрать файл доверенности', 'error');
+        return;
     }
     
-    // Проверка заполнения обязательных полей
     if (!patientID) {
-      showNotification('Пожалуйста, выберите пациента', 'error');
-      return;
+        showNotification('Пожалуйста, выберите пациента', 'error');
+        return;
     }
     
     if (!fullName) {
-      showNotification('Пожалуйста, введите ФИО сопровождающего', 'error');
-      return;
+        showNotification('Пожалуйста, введите ФИО сопровождающего', 'error');
+        return;
     }
     
+    if (!dateOfBirth) {
+        showNotification('Пожалуйста, укажите дату рождения', 'error');
+        return;
+    }
+    
+    if (!relationship) {
+        showNotification('Пожалуйста, выберите степень родства', 'error');
+        return;
+    }
+
+    // Проверка даты рождения (должна быть не позже текущей даты)
+    if (new Date(dateOfBirth) > new Date()) {
+        showNotification('Дата рождения не может быть в будущем', 'error');
+        return;
+    }
+
     // Проверяем тип стационара пациента
     const patientSelect = document.getElementById('accompanyingPatient');
     const selectedOption = patientSelect.options[patientSelect.selectedIndex];
@@ -2727,32 +2753,32 @@ document.addEventListener('DOMContentLoaded', function() {
     let accommodationInfo = null;
     
     if (needAccommodation) {
-      const buildingID = document.getElementById('accompanyingBuilding').value;
-      const roomID = document.getElementById('accompanyingRoom').value;
-      const bedNumber = document.getElementById('accompanyingBed').value;
-      
-      // Проверяем наличие значений только если нужно размещение
-      if (!buildingID || !roomID || !bedNumber) {
-        showNotification('Пожалуйста, выберите корпус, комнату и кровать для размещения', 'error');
-        return;
-      }
-      
-      accommodationInfo = {
-        RoomID: parseInt(roomID),
-        BedNumber: parseInt(bedNumber)
-      };
+        const buildingID = document.getElementById('accompanyingBuilding').value;
+        const roomID = document.getElementById('accompanyingRoom').value;
+        const bedNumber = document.getElementById('accompanyingBed').value;
+        
+        // Проверяем наличие значений только если нужно размещение
+        if (!buildingID || !roomID || !bedNumber) {
+            showNotification('Пожалуйста, выберите корпус, комнату и кровать для размещения', 'error');
+            return;
+        }
+
+        accommodationInfo = {
+            RoomID: parseInt(roomID),
+            BedNumber: parseInt(bedNumber)
+        };
     }
     
     // Формируем объект данных сопровождающего
     const accompanyingData = {
-      PatientID: parseInt(patientID),
-      FullName: fullName,
-      DateOfBirth: dateOfBirth || null,
-      Relationship: relationship,
-      HasPowerOfAttorney: hasPowerOfAttorney,
-      NeedAccommodation: needAccommodation,
-      // Если размещение не требуется, передаем пустой объект вместо null
-      AccommodationInfo: needAccommodation && accommodationInfo ? accommodationInfo : { RoomID: 0, BedNumber: 0 }
+        PatientID: parseInt(patientID),
+        FullName: fullName,
+        DateOfBirth: dateOfBirth || null,
+        Relationship: relationship,
+        HasPowerOfAttorney: hasPowerOfAttorney,
+        NeedAccommodation: needAccommodation,
+        // Если размещение не требуется, передаем пустой объект вместо null
+        AccommodationInfo: needAccommodation && accommodationInfo ? accommodationInfo : { RoomID: 0, BedNumber: 0 }
     };
     
     // Определяем, это добавление нового или редактирование существующего
@@ -2763,35 +2789,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для выполнения основного запроса (POST/PUT)
     function executeMainRequest() {
         const url = isEditMode 
-          ? `/api/manager/accompanyingperson/${accompanyingID}`
-          : '/api/manager/accompanyingperson';
+            ? `/api/manager/accompanyingperson/${accompanyingID}`
+            : '/api/manager/accompanyingperson';
         const method = isEditMode ? 'PUT' : 'POST';
         
         console.log('Отправка данных сопровождающего:', JSON.stringify(accompanyingData, null, 2));
         
         return fetch(url, {
-          method: method,
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(accompanyingData)
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(accompanyingData)
         })
         .then(response => {
-          console.log('Получен ответ со статусом:', response.status);
-          
-          if (!response.ok) {
-            // Пытаемся получить текст ошибки с сервера
-            return response.text().then(text => {
-              console.error('Текст ошибки от сервера:', text);
-              try {
-                const err = JSON.parse(text);
-                throw new Error(err.message || `Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего`);
-              } catch (parseError) {
-                throw new Error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего: ${text}`);
-              }
-            });
-          }
-          return response.json();
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Ошибка сервера'); });
+            }
+            return response.json();
         });
     }
 
@@ -2818,55 +2833,55 @@ document.addEventListener('DOMContentLoaded', function() {
     showNotification(`${isEditMode ? 'Обновление' : 'Добавление'} сопровождающего...`, 'info');
     
     executeMainRequest()
-      .then(mainResult => {
-          // Если это не режим редактирования И требуется доверенность И файл был выбран
-          if (!isEditMode && isPowerOfAttorneyRequired && selectedPowerOfAttorneyFile) {
-              const newAccompanyingPersonID = mainResult.accompanyingPersonID;
-              if (!newAccompanyingPersonID) {
-                  throw new Error('Не удалось получить ID нового сопровождающего после сохранения.');
-              }
-              // Выполняем загрузку файла
-              return executeFileUpload(newAccompanyingPersonID, selectedPowerOfAttorneyFile)
-                  .then(uploadResult => {
-                      if (!uploadResult.success) {
-                          // Ошибка при загрузке файла, но сопровождающий уже создан
-                          throw new Error(`Сопровождающий создан (ID: ${newAccompanyingPersonID}), но не удалось загрузить доверенность: ${uploadResult.message}`);
-                      }
-                      return mainResult; // Возвращаем результат основного сохранения
-                  });
-          } else if (isEditMode && selectedPowerOfAttorneyFile) {
-              // Если режим редактирования и был выбран НОВЫЙ файл для замены
-              return executeFileUpload(accompanyingID, selectedPowerOfAttorneyFile)
-                   .then(uploadResult => {
-                      if (!uploadResult.success) {
-                          throw new Error(`Данные сопровождающего обновлены, но не удалось загрузить новую доверенность: ${uploadResult.message}`);
-                      }
-                      return mainResult;
-                  });
-          }
-          // Если файл не требовался или не был выбран (или режим редактирования без нового файла)
-          return mainResult; 
-      })
-      .then(finalResult => {
-          // Успешное завершение (основной запрос и, возможно, загрузка файла)
-          showNotification(`Сопровождающий успешно ${isEditMode ? 'обновлен' : 'добавлен'}`, 'success');
-          
-          // Закрываем модальное окно
-          document.getElementById('accompanyingModal').style.display = 'none';
-          selectedPowerOfAttorneyFile = null; // Очищаем выбранный файл
-          
-          // Обновляем списки
-          loadAccompanyingPersons();
-          if (accompanyingData.NeedAccommodation) {
-            loadAccommodations();
-          }
-      })
-      .catch(error => {
-          // Обработка любых ошибок (основной запрос или загрузка файла)
-          console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего:`, error);
-          showNotification(error.message, 'error');
-          // Не закрываем окно, если была ошибка
-      });
+        .then(mainResult => {
+            // Если это не режим редактирования И требуется доверенность И файл был выбран
+            if (!isEditMode && isPowerOfAttorneyRequired && selectedPowerOfAttorneyFile) {
+                const newAccompanyingPersonID = mainResult.accompanyingPersonID;
+                if (!newAccompanyingPersonID) {
+                    throw new Error('Не удалось получить ID нового сопровождающего после сохранения.');
+                }
+                // Выполняем загрузку файла
+                return executeFileUpload(newAccompanyingPersonID, selectedPowerOfAttorneyFile)
+                    .then(uploadResult => {
+                        if (!uploadResult.success) {
+                            // Ошибка при загрузке файла, но сопровождающий уже создан
+                            throw new Error(`Сопровождающий создан (ID: ${newAccompanyingPersonID}), но не удалось загрузить доверенность: ${uploadResult.message}`);
+                        }
+                        return mainResult; // Возвращаем результат основного сохранения
+                    });
+            } else if (isEditMode && selectedPowerOfAttorneyFile) {
+                // Если режим редактирования и был выбран НОВЫЙ файл для замены
+                return executeFileUpload(accompanyingID, selectedPowerOfAttorneyFile)
+                    .then(uploadResult => {
+                        if (!uploadResult.success) {
+                            throw new Error(`Данные сопровождающего обновлены, но не удалось загрузить новую доверенность: ${uploadResult.message}`);
+                        }
+                        return mainResult;
+                    });
+            }
+            // Если файл не требовался или не был выбран (или режим редактирования без нового файла)
+            return mainResult; 
+        })
+        .then(finalResult => {
+            // Успешное завершение (основной запрос и, возможно, загрузка файла)
+            showNotification(`Сопровождающий успешно ${isEditMode ? 'обновлен' : 'добавлен'}`, 'success');
+            
+            // Закрываем модальное окно
+            document.getElementById('accompanyingModal').style.display = 'none';
+            selectedPowerOfAttorneyFile = null; // Очищаем выбранный файл
+            
+            // Обновляем списки
+            loadAccompanyingPersons();
+            if (accompanyingData.NeedAccommodation) {
+                loadAccommodations();
+            }
+        })
+        .catch(error => {
+            // Обработка любых ошибок (основной запрос или загрузка файла)
+            console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'добавлении'} сопровождающего:`, error);
+            showNotification(error.message, 'error');
+            // Не закрываем окно, если была ошибка
+        });
   }
 
   // Удаление сопровождающего
