@@ -6,12 +6,18 @@ let medications = [];
 let selectedDiagnoses = [];
 let selectedMedications = [];
 let isDarkTheme = false;
+let sourceScreen = null; // Для отслеживания экрана, с которого была открыта медкарта
+let sourceId = null; // Для хранения ID источника (врача или главврача)
 
 // При загрузке DOM
 document.addEventListener('DOMContentLoaded', () => {
   // Получаем ID пациента из URL
   const urlParams = new URLSearchParams(window.location.search);
   patientId = urlParams.get('id');
+  // Получаем источник перехода (doctor или chief)
+  sourceScreen = urlParams.get('source') || 'chief';
+  // Получаем ID источника (ID врача или главврача)
+  sourceId = urlParams.get('source_id');
   
   if (!patientId) {
     showError('Не указан ID пациента');
@@ -78,7 +84,12 @@ function initTabs() {
 function initButtons() {
   // Кнопка выхода
   document.getElementById('exitBtn').addEventListener('click', () => {
-    window.location.href = 'chief.html';
+    // Перенаправляем пользователя в зависимости от источника
+    if (sourceScreen === 'doctor') {
+      window.location.href = sourceId ? `doctor.html?id=${sourceId}` : 'doctor.html';
+    } else {
+      window.location.href = 'chief.html';
+    }
   });
   
   // Кнопка печати

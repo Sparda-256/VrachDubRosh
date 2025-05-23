@@ -239,23 +239,6 @@ namespace VrachDubRosh
             }
         }
 
-        private void btnEditPatient_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgDoctorPatients.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите пациента для редактирования.");
-                return;
-            }
-            DataRowView row = dgDoctorPatients.SelectedItem as DataRowView;
-            int patientID = Convert.ToInt32(row["PatientID"]);
-            AddEditPatientWindow editPatientWindow = new AddEditPatientWindow(this, patientID);
-            editPatientWindow.Owner = this;
-            if (editPatientWindow.ShowDialog() == true)
-            {
-                LoadDoctorPatients();
-            }
-        }
-
         // Обработчик двойного щелчка по пациенту
         private void dgDoctorPatients_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {

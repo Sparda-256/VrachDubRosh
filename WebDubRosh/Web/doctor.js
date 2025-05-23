@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     doctorID = urlParams.get('id');
     
     if (!doctorID) {
-      alert('Ошибка: ID врача не найден в URL.');
+      showNotification('Ошибка: ID врача не найден в URL.', 'error');
       window.location.href = 'login.html';
       return;
     }
@@ -77,6 +77,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Устанавливаем сегодняшнюю дату в поле даты
     appointmentDate.valueAsDate = new Date();
+  }
+
+  // Функция для отображения уведомлений
+  function showNotification(message, type = 'info') {
+    // Создаем элемент уведомления
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Добавляем уведомление на страницу
+    document.body.appendChild(notification);
+    
+    // Устанавливаем таймер для автоматического скрытия
+    setTimeout(() => {
+      notification.style.animation = 'fadeOut 0.5s';
+      notification.addEventListener('animationend', () => {
+        document.body.removeChild(notification);
+      });
+    }, 3000);
   }
 
   // Инициализация переключателя темы
@@ -164,6 +183,10 @@ document.addEventListener('DOMContentLoaded', function() {
     addProcedureBtn.addEventListener('click', () => {
       procedureName.value = '';
       procedureDuration.value = '';
+      // Очищаем атрибуты режима и ID процедуры при добавлении новой
+      delete addProcedureModal.dataset.mode;
+      delete addProcedureModal.dataset.procedureId;
+      document.getElementById('procedureModalTitle').textContent = 'Добавление процедуры';
       addProcedureModal.style.display = 'block';
     });
     
@@ -192,12 +215,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const patient = patients.find(p => p.PatientID === patientID);
       
       if (patient) {
-        patientNameDisplay.textContent = `Пациент: ${patient.FullName}`;
-        patientDescription.value = '';
-        addDescriptionModal.style.display = 'block';
-        
-        // Сохраняем ID пациента для использования в savePatientDescription
-        addDescriptionModal.dataset.patientId = patientID;
+        // Перенаправляем на страницу медкарты с передачей ID пациента и источника
+        window.location.href = `medcard.html?id=${patientID}&source=doctor&source_id=${doctorID}`;
       }
     });
     
@@ -242,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Сохраняем ID назначения для использования в saveProcedureDescription
         procedureDescriptionModal.dataset.appointmentId = appointmentID;
       } else if (appointment && appointment.Status === 'Назначена') {
-        alert('Нельзя добавить описание для процедуры со статусом "Назначена".');
+        showNotification('Нельзя добавить описание для процедуры со статусом "Назначена".', 'info');
       }
     });
     
@@ -284,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
         procedureDuration.value = procedure.Duration;
         addProcedureModal.dataset.procedureId = procedureID;
         addProcedureModal.dataset.mode = 'edit';
+        document.getElementById('procedureModalTitle').textContent = 'Редактирование процедуры';
         addProcedureModal.style.display = 'block';
       }
     });
@@ -314,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Error loading data:', error);
-      alert('Ошибка загрузки данных. Пожалуйста, обновите страницу или повторите попытку позже.');
+      showNotification('Ошибка загрузки данных. Пожалуйста, обновите страницу или повторите попытку позже.', 'error');
     });
   }
 
@@ -459,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const time = appointmentTime.value;
     
     if (!patientID || !procedureID || !date || !time) {
-      alert('Пожалуйста, заполните все поля для назначения процедуры.');
+      showNotification('Пожалуйста, заполните все поля для назначения процедуры.', 'error');
       return;
     }
     
@@ -480,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        alert(data.message);
+        showNotification(data.message, 'success');
         
         // Обновляем список назначений
         fetch(`/api/doctor/${doctorID}/appointments`)
@@ -490,19 +510,19 @@ document.addEventListener('DOMContentLoaded', function() {
             renderAppointments();
           });
       } else {
-        alert(data.message);
+        showNotification(data.message, 'error');
       }
     })
     .catch(error => {
       console.error('Error assigning procedure:', error);
-      alert('Ошибка при назначении процедуры.');
+      showNotification('Ошибка при назначении процедуры.', 'error');
     });
   }
 
   // Отмена назначения
   function cancelAppointment() {
     if (selectedAppointmentIDs.length === 0) {
-      alert('Пожалуйста, выберите назначение для отмены.');
+      showNotification('Пожалуйста, выберите назначение для отмены.', 'info');
       return;
     }
     
@@ -529,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const successCount = results.filter(r => r.success).length;
         
         if (successCount > 0) {
-          alert(`Успешно отменено ${successCount} назначение(й).`);
+          showNotification(`Успешно отменено ${successCount} назначение(й).`, 'success');
           
           // Обновляем список назначений
           fetch(`/api/doctor/${doctorID}/appointments`)
@@ -540,12 +560,12 @@ document.addEventListener('DOMContentLoaded', function() {
               selectedAppointmentIDs = [];
             });
         } else {
-          alert('Не удалось отменить назначения.');
+          showNotification('Не удалось отменить назначения.', 'error');
         }
       })
       .catch(error => {
         console.error('Error canceling appointments:', error);
-        alert('Ошибка при отмене назначений.');
+        showNotification('Ошибка при отмене назначений.', 'error');
       });
   }
 
@@ -565,12 +585,12 @@ document.addEventListener('DOMContentLoaded', function() {
             renderAppointments();
           });
       } else {
-        alert(data.message);
+        showNotification(data.message, 'error');
       }
     })
     .catch(error => {
       console.error('Error updating appointments status:', error);
-      alert('Ошибка при обновлении статусов назначений.');
+      showNotification('Ошибка при обновлении статусов назначений.', 'error');
     });
   }
 
@@ -580,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const duration = parseInt(procedureDuration.value);
     
     if (!name || isNaN(duration) || duration <= 0) {
-      alert('Пожалуйста, введите корректное название и длительность процедуры.');
+      showNotification('Пожалуйста, введите корректное название и длительность процедуры.', 'error');
       return;
     }
     
@@ -589,25 +609,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const procedureID = isEdit ? parseInt(addProcedureModal.dataset.procedureId) : null;
     
     if (isEdit) {
-      // Обновление существующей процедуры - для будущей реализации
-      alert('Редактирование процедур в данной версии не реализовано. Пожалуйста, удалите и создайте новую процедуру.');
-    } else {
-      // Добавление новой процедуры
-      fetch('/api/doctor/addprocedure', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          DoctorID: parseInt(doctorID),
-          ProcedureName: name,
-          Duration: duration
-        })
+      // Реализуем редактирование процедуры
+      // Так как специального API нет, используем удаление старой и создание новой процедуры
+      fetch(`/api/doctor/procedure/${procedureID}`, {
+        method: 'DELETE'
       })
       .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert(data.message);
+      .then(deleteResult => {
+        if (deleteResult.success) {
+          // После успешного удаления создаем новую процедуру
+          return fetch('/api/doctor/addprocedure', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              DoctorID: parseInt(doctorID),
+              ProcedureName: name,
+              Duration: duration
+            })
+          }).then(response => response.json());
+        } else {
+          throw new Error(deleteResult.message || 'Ошибка при удалении старой процедуры');
+        }
+      })
+      .then(addResult => {
+        if (addResult.success) {
+          showNotification('Процедура успешно обновлена.', 'success');
           addProcedureModal.style.display = 'none';
           
           // Обновляем список процедур
@@ -625,12 +653,53 @@ document.addEventListener('DOMContentLoaded', function() {
               fillSelect(procedureSelect, proceduresForAppointment, 'ProcedureID', 'DisplayText');
             });
         } else {
-          alert(data.message);
+          showNotification(addResult.message || 'Ошибка при создании новой процедуры', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating procedure:', error);
+        showNotification('Ошибка при обновлении процедуры: ' + error.message, 'error');
+      });
+    } else {
+      // Добавление новой процедуры
+      fetch('/api/doctor/addprocedure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          DoctorID: parseInt(doctorID),
+          ProcedureName: name,
+          Duration: duration
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(data.message, 'success');
+          addProcedureModal.style.display = 'none';
+          
+          // Обновляем список процедур
+          fetch(`/api/doctor/${doctorID}/procedures`)
+            .then(response => response.json())
+            .then(proceduresData => {
+              procedures = proceduresData;
+              renderProcedures();
+            });
+            
+          // Обновляем список процедур для назначения
+          fetch(`/api/doctor/${doctorID}/proceduresforappointment`)
+            .then(response => response.json())
+            .then(proceduresForAppointment => {
+              fillSelect(procedureSelect, proceduresForAppointment, 'ProcedureID', 'DisplayText');
+            });
+        } else {
+          showNotification(data.message, 'error');
         }
       })
       .catch(error => {
         console.error('Error saving procedure:', error);
-        alert('Ошибка при сохранении процедуры.');
+        showNotification('Ошибка при сохранении процедуры.', 'error');
       });
     }
   }
@@ -638,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Удаление процедуры
   function deleteProcedure() {
     if (selectedProcedureIDs.length === 0) {
-      alert('Пожалуйста, выберите процедуру для удаления.');
+      showNotification('Пожалуйста, выберите процедуру для удаления.', 'info');
       return;
     }
     
@@ -659,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const successCount = results.filter(r => r.success).length;
         
         if (successCount > 0) {
-          alert(`Успешно удалено ${successCount} процедуру(ы).`);
+          showNotification(`Успешно удалено ${successCount} процедуру(ы).`, 'success');
           
           // Обновляем список процедур
           fetch(`/api/doctor/${doctorID}/procedures`)
@@ -677,12 +746,12 @@ document.addEventListener('DOMContentLoaded', function() {
               fillSelect(procedureSelect, proceduresForAppointment, 'ProcedureID', 'DisplayText');
             });
         } else {
-          alert('Не удалось удалить процедуры.');
+          showNotification('Не удалось удалить процедуры.', 'error');
         }
       })
       .catch(error => {
         console.error('Error deleting procedures:', error);
-        alert('Ошибка при удалении процедур.');
+        showNotification('Ошибка при удалении процедур.', 'error');
       });
   }
 
@@ -692,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const description = patientDescription.value.trim();
     
     if (!patientID || !description) {
-      alert('Пожалуйста, введите описание.');
+      showNotification('Пожалуйста, введите описание.', 'error');
       return;
     }
     
@@ -710,15 +779,15 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        alert(data.message);
+        showNotification(data.message, 'success');
         addDescriptionModal.style.display = 'none';
       } else {
-        alert(data.message);
+        showNotification(data.message, 'error');
       }
     })
     .catch(error => {
       console.error('Error saving description:', error);
-      alert('Ошибка при сохранении описания.');
+      showNotification('Ошибка при сохранении описания.', 'error');
     });
   }
 
@@ -728,13 +797,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const description = procedureDescription.value.trim();
     
     if (!appointmentID || !description) {
-      alert('Пожалуйста, введите описание.');
+      showNotification('Пожалуйста, введите описание.', 'error');
       return;
     }
     
     // Эндпоинт для сохранения описания процедуры не реализован в контроллере
     // Для будущей реализации:
-    alert('Эта функция будет реализована в будущих версиях.');
+    showNotification('Эта функция будет реализована в будущих версиях.', 'info');
     procedureDescriptionModal.style.display = 'none';
   }
 
