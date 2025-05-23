@@ -73,7 +73,7 @@ namespace WebDubRosh.Controllers
                     con.Open();
                     string query = @"SELECT pa.AppointmentID, p.FullName AS PatientName, p.PatientID,
                                    pr.ProcedureName, pr.ProcedureID, pa.AppointmentDateTime, 
-                                   pr.Duration, pa.Status
+                                   pr.Duration, pa.Status, pa.Description
                              FROM ProcedureAppointments pa
                              INNER JOIN Patients p ON pa.PatientID = p.PatientID
                              INNER JOIN Procedures pr ON pa.ProcedureID = pr.ProcedureID
@@ -158,29 +158,40 @@ namespace WebDubRosh.Controllers
 
             try
             {
+                // Преобразуем время из UTC в местное время сервера
+                // При передаче с браузера на сервер время преобразуется в UTC
+                // Этот шаг корректирует разницу часовых поясов
+                DateTime appointmentLocalTime = TimeZoneInfo.ConvertTimeFromUtc(
+                    request.AppointmentDateTime.ToUniversalTime(),
+                    TimeZoneInfo.Local);
+                
                 // 1. Проверка на выписку пациента
-                if (IsPatientDischarged(request.PatientID, request.AppointmentDateTime))
+                if (IsPatientDischarged(request.PatientID, appointmentLocalTime))
                 {
                     return BadRequest(new { success = false, message = "Пациент не может быть записан на эту процедуру, так как он уже будет выписан к указанной дате." });
                 }
 
                 // 2. Проверка занятости врача
-                if (IsDoctorOccupied(request.DoctorID, request.AppointmentDateTime, request.ProcedureID))
+                if (IsDoctorOccupied(request.DoctorID, appointmentLocalTime, request.ProcedureID))
                 {
                     return BadRequest(new { success = false, message = "Пересечение с другим назначением." });
                 }
 
                 // 3. Проверка занятости пациента
-                if (IsPatientOccupied(request.PatientID, request.AppointmentDateTime, request.ProcedureID))
+                if (IsPatientOccupied(request.PatientID, appointmentLocalTime, request.ProcedureID))
                 {
                     return BadRequest(new { success = false, message = "Пациент уже записан на другую процедуру в это время." });
                 }
 
-                if (request.AppointmentDateTime <= DateTime.Now)
+                // Логирование для диагностики проблемы с временем
+                var now = DateTime.Now;
+                
+                // Восстанавливаем проверку на прошедшее время с учетом локального времени
+                if (appointmentLocalTime < now)
                 {
                     return BadRequest(new { success = false, message = "Нельзя назначать процедуры на прошедшие дату и время." });
                 }
-
+                
                 // Если все проверки прошли, записываем пациента на процедуру
                 using (SqlConnection con = new SqlConnection(_connectionString))
                 {
@@ -192,7 +203,7 @@ namespace WebDubRosh.Controllers
                         cmd.Parameters.AddWithValue("@PatientID", request.PatientID);
                         cmd.Parameters.AddWithValue("@DoctorID", request.DoctorID);
                         cmd.Parameters.AddWithValue("@ProcedureID", request.ProcedureID);
-                        cmd.Parameters.AddWithValue("@AppointmentDateTime", request.AppointmentDateTime);
+                        cmd.Parameters.AddWithValue("@AppointmentDateTime", appointmentLocalTime);
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -369,6 +380,44 @@ namespace WebDubRosh.Controllers
                 }
 
                 return Ok(new { success = true, message = "Описание успешно добавлено." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: api/doctor/addproceduredescription
+        [HttpPost("addproceduredescription")]
+        public IActionResult AddProcedureDescription([FromBody] AddProcedureDescriptionRequest request)
+        {
+            if (request == null || request.AppointmentID <= 0 || string.IsNullOrEmpty(request.Description))
+            {
+                return BadRequest(new { success = false, message = "Некорректные данные." });
+            }
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"UPDATE ProcedureAppointments 
+                                   SET Description = @Description 
+                                   WHERE AppointmentID = @AppointmentID";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@AppointmentID", request.AppointmentID);
+                        cmd.Parameters.AddWithValue("@Description", request.Description);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        
+                        if (rowsAffected == 0)
+                        {
+                            return NotFound(new { success = false, message = "Назначение не найдено." });
+                        }
+                    }
+                }
+
+                return Ok(new { success = true, message = "Описание процедуры успешно добавлено." });
             }
             catch (Exception ex)
             {
@@ -582,6 +631,12 @@ namespace WebDubRosh.Controllers
     {
         public int PatientID { get; set; }
         public int DoctorID { get; set; }
+        public string Description { get; set; }
+    }
+
+    public class AddProcedureDescriptionRequest
+    {
+        public int AppointmentID { get; set; }
         public string Description { get; set; }
     }
 } 

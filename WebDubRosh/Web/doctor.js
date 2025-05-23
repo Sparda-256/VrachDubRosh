@@ -253,15 +253,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const appointmentID = parseInt(row.dataset.id);
       const appointment = appointments.find(a => a.AppointmentID === appointmentID);
       
-      if (appointment && appointment.Status !== 'Назначена') {
+      if (appointment) {
         appointmentDetailsDisplay.textContent = `Пациент: ${appointment.PatientName}, Процедура: ${appointment.ProcedureName}, Дата: ${formatDateTime(new Date(appointment.AppointmentDateTime))}`;
-        procedureDescription.value = appointment.Description || '';
+        // Проверяем, что Description является строкой и не пустой
+        procedureDescription.value = typeof appointment.Description === 'string' ? appointment.Description : '';
         procedureDescriptionModal.style.display = 'block';
         
         // Сохраняем ID назначения для использования в saveProcedureDescription
         procedureDescriptionModal.dataset.appointmentId = appointmentID;
-      } else if (appointment && appointment.Status === 'Назначена') {
-        showNotification('Нельзя добавить описание для процедуры со статусом "Назначена".', 'info');
       }
     });
     
@@ -478,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const date = appointmentDate.value;
     const time = appointmentTime.value;
     
+    // Проверка заполнения всех полей
     if (!patientID || !procedureID || !date || !time) {
       showNotification('Пожалуйста, заполните все поля для назначения процедуры.', 'error');
       return;
@@ -485,6 +485,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const appointmentDateTime = new Date(`${date}T${time}`);
     
+    // Проверка, что назначение не на прошедшее время
+    const now = new Date();
+    if (appointmentDateTime < now) {
+      showNotification('Нельзя назначить процедуру на прошедшее время.', 'error');
+      return;
+    }
+    
+    // Проверка формата времени
+    if (!/^\d{2}:\d{2}$/.test(time)) {
+      showNotification('Неверный формат времени. Используйте ЧЧ:ММ.', 'error');
+      return;
+    }
+    
+    // Все валидации пройдены, отправляем запрос на сервер
+    // Серверная часть выполнит дополнительные проверки:
+    // - проверка на выписку пациента
+    // - проверка занятости врача
+    // - проверка занятости пациента
     fetch('/api/doctor/assignprocedure', {
       method: 'POST',
       headers: {
@@ -501,6 +519,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
       if (data.success) {
         showNotification(data.message, 'success');
+        
+        // Очищаем поля формы после успешного добавления
+        patientSelect.selectedIndex = 0;
+        procedureSelect.selectedIndex = 0;
+        appointmentTime.value = '';
         
         // Обновляем список назначений
         fetch(`/api/doctor/${doctorID}/appointments`)
@@ -801,10 +824,38 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    // Эндпоинт для сохранения описания процедуры не реализован в контроллере
-    // Для будущей реализации:
-    showNotification('Эта функция будет реализована в будущих версиях.', 'info');
-    procedureDescriptionModal.style.display = 'none';
+    // Отправляем запрос на сохранение описания процедуры
+    fetch('/api/doctor/addproceduredescription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        AppointmentID: appointmentID,
+        Description: description
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification(data.message, 'success');
+          procedureDescriptionModal.style.display = 'none';
+          
+          // Обновляем список назначений
+          fetch(`/api/doctor/${doctorID}/appointments`)
+            .then(response => response.json())
+            .then(appointmentsData => {
+              appointments = appointmentsData;
+              renderAppointments();
+            });
+        } else {
+          showNotification(data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error saving procedure description:', error);
+        showNotification('Ошибка при сохранении описания процедуры.', 'error');
+      });
   }
 
   // Вспомогательные функции
