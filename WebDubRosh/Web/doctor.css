@@ -475,6 +475,7 @@ input:checked + .slider .moon-icon {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  padding: 20px 0;
 }
 
 .modal-content {
@@ -510,7 +511,8 @@ input:checked + .slider .moon-icon {
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-footer {
@@ -584,4 +586,198 @@ input:checked + .slider .moon-icon {
 @keyframes fadeOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Стили для модального окна недельного графика */
+.weekly-schedule-modal {
+  width: 800px;
+  max-width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 30px auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.weekly-schedule-modal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
+}
+
+.modal-header, .modal-footer {
+  flex-shrink: 0;
+}
+
+.weekly-days {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--alternate-row-color);
+}
+
+.weekly-days-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.day-checkbox-input {
+  margin-right: 5px;
+}
+
+.day-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  gap: 5px;
+}
+
+.day-time-input {
+  width: 100px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--input-bg-color);
+  color: var(--foreground-color);
+  height: 34px;
+}
+
+.schedule-table-container {
+  margin-top: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.schedule-table-container h3 {
+  margin: 8px;
+  font-size: 16px;
+  color: var(--subtitle-color);
+  position: sticky;
+  top: 0;
+  background-color: var(--background-color);
+  padding: 8px;
+  z-index: 1;
+}
+
+.schedule-form {
+  background-color: var(--background-color);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .buttons-group {
+    flex-direction: column;
+  }
+  
+  .appointments-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .checkbox-container {
+    margin-bottom: 10px;
+  }
+  
+  .modal-content {
+    margin: 20% auto;
+  }
+}
+
+/* Стиль уведомлений */
+.notification {
+  padding: 10px 15px;
+  margin: 10px 0;
+  border-radius: 5px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  max-width: 300px;
+  animation: fadeIn 0.5s;
+}
+
+.notification.success {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.notification.error {
+  background-color: #F44336;
+  color: white;
+}
+
+.notification.info {
+  background-color: #2196F3;
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-20px); }
+}
+
+.schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 0;
+  justify-content: flex-end;
+}
+
+.schedule-form .schedule-actions {
+  justify-content: flex-end;
+}
+
+.schedule-table-container .schedule-actions {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+.schedule-form h4 {
+  margin: 10px 0 5px 0;
+  font-size: 15px;
+  color: var(--subtitle-color);
+}
+
+#schedulesTable {
+  font-size: 13px;
+}
+
+#schedulesTable th {
+  padding: 8px 6px;
+}
+
+#schedulesTable td {
+  padding: 6px;
+}
+
+.day-checkbox label {
+  flex: 0 0 110px;
+  font-size: 14px;
 } 

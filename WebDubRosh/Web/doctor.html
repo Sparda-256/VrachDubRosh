@@ -238,6 +238,114 @@
     </div>
   </div>
   
+  <!-- Модальное окно для недельного графика -->
+  <div id="weeklyScheduleModal" class="modal">
+    <div class="modal-content weekly-schedule-modal">
+      <div class="modal-header">
+        <h2>Недельный график процедур</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="schedule-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="schedulePatientSelect">Пациент:</label>
+              <select id="schedulePatientSelect" class="form-select"></select>
+            </div>
+            <div class="form-group">
+              <label for="scheduleProcedureSelect">Процедура:</label>
+              <select id="scheduleProcedureSelect" class="form-select"></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="scheduleStartDate">Дата начала:</label>
+              <input type="date" id="scheduleStartDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="scheduleEndDate">Дата окончания:</label>
+              <input type="date" id="scheduleEndDate" class="form-input">
+            </div>
+          </div>
+          <h4>Выберите дни недели и время процедур:</h4>
+          <div class="weekly-days">
+            <div class="weekly-days-column">
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkMonday" class="day-checkbox-input">
+                <label for="chkMonday">Понедельник</label>
+                <input type="time" id="tbMondayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkTuesday" class="day-checkbox-input">
+                <label for="chkTuesday">Вторник</label>
+                <input type="time" id="tbTuesdayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkWednesday" class="day-checkbox-input">
+                <label for="chkWednesday">Среда</label>
+                <input type="time" id="tbWednesdayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkThursday" class="day-checkbox-input">
+                <label for="chkThursday">Четверг</label>
+                <input type="time" id="tbThursdayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+            </div>
+            <div class="weekly-days-column">
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkFriday" class="day-checkbox-input">
+                <label for="chkFriday">Пятница</label>
+                <input type="time" id="tbFridayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkSaturday" class="day-checkbox-input">
+                <label for="chkSaturday">Суббота</label>
+                <input type="time" id="tbSaturdayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+              <div class="day-checkbox">
+                <input type="checkbox" id="chkSunday" class="day-checkbox-input">
+                <label for="chkSunday">Воскресенье</label>
+                <input type="time" id="tbSundayTime" class="day-time-input" placeholder="ЧЧ:ММ">
+              </div>
+            </div>
+          </div>
+          <div class="schedule-actions">
+            <button id="addScheduleBtn" class="btn btn-accent">Создать расписание</button>
+          </div>
+        </div>
+        
+        <div class="schedule-table-container">
+          <h3>Текущие недельные расписания</h3>
+          <div class="table-container">
+            <table id="schedulesTable" class="data-table">
+              <thead>
+                <tr>
+                  <th>Пациент</th>
+                  <th>Процедура</th>
+                  <th>День недели</th>
+                  <th>Время</th>
+                  <th>Дата начала</th>
+                  <th>Дата окончания</th>
+                  <th>Активно</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Данные будут загружены через JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div class="schedule-actions">
+            <button id="deleteScheduleBtn" class="btn btn-red">Удалить</button>
+            <button id="refreshScheduleBtn" class="btn btn-blue">Обновить</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gray close-modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+  
   <script src="doctor.js"></script>
 </body>
 </html> 

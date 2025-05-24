@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Collections.Generic;
 
 namespace WebDubRosh.Controllers
 {
@@ -133,6 +134,48 @@ namespace WebDubRosh.Controllers
                                CONCAT(ProcedureName, ' - ', Duration, ' мин.') AS DisplayText
                         FROM Procedures 
                         WHERE DoctorID = @DoctorID";
+
+                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    da.SelectCommand.Parameters.AddWithValue("@DoctorID", id);
+                    da.Fill(dt);
+                }
+                return Ok(DataTableToList(dt));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: api/doctor/{id}/weeklyschedules
+        [HttpGet("{id}/weeklyschedules")]
+        public IActionResult GetDoctorWeeklySchedules(int id)
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string query = @"
+                        SELECT ws.ScheduleID, ws.PatientID, ws.ProcedureID, ws.DayOfWeek, 
+                               ws.AppointmentTime, ws.StartDate, ws.EndDate, ws.IsActive,
+                               p.FullName AS PatientName, pr.ProcedureName,
+                               CASE 
+                                   WHEN ws.DayOfWeek = 1 THEN 'Понедельник'
+                                   WHEN ws.DayOfWeek = 2 THEN 'Вторник'
+                                   WHEN ws.DayOfWeek = 3 THEN 'Среда'
+                                   WHEN ws.DayOfWeek = 4 THEN 'Четверг'
+                                   WHEN ws.DayOfWeek = 5 THEN 'Пятница'
+                                   WHEN ws.DayOfWeek = 6 THEN 'Суббота'
+                                   WHEN ws.DayOfWeek = 7 THEN 'Воскресенье'
+                               END AS DayOfWeekName,
+                               CONVERT(VARCHAR(5), ws.AppointmentTime, 108) AS AppointmentTimeStr
+                        FROM WeeklyScheduleAppointments ws
+                        INNER JOIN Patients p ON ws.PatientID = p.PatientID
+                        INNER JOIN Procedures pr ON ws.ProcedureID = pr.ProcedureID
+                        WHERE ws.DoctorID = @DoctorID
+                        ORDER BY ws.IsActive DESC, p.FullName, ws.DayOfWeek";
 
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     da.SelectCommand.Parameters.AddWithValue("@DoctorID", id);
@@ -425,6 +468,258 @@ namespace WebDubRosh.Controllers
             }
         }
 
+        // POST: api/doctor/addweeklyschedule
+        [HttpPost("addweeklyschedule")]
+        public IActionResult AddWeeklySchedule([FromBody] AddWeeklyScheduleRequest request)
+        {
+            if (request == null || request.PatientID <= 0 || request.DoctorID <= 0 || request.ProcedureID <= 0 ||
+                request.DayOfWeek < 1 || request.DayOfWeek > 7 || string.IsNullOrEmpty(request.AppointmentTime) ||
+                request.StartDate == default || request.EndDate == default)
+            {
+                return BadRequest(new { success = false, message = "Некорректные данные." });
+            }
+
+            try
+            {
+                // Проверка времени
+                if (!TimeSpan.TryParse(request.AppointmentTime, out TimeSpan appointmentTime))
+                {
+                    return BadRequest(new { success = false, message = "Неверный формат времени." });
+                }
+
+                // Проверка дат
+                DateTime startDate = DateTime.Parse(request.StartDate);
+                DateTime endDate = DateTime.Parse(request.EndDate);
+
+                if (endDate <= startDate)
+                {
+                    return BadRequest(new { success = false, message = "Дата окончания должна быть позже даты начала." });
+                }
+
+                // Проверка на выписку пациента
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string checkDischargeQuery = "SELECT DischargeDate FROM Patients WHERE PatientID = @PatientID";
+                    using (SqlCommand cmd = new SqlCommand(checkDischargeQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", request.PatientID);
+                        object result = cmd.ExecuteScalar();
+
+                        if (result != DBNull.Value && result != null)
+                        {
+                            DateTime dischargeDate = Convert.ToDateTime(result);
+                            if (dischargeDate <= endDate)
+                            {
+                                return BadRequest(new { success = false, message = "Пациент будет выписан раньше, чем окончание графика." });
+                            }
+                        }
+                    }
+
+                    // Добавление расписания
+                    string insertQuery = @"
+                        INSERT INTO WeeklyScheduleAppointments 
+                        (PatientID, DoctorID, ProcedureID, DayOfWeek, AppointmentTime, StartDate, EndDate, IsActive)
+                        VALUES 
+                        (@PatientID, @DoctorID, @ProcedureID, @DayOfWeek, @AppointmentTime, @StartDate, @EndDate, @IsActive);
+                        SELECT SCOPE_IDENTITY();";
+
+                    using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@PatientID", request.PatientID);
+                        cmd.Parameters.AddWithValue("@DoctorID", request.DoctorID);
+                        cmd.Parameters.AddWithValue("@ProcedureID", request.ProcedureID);
+                        cmd.Parameters.AddWithValue("@DayOfWeek", request.DayOfWeek);
+                        cmd.Parameters.AddWithValue("@AppointmentTime", appointmentTime);
+                        cmd.Parameters.AddWithValue("@StartDate", startDate);
+                        cmd.Parameters.AddWithValue("@EndDate", endDate);
+                        cmd.Parameters.AddWithValue("@IsActive", request.IsActive);
+
+                        int newScheduleId = Convert.ToInt32(cmd.ExecuteScalar());
+                        return Ok(new { success = true, scheduleId = newScheduleId, message = "Недельное расписание успешно добавлено." });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: api/doctor/updateweeklyschedule
+        [HttpPost("updateweeklyschedule")]
+        public IActionResult UpdateWeeklySchedule([FromBody] UpdateWeeklyScheduleRequest request)
+        {
+            if (request == null || request.ScheduleID <= 0 || request.PatientID <= 0 || request.DoctorID <= 0 ||
+                request.ProcedureID <= 0 || request.DayOfWeek < 1 || request.DayOfWeek > 7 ||
+                string.IsNullOrEmpty(request.AppointmentTime) || request.StartDate == default || request.EndDate == default)
+            {
+                return BadRequest(new { success = false, message = "Некорректные данные." });
+            }
+
+            try
+            {
+                // Проверка времени
+                if (!TimeSpan.TryParse(request.AppointmentTime, out TimeSpan appointmentTime))
+                {
+                    return BadRequest(new { success = false, message = "Неверный формат времени." });
+                }
+
+                // Проверка дат
+                DateTime startDate = DateTime.Parse(request.StartDate);
+                DateTime endDate = DateTime.Parse(request.EndDate);
+
+                if (endDate <= startDate)
+                {
+                    return BadRequest(new { success = false, message = "Дата окончания должна быть позже даты начала." });
+                }
+
+                // Обновление расписания
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    string updateQuery = @"
+                        UPDATE WeeklyScheduleAppointments 
+                        SET PatientID = @PatientID, 
+                            ProcedureID = @ProcedureID, 
+                            DayOfWeek = @DayOfWeek, 
+                            AppointmentTime = @AppointmentTime, 
+                            StartDate = @StartDate, 
+                            EndDate = @EndDate, 
+                            IsActive = @IsActive
+                        WHERE ScheduleID = @ScheduleID AND DoctorID = @DoctorID";
+
+                    using (SqlCommand cmd = new SqlCommand(updateQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@ScheduleID", request.ScheduleID);
+                        cmd.Parameters.AddWithValue("@PatientID", request.PatientID);
+                        cmd.Parameters.AddWithValue("@DoctorID", request.DoctorID);
+                        cmd.Parameters.AddWithValue("@ProcedureID", request.ProcedureID);
+                        cmd.Parameters.AddWithValue("@DayOfWeek", request.DayOfWeek);
+                        cmd.Parameters.AddWithValue("@AppointmentTime", appointmentTime);
+                        cmd.Parameters.AddWithValue("@StartDate", startDate);
+                        cmd.Parameters.AddWithValue("@EndDate", endDate);
+                        cmd.Parameters.AddWithValue("@IsActive", request.IsActive);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected == 0)
+                        {
+                            return NotFound(new { success = false, message = "Расписание не найдено." });
+                        }
+                    }
+                }
+
+                return Ok(new { success = true, message = "Недельное расписание успешно обновлено." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // DELETE: api/doctor/weeklyschedule/{id}
+        [HttpDelete("weeklyschedule/{id}")]
+        public IActionResult DeleteWeeklySchedule(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new { success = false, message = "Некорректный ID расписания." });
+                }
+
+                using (SqlConnection con = new SqlConnection(_connectionString))
+                {
+                    con.Open();
+                    using (SqlTransaction transaction = con.BeginTransaction())
+                    {
+                        try
+                        {
+                            // 1. Получаем все связанные назначения
+                            List<int> appointmentIDs = new List<int>();
+                            string getAppointmentsQuery = @"
+                                SELECT AppointmentID 
+                                FROM ScheduleGeneratedAppointments 
+                                WHERE ScheduleID = @ScheduleID";
+
+                            using (SqlCommand cmd = new SqlCommand(getAppointmentsQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ScheduleID", id);
+                                using (SqlDataReader reader = cmd.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        appointmentIDs.Add(reader.GetInt32(0));
+                                    }
+                                }
+                            }
+
+                            // 2. Отменяем все будущие назначения, генерируемые по этому расписанию
+                            if (appointmentIDs.Count > 0)
+                            {
+                                string cancelAppointmentsQuery = @"
+                                    UPDATE ProcedureAppointments 
+                                    SET Status = 'Отменена', Description = ISNULL(Description, '') + 
+                                        CASE WHEN Description IS NULL THEN '' ELSE '; ' END + 
+                                        'Отменено из-за удаления расписания'
+                                    WHERE AppointmentID IN (SELECT AppointmentID FROM ScheduleGeneratedAppointments 
+                                          WHERE ScheduleID = @ScheduleID)
+                                    AND Status = 'Назначена'
+                                    AND AppointmentDateTime > GETDATE()";
+
+                                using (SqlCommand cmd = new SqlCommand(cancelAppointmentsQuery, con, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@ScheduleID", id);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            // 3. Удаляем связанные записи в ScheduleGeneratedAppointments
+                            string deleteGeneratedQuery = @"
+                                DELETE FROM ScheduleGeneratedAppointments 
+                                WHERE ScheduleID = @ScheduleID";
+
+                            using (SqlCommand cmd = new SqlCommand(deleteGeneratedQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ScheduleID", id);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // 4. Удаляем само расписание
+                            string deleteScheduleQuery = @"
+                                DELETE FROM WeeklyScheduleAppointments 
+                                WHERE ScheduleID = @ScheduleID";
+
+                            using (SqlCommand cmd = new SqlCommand(deleteScheduleQuery, con, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ScheduleID", id);
+                                int rowsAffected = cmd.ExecuteNonQuery();
+                                if (rowsAffected == 0)
+                                {
+                                    transaction.Rollback();
+                                    return NotFound(new { success = false, message = $"Расписание с ID {id} не найдено." });
+                                }
+                            }
+
+                            transaction.Commit();
+                            return Ok(new { success = true, message = "Недельное расписание и связанные с ним назначения успешно удалены." });
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            Console.WriteLine($"Ошибка при удалении расписания с ID {id}: {ex.Message}");
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при удалении расписания с ID {id}: {ex.Message}");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         #region Helper Methods
         private bool IsPatientDischarged(int patientID, DateTime appointmentDateTime)
         {
@@ -638,5 +933,30 @@ namespace WebDubRosh.Controllers
     {
         public int AppointmentID { get; set; }
         public string Description { get; set; }
+    }
+
+    public class AddWeeklyScheduleRequest
+    {
+        public int PatientID { get; set; }
+        public int DoctorID { get; set; }
+        public int ProcedureID { get; set; }
+        public int DayOfWeek { get; set; }
+        public string AppointmentTime { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class UpdateWeeklyScheduleRequest
+    {
+        public int ScheduleID { get; set; }
+        public int PatientID { get; set; }
+        public int DoctorID { get; set; }
+        public int ProcedureID { get; set; }
+        public int DayOfWeek { get; set; }
+        public string AppointmentTime { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 } 

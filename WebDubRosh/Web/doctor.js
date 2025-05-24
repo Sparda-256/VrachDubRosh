@@ -4,8 +4,10 @@ document.addEventListener('DOMContentLoaded', function() {
   let patients = [];
   let appointments = [];
   let procedures = [];
+  let weeklySchedules = []; // Добавлено для недельного графика
   let selectedAppointmentIDs = [];
   let selectedProcedureIDs = [];
+  let selectedScheduleIDs = []; // Добавлено для недельного графика
   let hideCompleted = true;
 
   // Элементы DOM
@@ -13,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const patientsTable = document.getElementById('patientsTable');
   const appointmentsTable = document.getElementById('appointmentsTable');
   const proceduresTable = document.getElementById('proceduresTable');
+  const schedulesTable = document.getElementById('schedulesTable'); // Добавлено для недельного графика
   const searchPatients = document.getElementById('searchPatients');
   const searchAppointments = document.getElementById('searchAppointments');
   const searchProcedures = document.getElementById('searchProcedures');
@@ -21,6 +24,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const procedureSelect = document.getElementById('procedureSelect');
   const appointmentDate = document.getElementById('appointmentDate');
   const appointmentTime = document.getElementById('appointmentTime');
+  
+  // Добавлено для недельного графика
+  const schedulePatientSelect = document.getElementById('schedulePatientSelect');
+  const scheduleProcedureSelect = document.getElementById('scheduleProcedureSelect');
+  const scheduleStartDate = document.getElementById('scheduleStartDate');
+  const scheduleEndDate = document.getElementById('scheduleEndDate');
+  const weeklyScheduleModal = document.getElementById('weeklyScheduleModal');
 
   // Кнопки
   const exitBtn = document.getElementById('exitBtn');
@@ -33,6 +43,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveProcedureBtn = document.getElementById('saveProcedureBtn');
   const saveDescriptionBtn = document.getElementById('saveDescriptionBtn');
   const saveProcedureDescriptionBtn = document.getElementById('saveProcedureDescriptionBtn');
+  
+  // Добавлено для недельного графика
+  const addScheduleBtn = document.getElementById('addScheduleBtn');
+  const deleteScheduleBtn = document.getElementById('deleteScheduleBtn');
+  const refreshScheduleBtn = document.getElementById('refreshScheduleBtn');
 
   // Модальные окна
   const addProcedureModal = document.getElementById('addProcedureModal');
@@ -74,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Инициализация обработчиков событий
     initEventListeners();
+    
+    // Запускаем интервал автообновления статусов каждые 60 секунд
+    setInterval(autoUpdateStatuses, 60000);
 
     // Устанавливаем сегодняшнюю дату в поле даты
     appointmentDate.valueAsDate = new Date();
@@ -304,6 +322,58 @@ document.addEventListener('DOMContentLoaded', function() {
         addProcedureModal.dataset.mode = 'edit';
         document.getElementById('procedureModalTitle').textContent = 'Редактирование процедуры';
         addProcedureModal.style.display = 'block';
+      }
+    });
+
+    // Обработчик кнопки "Недельный график"
+    weeklyScheduleBtn.addEventListener('click', function() {
+      // Очищаем форму и режим
+      clearScheduleForm();
+      
+      // Загружаем данные для недельного графика
+      loadPatientsForSchedule();
+      loadProceduresForSchedule();
+      loadWeeklySchedules();
+      
+      // Устанавливаем текущую дату и дату через месяц
+      const today = new Date();
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      
+      scheduleStartDate.valueAsDate = today;
+      scheduleEndDate.valueAsDate = nextMonth;
+      
+      // Показываем модальное окно
+      weeklyScheduleModal.style.display = 'block';
+    });
+    
+    // Обработчики кнопок недельного графика
+    addScheduleBtn.addEventListener('click', addSchedule);
+    deleteScheduleBtn.addEventListener('click', deleteSchedule);
+    refreshScheduleBtn.addEventListener('click', loadWeeklySchedules);
+    
+    // Обработчик выбора строки в таблице расписаний
+    schedulesTable.addEventListener('click', function(e) {
+      const row = e.target.closest('tr');
+      if (!row || row.parentElement.tagName === 'THEAD') return;
+      
+      const scheduleID = parseInt(row.dataset.id);
+      
+      // Если нажата клавиша Ctrl или Shift, добавляем/удаляем из выбранных
+      if (e.ctrlKey || e.shiftKey) {
+        row.classList.toggle('selected');
+        if (row.classList.contains('selected')) {
+          if (!selectedScheduleIDs.includes(scheduleID)) {
+            selectedScheduleIDs.push(scheduleID);
+          }
+        } else {
+          selectedScheduleIDs = selectedScheduleIDs.filter(id => id !== scheduleID);
+        }
+      } else {
+        // Иначе выбираем только текущую строку
+        schedulesTable.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        selectedScheduleIDs = [scheduleID];
       }
     });
   }
@@ -858,6 +928,36 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
+  // Функция автоматического обновления статусов
+  function autoUpdateStatuses() {
+    console.log('Автоматическое обновление статусов...');
+    
+    // Вызываем API для обновления статусов
+    fetch('/api/doctor/updateappointmentsstatus', {
+      method: 'POST'
+    })
+    .then(response => response.json())
+    .then(() => {
+      // После обновления статусов обновляем список назначений
+      return fetch(`/api/doctor/${doctorID}/appointments`);
+    })
+    .then(response => response.json())
+    .then(appointmentsData => {
+      // Обновляем данные и отображение
+      appointments = appointmentsData;
+      renderAppointments();
+      
+      // Показываем уведомление об успешном обновлении каждые 5 минут
+      const minutes = new Date().getMinutes();
+      if (minutes % 5 === 0) {
+        showNotification('Статусы назначений обновлены', 'info');
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка при автоматическом обновлении статусов:', error);
+    });
+  }
+
   // Вспомогательные функции
   function formatDate(date) {
     if (!(date instanceof Date) || isNaN(date)) return '-';
@@ -889,5 +989,305 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     return `<span class="status-badge" style="background-color: var(--${color}-color); color: white; padding: 3px 8px; border-radius: 4px;">${status}</span>`;
+  }
+
+  // Загрузка пациентов для недельного графика
+  function loadPatientsForSchedule() {
+    fetch(`/api/doctor/${doctorID}/patientsforappointment`)
+      .then(response => response.json())
+      .then(data => {
+        fillSelect(schedulePatientSelect, data, 'PatientID', 'FullName');
+      })
+      .catch(error => {
+        console.error('Error loading patients for schedule:', error);
+        showNotification('Ошибка загрузки пациентов.', 'error');
+      });
+  }
+  
+  // Загрузка процедур для недельного графика
+  function loadProceduresForSchedule() {
+    fetch(`/api/doctor/${doctorID}/proceduresforappointment`)
+      .then(response => response.json())
+      .then(data => {
+        fillSelect(scheduleProcedureSelect, data, 'ProcedureID', 'DisplayText');
+      })
+      .catch(error => {
+        console.error('Error loading procedures for schedule:', error);
+        showNotification('Ошибка загрузки процедур.', 'error');
+      });
+  }
+  
+  // Загрузка недельных расписаний
+  function loadWeeklySchedules() {
+    fetch(`/api/doctor/${doctorID}/weeklyschedules`)
+      .then(response => response.json())
+      .then(data => {
+        weeklySchedules = data;
+        renderWeeklySchedules();
+      })
+      .catch(error => {
+        console.error('Error loading weekly schedules:', error);
+        showNotification('Ошибка загрузки недельных расписаний.', 'error');
+      });
+  }
+  
+  // Отображение недельных расписаний
+  function renderWeeklySchedules() {
+    const tbody = schedulesTable.querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    weeklySchedules.forEach(schedule => {
+      const row = document.createElement('tr');
+      row.dataset.id = schedule.ScheduleID;
+      
+      row.innerHTML = `
+        <td>${schedule.PatientName}</td>
+        <td>${schedule.ProcedureName}</td>
+        <td>${schedule.DayOfWeekName}</td>
+        <td>${schedule.AppointmentTimeStr}</td>
+        <td>${formatDate(new Date(schedule.StartDate))}</td>
+        <td>${formatDate(new Date(schedule.EndDate))}</td>
+        <td>${schedule.IsActive ? 'Да' : 'Нет'}</td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    // Сбрасываем выделение
+    selectedScheduleIDs = [];
+  }
+  
+  // Добавление недельного расписания
+  function addSchedule() {
+    // Проверяем обязательные поля
+    if (!schedulePatientSelect.value) {
+      showNotification('Пожалуйста, выберите пациента.', 'error');
+      return;
+    }
+    
+    if (!scheduleProcedureSelect.value) {
+      showNotification('Пожалуйста, выберите процедуру.', 'error');
+      return;
+    }
+    
+    if (!scheduleStartDate.value) {
+      showNotification('Пожалуйста, укажите дату начала.', 'error');
+      return;
+    }
+    
+    if (!scheduleEndDate.value) {
+      showNotification('Пожалуйста, укажите дату окончания.', 'error');
+      return;
+    }
+    
+    const startDate = new Date(scheduleStartDate.value);
+    const endDate = new Date(scheduleEndDate.value);
+    
+    if (endDate <= startDate) {
+      showNotification('Дата окончания должна быть позже даты начала.', 'error');
+      return;
+    }
+    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Сбрасываем время для корректного сравнения дат
+    
+    if (startDate < now) {
+      showNotification('Дата начала не может быть в прошлом.', 'error');
+      return;
+    }
+    
+    // Собираем выбранные дни недели
+    const selectedDays = getSelectedDays();
+    if (selectedDays.length === 0) {
+      showNotification('Пожалуйста, выберите хотя бы один день недели.', 'error');
+      return;
+    }
+    
+    // Создаем расписания для каждого выбранного дня
+    const scheduleRequests = [];
+    for (const dayOfWeek of selectedDays) {
+      const timeValue = getTimeForDay(dayOfWeek);
+      if (!timeValue) continue;
+      
+      scheduleRequests.push({
+        PatientID: parseInt(schedulePatientSelect.value),
+        DoctorID: parseInt(doctorID),
+        ProcedureID: parseInt(scheduleProcedureSelect.value),
+        DayOfWeek: dayOfWeek,
+        AppointmentTime: timeValue,
+        StartDate: scheduleStartDate.value,
+        EndDate: scheduleEndDate.value,
+        IsActive: true
+      });
+    }
+    
+    if (scheduleRequests.length === 0) {
+      showNotification('Пожалуйста, укажите время для выбранных дней недели.', 'error');
+      return;
+    }
+    
+    // Отправляем запросы на создание расписаний
+    Promise.all(scheduleRequests.map(request => {
+      return fetch('/api/doctor/addweeklyschedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
+      })
+      .then(response => response.json());
+    }))
+    .then(results => {
+      const successCount = results.filter(r => r.success).length;
+      if (successCount > 0) {
+        showNotification(`Успешно создано ${successCount} недельных расписаний.`, 'success');
+        clearScheduleForm();
+        loadWeeklySchedules();
+      } else {
+        showNotification('Не удалось создать недельные расписания.', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error creating weekly schedules:', error);
+      showNotification('Ошибка при создании недельных расписаний.', 'error');
+    });
+  }
+  
+  // Удаление недельного расписания
+  function deleteSchedule() {
+    if (selectedScheduleIDs.length === 0) {
+      showNotification('Пожалуйста, выберите расписание для удаления.', 'info');
+      return;
+    }
+    
+    if (!confirm(`Вы уверены, что хотите удалить ${selectedScheduleIDs.length} недельное(ых) расписание(й)? Все связанные с ними будущие процедуры будут отменены.`)) {
+      return;
+    }
+    
+    // Удаляем расписания по очереди
+    Promise.all(selectedScheduleIDs.map(scheduleID => {
+      return fetch(`/api/doctor/weeklyschedule/${scheduleID}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      });
+    }))
+    .then(results => {
+      const successCount = results.filter(r => r.success).length;
+      
+      if (successCount > 0) {
+        showNotification(`Успешно удалено ${successCount} недельное(ых) расписание(й) и связанные с ними процедуры.`, 'success');
+        
+        // Обновляем списки назначений и расписаний
+        loadWeeklySchedules();
+        
+        // Также обновляем список назначенных процедур, так как некоторые могли быть отменены
+        fetch(`/api/doctor/${doctorID}/appointments`)
+          .then(response => response.json())
+          .then(appointmentsData => {
+            appointments = appointmentsData;
+            renderAppointments();
+          });
+        
+        selectedScheduleIDs = [];
+      } else {
+        showNotification('Не удалось удалить расписания.', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting schedules:', error);
+      showNotification('Ошибка при удалении недельных расписаний: ' + error.message, 'error');
+    });
+  }
+  
+  // Очистка формы недельного графика
+  function clearScheduleForm() {
+    schedulePatientSelect.selectedIndex = 0;
+    scheduleProcedureSelect.selectedIndex = 0;
+    
+    const today = new Date();
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
+    scheduleStartDate.valueAsDate = today;
+    scheduleEndDate.valueAsDate = nextMonth;
+    
+    clearDaysAndTimes();
+  }
+  
+  // Очистка дней недели и времени
+  function clearDaysAndTimes() {
+    document.getElementById('chkMonday').checked = false;
+    document.getElementById('chkTuesday').checked = false;
+    document.getElementById('chkWednesday').checked = false;
+    document.getElementById('chkThursday').checked = false;
+    document.getElementById('chkFriday').checked = false;
+    document.getElementById('chkSaturday').checked = false;
+    document.getElementById('chkSunday').checked = false;
+    
+    document.getElementById('tbMondayTime').value = '';
+    document.getElementById('tbTuesdayTime').value = '';
+    document.getElementById('tbWednesdayTime').value = '';
+    document.getElementById('tbThursdayTime').value = '';
+    document.getElementById('tbFridayTime').value = '';
+    document.getElementById('tbSaturdayTime').value = '';
+    document.getElementById('tbSundayTime').value = '';
+  }
+  
+  // Получение выбранных дней недели
+  function getSelectedDays() {
+    const selectedDays = [];
+    if (document.getElementById('chkMonday').checked) selectedDays.push(1);
+    if (document.getElementById('chkTuesday').checked) selectedDays.push(2);
+    if (document.getElementById('chkWednesday').checked) selectedDays.push(3);
+    if (document.getElementById('chkThursday').checked) selectedDays.push(4);
+    if (document.getElementById('chkFriday').checked) selectedDays.push(5);
+    if (document.getElementById('chkSaturday').checked) selectedDays.push(6);
+    if (document.getElementById('chkSunday').checked) selectedDays.push(7);
+    return selectedDays;
+  }
+  
+  // Получение времени для дня недели
+  function getTimeForDay(dayOfWeek) {
+    switch (dayOfWeek) {
+      case 1: return document.getElementById('tbMondayTime').value.trim();
+      case 2: return document.getElementById('tbTuesdayTime').value.trim();
+      case 3: return document.getElementById('tbWednesdayTime').value.trim();
+      case 4: return document.getElementById('tbThursdayTime').value.trim();
+      case 5: return document.getElementById('tbFridayTime').value.trim();
+      case 6: return document.getElementById('tbSaturdayTime').value.trim();
+      case 7: return document.getElementById('tbSundayTime').value.trim();
+      default: return '';
+    }
+  }
+  
+  // Установка времени для дня недели
+  function setTimeForDay(dayOfWeek, time) {
+    switch (dayOfWeek) {
+      case 1: document.getElementById('tbMondayTime').value = time; break;
+      case 2: document.getElementById('tbTuesdayTime').value = time; break;
+      case 3: document.getElementById('tbWednesdayTime').value = time; break;
+      case 4: document.getElementById('tbThursdayTime').value = time; break;
+      case 5: document.getElementById('tbFridayTime').value = time; break;
+      case 6: document.getElementById('tbSaturdayTime').value = time; break;
+      case 7: document.getElementById('tbSundayTime').value = time; break;
+    }
+  }
+  
+  // Установка чекбокса для дня недели
+  function setDayChecked(dayOfWeek, isChecked) {
+    switch (dayOfWeek) {
+      case 1: document.getElementById('chkMonday').checked = isChecked; break;
+      case 2: document.getElementById('chkTuesday').checked = isChecked; break;
+      case 3: document.getElementById('chkWednesday').checked = isChecked; break;
+      case 4: document.getElementById('chkThursday').checked = isChecked; break;
+      case 5: document.getElementById('chkFriday').checked = isChecked; break;
+      case 6: document.getElementById('chkSaturday').checked = isChecked; break;
+      case 7: document.getElementById('chkSunday').checked = isChecked; break;
+    }
   }
 }); 
