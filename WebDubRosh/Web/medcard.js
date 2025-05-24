@@ -8,6 +8,10 @@ let selectedMedications = [];
 let isDarkTheme = false;
 let sourceScreen = null; // Для отслеживания экрана, с которого была открыта медкарта
 let sourceId = null; // Для хранения ID источника (врача или главврача)
+// Переменные для сортировки
+let currentSortColumn = null;
+let currentSortDirection = 'asc';
+let doctorProceduresData = {}; // Для хранения данных о процедурах по врачам для сортировки
 
 // При загрузке DOM
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,13 +48,26 @@ document.addEventListener('DOMContentLoaded', () => {
 function initThemeToggle() {
   const themeToggle = document.getElementById('themeToggle');
   
-  // Проверяем сохраненную тему из localStorage
-  isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+  // Проверяем тему из параметров URL (приоритет над localStorage)
+  const urlParams = new URLSearchParams(window.location.search);
+  const themeParam = urlParams.get('theme');
+  
+  if (themeParam === 'dark') {
+    isDarkTheme = true;
+  } else if (themeParam === 'light') {
+    isDarkTheme = false;
+  } else {
+    // Если нет параметра в URL, проверяем localStorage
+    isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+  }
   
   // Устанавливаем начальное состояние
   if (isDarkTheme) {
     document.body.classList.add('dark-theme');
     themeToggle.checked = true;
+  } else {
+    document.body.classList.remove('dark-theme');
+    themeToggle.checked = false;
   }
   
   // Обработчик изменения темы
@@ -326,6 +343,9 @@ function displayDiagnoses() {
     
     tbody.appendChild(row);
   });
+
+  // Инициализируем сортировку для таблицы диагнозов
+  initTableSorting(document.getElementById('diagnosesTable'));
 }
 
 // Отображение антропометрических данных
@@ -390,6 +410,9 @@ function displayMedications() {
     
     tbody.appendChild(row);
   });
+
+  // Инициализируем сортировку для таблицы медикаментов
+  initTableSorting(document.getElementById('medicationsTable'));
 }
 
 // Отображение процедур по врачам
@@ -410,6 +433,9 @@ function displayDoctorProcedures(data) {
     const generalName = doctorData.generalName || doctorData.GeneralName || "";
     const officeNumber = doctorData.officeNumber || doctorData.OfficeNumber || "";
     const procedures = doctorData.procedures || doctorData.Procedures || [];
+    
+    // Сохраняем процедуры для сортировки
+    doctorProceduresData[doctorId] = procedures;
     
     // Используем generalName если доступно, иначе specialty
     const doctorName = generalName || specialty;
@@ -439,17 +465,18 @@ function displayDoctorProcedures(data) {
     
     // Таблица процедур
     const tableContainer = document.createElement('div');
-    tableContainer.className = 'table-container';
+    tableContainer.className = 'procedures-table-container'; // Используем новый класс
     
     const table = document.createElement('table');
     table.className = 'data-table';
+    table.dataset.doctorId = doctorId;
     
     const thead = document.createElement('thead');
     thead.innerHTML = `
       <tr>
-        <th>Наименование</th>
-        <th>Дата и время</th>
-        <th>Статус</th>
+        <th data-sort="procedureName">Наименование</th>
+        <th data-sort="appointmentDateTime">Дата и время</th>
+        <th data-sort="status">Статус</th>
       </tr>
     `;
     
@@ -495,6 +522,195 @@ function displayDoctorProcedures(data) {
       tabContent.classList.add('active');
       tabButton.classList.add('active');
     });
+
+    // Инициализируем сортировку для таблицы
+    initTableSorting(table);
+  });
+}
+
+// Инициализация сортировки для таблицы
+function initTableSorting(table) {
+  const headers = table.querySelectorAll('th[data-sort]');
+  const doctorId = table.dataset.doctorId || null;
+  const tableId = table.id;
+  
+  headers.forEach(header => {
+    header.addEventListener('click', function() {
+      const sortBy = this.getAttribute('data-sort');
+      
+      // Если сортируем по тому же столбцу, меняем направление
+      if (currentSortColumn === sortBy) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = sortBy;
+        currentSortDirection = 'asc';
+      }
+      
+      // Удаляем индикаторы сортировки со всех заголовков в этой таблице
+      headers.forEach(h => {
+        h.classList.remove('sort-asc', 'sort-desc');
+      });
+      
+      // Добавляем индикатор на текущий заголовок
+      this.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+      
+      // Сортируем и обновляем таблицу в зависимости от её типа
+      if (doctorId) {
+        // Таблица процедур врача
+        sortAndRenderProcedures(doctorId, sortBy);
+      } else if (tableId === 'diagnosesTable') {
+        // Таблица диагнозов
+        sortAndRenderDiagnoses(sortBy);
+      } else if (tableId === 'medicationsTable') {
+        // Таблица медикаментов
+        sortAndRenderMedications(sortBy);
+      }
+    });
+  });
+}
+
+// Сортировка и отображение процедур
+function sortAndRenderProcedures(doctorId, sortBy) {
+  const procedures = doctorProceduresData[doctorId];
+  if (!procedures || procedures.length === 0) return;
+  
+  procedures.sort((a, b) => {
+    // Используем безопасный доступ к свойствам с учетом разных форматов данных
+    let aValue, bValue;
+    
+    switch(sortBy) {
+      case 'procedureName':
+        aValue = a.procedureName || a.ProcedureName || "";
+        bValue = b.procedureName || b.ProcedureName || "";
+        break;
+      case 'appointmentDateTime':
+        aValue = new Date(a.appointmentDateTime || a.AppointmentDateTime);
+        bValue = new Date(b.appointmentDateTime || b.AppointmentDateTime);
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'status':
+        aValue = a.status || a.Status || "";
+        bValue = b.status || b.Status || "";
+        break;
+      default:
+        aValue = a[sortBy] || "";
+        bValue = b[sortBy] || "";
+    }
+    
+    if (currentSortDirection === 'asc') {
+      return String(aValue).localeCompare(String(bValue));
+    } else {
+      return String(bValue).localeCompare(String(aValue));
+    }
+  });
+  
+  // Обновляем таблицу с отсортированными данными
+  const tableBody = document.querySelector(`table[data-doctor-id="${doctorId}"] tbody`);
+  tableBody.innerHTML = '';
+  
+  procedures.forEach(procedure => {
+    const procedureName = procedure.procedureName || procedure.ProcedureName || "";
+    const appointmentDateTime = procedure.appointmentDateTime || procedure.AppointmentDateTime;
+    const status = procedure.status || procedure.Status || "";
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${procedureName}</td>
+      <td>${formatDateTime(appointmentDateTime)}</td>
+      <td>${status}</td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+// Сортировка и отображение диагнозов
+function sortAndRenderDiagnoses(sortBy) {
+  if (!diagnoses || diagnoses.length === 0) return;
+  
+  diagnoses.sort((a, b) => {
+    let aValue = a[sortBy] || '';
+    let bValue = b[sortBy] || '';
+    
+    if (currentSortDirection === 'asc') {
+      return String(aValue).localeCompare(String(bValue));
+    } else {
+      return String(bValue).localeCompare(String(aValue));
+    }
+  });
+  
+  // Обновляем таблицу с отсортированными данными
+  const tbody = document.querySelector('#diagnosesTable tbody');
+  tbody.innerHTML = '';
+  
+  diagnoses.forEach(diagnosis => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${diagnosis.diagnosisName}</td>`;
+    row.dataset.id = diagnosis.diagnosisId;
+    
+    row.addEventListener('click', () => {
+      row.classList.toggle('selected');
+      
+      if (row.classList.contains('selected')) {
+        selectedDiagnoses.push(diagnosis.diagnosisId);
+      } else {
+        selectedDiagnoses = selectedDiagnoses.filter(id => id !== diagnosis.diagnosisId);
+      }
+    });
+    
+    tbody.appendChild(row);
+  });
+}
+
+// Сортировка и отображение медикаментов
+function sortAndRenderMedications(sortBy) {
+  if (!medications || medications.length === 0) return;
+  
+  medications.sort((a, b) => {
+    let aValue = a[sortBy];
+    let bValue = b[sortBy];
+    
+    // Особая обработка для дат
+    if (sortBy === 'prescribedDate') {
+      aValue = new Date(aValue);
+      bValue = new Date(bValue);
+      return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    
+    // Для текстовых полей
+    aValue = aValue || '';
+    bValue = bValue || '';
+    
+    if (currentSortDirection === 'asc') {
+      return String(aValue).localeCompare(String(bValue));
+    } else {
+      return String(bValue).localeCompare(String(aValue));
+    }
+  });
+  
+  // Обновляем таблицу с отсортированными данными
+  const tbody = document.querySelector('#medicationsTable tbody');
+  tbody.innerHTML = '';
+  
+  medications.forEach(medication => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${medication.medicationName}</td>
+      <td>${medication.dosage || ''}</td>
+      <td>${medication.instructions || ''}</td>
+      <td>${formatDate(medication.prescribedDate)}</td>
+    `;
+    row.dataset.id = medication.medicationId;
+    
+    row.addEventListener('click', () => {
+      row.classList.toggle('selected');
+      
+      if (row.classList.contains('selected')) {
+        selectedMedications.push(medication.medicationId);
+      } else {
+        selectedMedications = selectedMedications.filter(id => id !== medication.medicationId);
+      }
+    });
+    
+    tbody.appendChild(row);
   });
 }
 

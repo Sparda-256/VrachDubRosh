@@ -364,6 +364,16 @@ input:checked + .slider:before {
   border-radius: 6px;
 }
 
+/* Специальный контейнер для таблицы процедур */
+.procedures-table-container {
+  margin-top: 10px;
+  overflow: auto;
+  max-height: calc(100vh - 400px); /* Динамическая высота на основе высоты окна */
+  min-height: 400px; /* Минимальная высота */
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -594,4 +604,37 @@ textarea.form-control {
     width: 90%;
     padding: 15px;
   }
+}
+
+/* Сортируемые заголовки таблиц */
+.data-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.data-table th[data-sort]::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 5px;
+  vertical-align: middle;
+  opacity: 0.3;
+}
+
+.data-table th.sort-asc::after {
+  content: "";
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  opacity: 1;
+}
+
+.data-table th.sort-desc::after {
+  content: "";
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 1;
 } 

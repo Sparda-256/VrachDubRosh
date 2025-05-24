@@ -234,7 +234,8 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (patient) {
         // Перенаправляем на страницу медкарты с передачей ID пациента и источника
-        window.location.href = `medcard.html?id=${patientID}&source=doctor&source_id=${doctorID}`;
+        const isDarkTheme = document.body.classList.contains('dark-theme');
+        window.location.href = `medcard.html?id=${patientID}&source=doctor&source_id=${doctorID}&theme=${isDarkTheme ? 'dark' : 'light'}`;
       }
     });
     

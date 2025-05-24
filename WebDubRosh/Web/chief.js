@@ -358,7 +358,8 @@ function handleDoctorRowClick(event) {
 // Открытие медкарты пациента
 function openPatientMedCard() {
   const patientId = this.dataset.id;
-  window.location.href = `medcard.html?id=${patientId}`;
+  const isDarkTheme = document.body.classList.contains('dark-theme');
+  window.location.href = `medcard.html?id=${patientId}&source=chief&theme=${isDarkTheme ? 'dark' : 'light'}`;
 }
 
 // Открытие списка процедур врача
