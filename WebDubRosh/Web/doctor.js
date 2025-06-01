@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedProcedureIDs = [];
   let selectedScheduleIDs = []; // Добавлено для недельного графика
   let hideCompleted = true;
+  // Переменные для сортировки
+  let currentSortColumn = null;
+  let currentSortDirection = 'asc';
 
   // Элементы DOM
   const themeToggle = document.getElementById('themeToggle');
@@ -95,6 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Устанавливаем сегодняшнюю дату в поле даты
     appointmentDate.valueAsDate = new Date();
+    
+    // Инициализация сортировки таблиц
+    initTableSorting();
   }
 
   // Функция для отображения уведомлений
@@ -1290,5 +1296,285 @@ document.addEventListener('DOMContentLoaded', function() {
       case 6: document.getElementById('chkSaturday').checked = isChecked; break;
       case 7: document.getElementById('chkSunday').checked = isChecked; break;
     }
+  }
+
+  // Инициализация сортировки таблиц
+  function initTableSorting() {
+    initTableSortingForTable(document.getElementById('patientsTable'));
+    initTableSortingForTable(document.getElementById('appointmentsTable'));
+    initTableSortingForTable(document.getElementById('proceduresTable'));
+    
+    // Инициализация сортировки для таблицы недельного графика (если она существует)
+    const schedulesTable = document.getElementById('schedulesTable');
+    if (schedulesTable) {
+      initTableSortingForTable(schedulesTable);
+    }
+  }
+  
+  // Инициализация сортировки для конкретной таблицы
+  function initTableSortingForTable(table) {
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('th[data-sort]');
+    const tableId = table.id;
+    
+    headers.forEach(header => {
+      header.addEventListener('click', function() {
+        const sortBy = this.getAttribute('data-sort');
+        
+        // Если сортируем по тому же столбцу, меняем направление
+        if (currentSortColumn === sortBy) {
+          currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSortColumn = sortBy;
+          currentSortDirection = 'asc';
+        }
+        
+        // Удаляем индикаторы сортировки со всех заголовков этой таблицы
+        headers.forEach(h => {
+          h.classList.remove('sort-asc', 'sort-desc');
+        });
+        
+        // Добавляем индикатор на текущий заголовок
+        this.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        
+        // Применяем сортировку в зависимости от таблицы
+        switch (tableId) {
+          case 'patientsTable':
+            sortAndRenderPatients();
+            break;
+          case 'appointmentsTable':
+            sortAndRenderAppointments();
+            break;
+          case 'proceduresTable':
+            sortAndRenderProcedures();
+            break;
+          case 'schedulesTable':
+            sortAndRenderSchedules();
+            break;
+        }
+      });
+    });
+  }
+  
+  // Сортировка и отображение пациентов
+  function sortAndRenderPatients() {
+    if (!patients || patients.length === 0 || !currentSortColumn) return;
+    
+    patients.sort((a, b) => {
+      let aValue = a[currentSortColumn];
+      let bValue = b[currentSortColumn];
+      
+      // Обработка дат
+      if (currentSortColumn.includes('Date')) {
+        aValue = aValue ? new Date(aValue) : new Date(0);
+        bValue = bValue ? new Date(bValue) : new Date(0);
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Обработка строковых значений
+      aValue = aValue || '';
+      bValue = bValue || '';
+      
+      if (currentSortDirection === 'asc') {
+        return String(aValue).localeCompare(String(bValue));
+      } else {
+        return String(bValue).localeCompare(String(aValue));
+      }
+    });
+    
+    renderPatients();
+  }
+  
+  // Сортировка и отображение назначений
+  function sortAndRenderAppointments() {
+    if (!appointments || appointments.length === 0 || !currentSortColumn) return;
+    
+    let filteredAppointments = appointments;
+    
+    // Применяем фильтр "Скрыть завершённые и отменённые"
+    if (hideCompleted) {
+      filteredAppointments = appointments.filter(a => !['Завершена', 'Отменена'].includes(a.Status));
+    }
+    
+    filteredAppointments.sort((a, b) => {
+      let aValue = a[currentSortColumn];
+      let bValue = b[currentSortColumn];
+      
+      // Обработка дат и времени
+      if (currentSortColumn === 'AppointmentDateTime') {
+        aValue = aValue ? new Date(aValue) : new Date(0);
+        bValue = bValue ? new Date(bValue) : new Date(0);
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Обработка строковых значений
+      aValue = aValue || '';
+      bValue = bValue || '';
+      
+      if (currentSortDirection === 'asc') {
+        return String(aValue).localeCompare(String(bValue));
+      } else {
+        return String(bValue).localeCompare(String(aValue));
+      }
+    });
+    
+    const tbody = appointmentsTable.querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    filteredAppointments.forEach(appointment => {
+      const row = document.createElement('tr');
+      row.dataset.id = appointment.AppointmentID;
+      
+      row.innerHTML = `
+        <td>${appointment.PatientName}</td>
+        <td>${appointment.ProcedureName}</td>
+        <td>${formatDateTime(new Date(appointment.AppointmentDateTime))}</td>
+        <td>${getStatusBadge(appointment.Status)}</td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    // Восстанавливаем обработчики событий для строк
+    const rows = appointmentsTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      row.addEventListener('click', function(e) {
+        const appointmentID = parseInt(this.dataset.id);
+        
+        if (e.ctrlKey || e.shiftKey) {
+          this.classList.toggle('selected');
+          if (this.classList.contains('selected')) {
+            if (!selectedAppointmentIDs.includes(appointmentID)) {
+              selectedAppointmentIDs.push(appointmentID);
+            }
+          } else {
+            selectedAppointmentIDs = selectedAppointmentIDs.filter(id => id !== appointmentID);
+          }
+        } else {
+          appointmentsTable.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+          this.classList.add('selected');
+          selectedAppointmentIDs = [appointmentID];
+        }
+      });
+      
+      row.addEventListener('dblclick', function() {
+        const appointmentID = parseInt(this.dataset.id);
+        const appointment = appointments.find(a => a.AppointmentID === appointmentID);
+        
+        if (appointment) {
+          appointmentDetailsDisplay.textContent = `Пациент: ${appointment.PatientName}, Процедура: ${appointment.ProcedureName}, Дата: ${formatDateTime(new Date(appointment.AppointmentDateTime))}`;
+          procedureDescription.value = typeof appointment.Description === 'string' ? appointment.Description : '';
+          procedureDescriptionModal.style.display = 'block';
+          procedureDescriptionModal.dataset.appointmentId = appointmentID;
+        }
+      });
+    });
+  }
+  
+  // Сортировка и отображение процедур
+  function sortAndRenderProcedures() {
+    if (!procedures || procedures.length === 0 || !currentSortColumn) return;
+    
+    procedures.sort((a, b) => {
+      let aValue = a[currentSortColumn];
+      let bValue = b[currentSortColumn];
+      
+      // Обработка числовых значений
+      if (currentSortColumn === 'Duration') {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Обработка строковых значений
+      aValue = aValue || '';
+      bValue = bValue || '';
+      
+      if (currentSortDirection === 'asc') {
+        return String(aValue).localeCompare(String(bValue));
+      } else {
+        return String(bValue).localeCompare(String(aValue));
+      }
+    });
+    
+    renderProcedures();
+  }
+  
+  // Сортировка и отображение расписаний
+  function sortAndRenderSchedules() {
+    if (!weeklySchedules || weeklySchedules.length === 0 || !currentSortColumn) return;
+    
+    weeklySchedules.sort((a, b) => {
+      let aValue = a[currentSortColumn];
+      let bValue = b[currentSortColumn];
+      
+      // Обработка дат
+      if (currentSortColumn === 'StartDate' || currentSortColumn === 'EndDate') {
+        aValue = aValue ? new Date(aValue) : new Date(0);
+        bValue = bValue ? new Date(bValue) : new Date(0);
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Обработка числовых значений
+      if (currentSortColumn === 'DayOfWeek') {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+        return currentSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Обработка строковых значений
+      aValue = aValue || '';
+      bValue = bValue || '';
+      
+      if (currentSortDirection === 'asc') {
+        return String(aValue).localeCompare(String(bValue));
+      } else {
+        return String(bValue).localeCompare(String(aValue));
+      }
+    });
+    
+    const tbody = schedulesTable.querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    weeklySchedules.forEach(schedule => {
+      const row = document.createElement('tr');
+      row.dataset.id = schedule.ScheduleID;
+      
+      row.innerHTML = `
+        <td>${schedule.PatientName}</td>
+        <td>${schedule.ProcedureName}</td>
+        <td>${schedule.DayOfWeekName}</td>
+        <td>${schedule.AppointmentTimeStr}</td>
+        <td>${formatDate(new Date(schedule.StartDate))}</td>
+        <td>${formatDate(new Date(schedule.EndDate))}</td>
+        <td>${schedule.IsActive ? 'Да' : 'Нет'}</td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+    
+    // Восстанавливаем обработчики событий для строк
+    const rows = schedulesTable.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      row.addEventListener('click', function(e) {
+        const scheduleID = parseInt(this.dataset.id);
+        
+        if (e.ctrlKey || e.shiftKey) {
+          this.classList.toggle('selected');
+          if (this.classList.contains('selected')) {
+            if (!selectedScheduleIDs.includes(scheduleID)) {
+              selectedScheduleIDs.push(scheduleID);
+            }
+          } else {
+            selectedScheduleIDs = selectedScheduleIDs.filter(id => id !== scheduleID);
+          }
+        } else {
+          schedulesTable.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+          this.classList.add('selected');
+          selectedScheduleIDs = [scheduleID];
+        }
+      });
+    });
   }
 }); 

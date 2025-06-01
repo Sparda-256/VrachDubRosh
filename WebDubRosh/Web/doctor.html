@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Врач - Дубовая Роща</title>
   <link rel="stylesheet" href="doctor.css">
+  <link rel="icon" href="icodubrosh.png" type="image/png">
 </head>
 <body>
   <div class="container">
@@ -47,11 +48,11 @@
             <table id="patientsTable" class="data-table">
               <thead>
                 <tr>
-                  <th>ФИО</th>
-                  <th>Дата рождения</th>
-                  <th>Пол</th>
-                  <th>Дата записи</th>
-                  <th>Дата выписки</th>
+                  <th data-sort="FullName">ФИО</th>
+                  <th data-sort="DateOfBirth">Дата рождения</th>
+                  <th data-sort="Gender">Пол</th>
+                  <th data-sort="RecordDate">Дата записи</th>
+                  <th data-sort="DischargeDate">Дата выписки</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,10 +102,10 @@
             <table id="appointmentsTable" class="data-table">
               <thead>
                 <tr>
-                  <th>Пациент</th>
-                  <th>Процедура</th>
-                  <th>Дата и время</th>
-                  <th>Статус</th>
+                  <th data-sort="PatientName">Пациент</th>
+                  <th data-sort="ProcedureName">Процедура</th>
+                  <th data-sort="AppointmentDateTime">Дата и время</th>
+                  <th data-sort="Status">Статус</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,8 +147,8 @@
             <table id="proceduresTable" class="data-table">
               <thead>
                 <tr>
-                  <th>Наименование</th>
-                  <th>Длительность (мин)</th>
+                  <th data-sort="ProcedureName">Наименование</th>
+                  <th data-sort="Duration">Длительность (мин)</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,13 +321,13 @@
             <table id="schedulesTable" class="data-table">
               <thead>
                 <tr>
-                  <th>Пациент</th>
-                  <th>Процедура</th>
-                  <th>День недели</th>
-                  <th>Время</th>
-                  <th>Дата начала</th>
-                  <th>Дата окончания</th>
-                  <th>Активно</th>
+                  <th data-sort="PatientName">Пациент</th>
+                  <th data-sort="ProcedureName">Процедура</th>
+                  <th data-sort="DayOfWeekName">День недели</th>
+                  <th data-sort="AppointmentTimeStr">Время</th>
+                  <th data-sort="StartDate">Дата начала</th>
+                  <th data-sort="EndDate">Дата окончания</th>
+                  <th data-sort="IsActive">Активно</th>
                 </tr>
               </thead>
               <tbody>

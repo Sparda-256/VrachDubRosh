@@ -1369,6 +1369,7 @@ document.addEventListener('DOMContentLoaded', function() {
           // Обновляем списки
           loadPatients();
           loadAccommodations(); // Обновляем также размещение, т.к. оно могло измениться
+          loadAccompanyingPersons(); // Обновляем список сопровождающих
           
           // Очищаем выбранные идентификаторы
           selectedPatientIDs = [];

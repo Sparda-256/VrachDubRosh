@@ -357,16 +357,47 @@ input:checked + .slider .moon-icon {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid var(--border-color);
 }
 
 .data-table th {
-  background-color: var(--background-color);
-  color: var(--foreground-color);
-  font-weight: 600;
-  text-align: left;
   padding: 10px;
-  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  font-weight: bold;
+  background-color: var(--background-color);
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Сортируемые заголовки таблиц */
+.data-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.data-table th[data-sort]::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 5px;
+  vertical-align: middle;
+  opacity: 0.3;
+}
+
+.data-table th.sort-asc::after {
+  content: "";
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  opacity: 1;
+}
+
+.data-table th.sort-desc::after {
+  content: "";
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 1;
 }
 
 .data-table td {
