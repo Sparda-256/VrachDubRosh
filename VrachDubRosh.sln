@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решен
 		База Данных1.txt = База Данных1.txt
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestDubRosh", "TestDubRosh\TestDubRosh.csproj", "{2ED47C63-B6E2-4838-A807-51F99FA59E3D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,10 @@ Global
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{672F0FDB-506A-432E-A021-D54FE57A39F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ED47C63-B6E2-4838-A807-51F99FA59E3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ED47C63-B6E2-4838-A807-51F99FA59E3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ED47C63-B6E2-4838-A807-51F99FA59E3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ED47C63-B6E2-4838-A807-51F99FA59E3D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

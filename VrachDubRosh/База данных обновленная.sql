@@ -231,7 +231,9 @@ CREATE TABLE DischargeDocuments (
 
 INSERT INTO Managers(FullName, Password)
 VALUES
-('3', '3');
+('3', '3'),
+('3', '3')
+;
 
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
@@ -407,6 +409,33 @@ CREATE TABLE PatientMeasurements (
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID),
     FOREIGN KEY (MeasuredBy) REFERENCES ChiefDoctors(ChiefDoctorID)
 );
+
+-- Обновляем данные менеджера на более реалистичные
+UPDATE Managers 
+SET FullName = 'Петрова Ольга Николаевна', Password = 'manager2023' 
+WHERE ManagerID = 1;
+
+-- Добавляем ещё одного менеджера для разнообразия
+INSERT INTO Managers (FullName, Password)
+VALUES ('Козлова Ирина Сергеевна', 'MngAccess!2023');
+
+-- Обновляем данные главврача на более реалистичные
+UPDATE ChiefDoctors 
+SET FullName = 'Соколов Михаил Андреевич', Password = 'Doc$2023' 
+WHERE ChiefDoctorID = 5;
+
+-- Обновляем данные врачей с более сложными паролями
+UPDATE Doctors 
+SET Password = 'LFK_2023!' 
+WHERE DoctorID = 1; -- Иванов Иван Иванович
+
+UPDATE Doctors 
+SET Password = 'Massage#2023' 
+WHERE DoctorID = 4; -- Кузнецова Елена Александровна
+
+-- Добавляем процедуры для врача ЛФК
+INSERT INTO Procedures (DoctorID, ProcedureName, Duration) 
+VALUES (1, 'Лечебная физкультура для спины', 45);
 
 -- Модифицируем таблицу PatientDiagnoses для добавления типа диагноза (основной/сопутствующий)
 ALTER TABLE PatientDiagnoses
