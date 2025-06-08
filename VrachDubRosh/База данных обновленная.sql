@@ -232,8 +232,7 @@ CREATE TABLE DischargeDocuments (
 INSERT INTO Managers(FullName, Password)
 VALUES
 ('3', '3'),
-('3', '3')
-;
+('3', '3');
 
 INSERT INTO ChiefDoctors(FullName, Password)
 VALUES
