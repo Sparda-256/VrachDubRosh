@@ -47,6 +47,7 @@ namespace WebDubRosh
         private object _logLock = new object();
         private string _externalUrl;
         private bool _serverRunning;
+        private string _appRoot;
         
         /// <summary>
         /// Событие изменения статуса сервера
@@ -74,6 +75,14 @@ namespace WebDubRosh
             lock (_logLock)
             {
                 _logMessages.Add(message);
+                
+                // Для отладки опубликованного приложения
+                try
+                {
+                    string logPath = Path.Combine(_appRoot, "webdubrosh_log.txt");
+                    File.AppendAllText(logPath, $"[{DateTime.Now}] {message}\n");
+                }
+                catch { }
             }
         }
         
@@ -101,40 +110,91 @@ namespace WebDubRosh
 
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // Устанавливаем глобальную обработку исключений
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            DispatcherUnhandledException += App_DispatcherUnhandledException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
             base.OnStartup(e);
             
-            // Создаем и показываем окно
-            var mainWindow = new MainWindow();
-            MainWindow = mainWindow;
-            mainWindow.Show();
-
-            // 1) Запускаем локальный сервер
-            await Task.Run(() => StartKestrelServer(e.Args));
-            RaiseServerStatusChanged(true, "Локальный сервер запущен на http://localhost:8080");
-
-            // 2) Проверяем/устанавливаем Node.js + localtunnel
-            await CheckAndSetupNodeAndLocalTunnel();
-            
-            // 3) Запускаем localtunnel с повторными попытками (до 3 раз)
-            var tunnelUrl = await StartLocalTunnelWithRetryAsync(3);
-            if (!string.IsNullOrEmpty(tunnelUrl))
+            try
             {
-                RaiseServerStatusChanged(true, $"Внешний туннель доступен: {tunnelUrl}", tunnelUrl);
+                // Определяем корневой путь приложения
+                _appRoot = AppDomain.CurrentDomain.BaseDirectory;
+                LogMessage($"Запуск приложения, путь: {_appRoot}");
                 
-                // Открываем браузер
-                Process.Start(new ProcessStartInfo(tunnelUrl)
+                // Создаем и показываем окно
+                var mainWindow = new MainWindow();
+                MainWindow = mainWindow;
+                mainWindow.Show();
+
+                // 1) Запускаем локальный сервер
+                await Task.Run(() => StartKestrelServer(e.Args));
+                RaiseServerStatusChanged(true, "Локальный сервер запущен на http://localhost:8080");
+
+                // 2) Проверяем/устанавливаем Node.js + localtunnel
+                await CheckAndSetupNodeAndLocalTunnel();
+                
+                // 3) Запускаем localtunnel с повторными попытками (до 3 раз)
+                var tunnelUrl = await StartLocalTunnelWithRetryAsync(3);
+                if (!string.IsNullOrEmpty(tunnelUrl))
                 {
-                    UseShellExecute = true
-                });
+                    RaiseServerStatusChanged(true, $"Внешний туннель доступен: {tunnelUrl}", tunnelUrl);
+                    
+                    // Открываем браузер
+                    Process.Start(new ProcessStartInfo(tunnelUrl)
+                    {
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    RaiseServerStatusChanged(true, "Не удалось создать внешний туннель. Используем локальный URL.");
+                    Process.Start(new ProcessStartInfo("http://localhost:8080")
+                    {
+                        UseShellExecute = true
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                RaiseServerStatusChanged(true, "Не удалось создать внешний туннель. Используем локальный URL.");
-                Process.Start(new ProcessStartInfo("http://localhost:8080")
-                {
-                    UseShellExecute = true
-                });
+                HandleException(ex, "OnStartup");
             }
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            HandleException((Exception)e.ExceptionObject, "UnhandledException");
+        }
+
+        private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            HandleException(e.Exception, "DispatcherUnhandledException");
+            e.Handled = true;
+        }
+
+        private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+        {
+            HandleException(e.Exception, "UnobservedTaskException");
+            e.SetObserved();
+        }
+
+        private void HandleException(Exception ex, string source)
+        {
+            string message = $"ОШИБКА [{source}]: {ex.Message}\n{ex.StackTrace}";
+            LogMessage(message);
+            
+            if (ex.InnerException != null)
+            {
+                LogMessage($"InnerException: {ex.InnerException.Message}\n{ex.InnerException.StackTrace}");
+            }
+            
+            try
+            {
+                MessageBox.Show($"Произошла ошибка: {ex.Message}\nПодробности в журнале.", 
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch { }
         }
 
         /// <summary>
@@ -144,77 +204,133 @@ namespace WebDubRosh
         {
             LogMessage("Запуск Kestrel сервера...");
             
-            _webHost = Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    // Слушаем на всех IP (0.0.0.0) на порту 8080
-                    webBuilder.UseUrls("http://*:8080");
-
-                    webBuilder.ConfigureServices(services =>
+            try
+            {
+                _webHost = Host.CreateDefaultBuilder(args)
+                    .ConfigureWebHostDefaults(webBuilder =>
                     {
-                        services.AddControllers();
-                        services.AddCors(options =>
+                        // Слушаем на всех IP (0.0.0.0) на порту 8080
+                        webBuilder.UseUrls("http://*:8080");
+
+                        webBuilder.ConfigureServices(services =>
                         {
-                            options.AddPolicy("MyCors", builder =>
+                            services.AddControllers();
+                            services.AddCors(options =>
                             {
-                                builder.AllowAnyOrigin()
-                                       .AllowAnyMethod()
-                                       .AllowAnyHeader();
+                                options.AddPolicy("MyCors", builder =>
+                                {
+                                    builder.AllowAnyOrigin()
+                                           .AllowAnyMethod()
+                                           .AllowAnyHeader();
+                                });
                             });
                         });
-                    });
 
-                    webBuilder.Configure(app =>
-                    {
-                        // Логирование входящих запросов
-                        app.Use(async (context, next) =>
+                        webBuilder.Configure(app =>
                         {
-                            var logMessage = $"[{DateTime.Now}] {context.Connection.RemoteIpAddress} => {context.Request.Method} {context.Request.Path}";
-                            LogMessage(logMessage);
-                            await next.Invoke();
+                            // Логирование входящих запросов
+                            app.Use(async (context, next) =>
+                            {
+                                var logMessage = $"[{DateTime.Now}] {context.Connection.RemoteIpAddress} => {context.Request.Method} {context.Request.Path}";
+                                LogMessage(logMessage);
+                                await next.Invoke();
+                            });
+
+                            // Подключаем файлы - поиск в разных местах
+                            string siteFolder = FindWebFolder();
+                            
+                            if (!Directory.Exists(siteFolder))
+                            {
+                                LogMessage($"ОШИБКА: Web директория не найдена!");
+                                throw new DirectoryNotFoundException($"Не найдена директория Web: проверены пути {siteFolder}");
+                            }
+                            
+                            LogMessage($"Используем Web директорию: {siteFolder}");
+                            
+                            var defaultFilesOptions = new DefaultFilesOptions
+                            {
+                                FileProvider = new PhysicalFileProvider(siteFolder)
+                            };
+                            defaultFilesOptions.DefaultFileNames.Clear();
+                            defaultFilesOptions.DefaultFileNames.Add("Login.html");
+
+                            app.UseDefaultFiles(defaultFilesOptions);
+                            app.UseStaticFiles(new StaticFileOptions
+                            {
+                                FileProvider = new PhysicalFileProvider(siteFolder)
+                            });
+                            app.UseRouting();
+                            app.UseCors("MyCors");
+                            app.UseEndpoints(endpoints =>
+                            {
+                                endpoints.MapControllers();
+                            });
                         });
+                    })
+                    .Build();
 
-                        // Подключаем файлы
-                        string projectDir = AppDomain.CurrentDomain.BaseDirectory;
-                        // Navigate up from bin/Debug/net8.0-windows to the project directory
-                        if (projectDir.Contains("bin\\Debug") || projectDir.Contains("bin\\Release"))
-                        {
-                            projectDir = Path.GetFullPath(Path.Combine(projectDir, "..", "..", ".."));
-                        }
-                        string siteFolder = Path.Combine(projectDir, "Web");
-                        
-                        // Verify that the directory exists
-                        if (!Directory.Exists(siteFolder))
-                        {
-                            LogMessage($"Web directory not found at: {siteFolder}");
-                            // Fall back to the app's directory if needed
-                            siteFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Web");
-                        }
-                        
-                        var defaultFilesOptions = new DefaultFilesOptions
-                        {
-                            FileProvider = new PhysicalFileProvider(siteFolder)
-                        };
-                        defaultFilesOptions.DefaultFileNames.Clear();
-                        defaultFilesOptions.DefaultFileNames.Add("Login.html");
+                _webHost.Start();
+                LogMessage("Kestrel server started on http://*:8080");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Ошибка запуска Kestrel: {ex.Message}");
+                throw;
+            }
+        }
 
-                        app.UseDefaultFiles(defaultFilesOptions);
-                        app.UseStaticFiles(new StaticFileOptions
-                        {
-                            FileProvider = new PhysicalFileProvider(siteFolder)
-                        });
-                        app.UseRouting();
-                        app.UseCors("MyCors");
-                        app.UseEndpoints(endpoints =>
-                        {
-                            endpoints.MapControllers();
-                        });
-                    });
-                })
-                .Build();
-
-            _webHost.Start();
-            LogMessage("Kestrel server started on http://*:8080");
+        /// <summary>
+        /// Ищет директорию Web в различных местах в зависимости от типа запуска
+        /// </summary>
+        private string FindWebFolder()
+        {
+            List<string> possiblePaths = new List<string>();
+            
+            // Базовая директория приложения
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            possiblePaths.Add(Path.Combine(baseDir, "Web"));
+            
+            // Опубликованный проект может иметь иерархию
+            possiblePaths.Add(Path.Combine(baseDir, "publish", "Web"));
+            
+            // Разработка - обратно на два уровня вверх
+            if (baseDir.Contains("bin\\Debug") || baseDir.Contains("bin\\Release"))
+            {
+                possiblePaths.Add(Path.Combine(baseDir, "..", "..", "..", "Web"));
+            }
+            
+            // Ищем первый существующий путь
+            foreach (string path in possiblePaths)
+            {
+                LogMessage($"Проверка наличия Web директории: {path}");
+                if (Directory.Exists(path))
+                {
+                    return path;
+                }
+            }
+            
+            // Если дошли сюда, значит ни один путь не существует
+            LogMessage($"Не найдена Web директория. Проверенные пути: {string.Join(", ", possiblePaths)}");
+            
+            // Последний шанс - создаем папку Web рядом с exe и кладем туда минимум (для тестирования)
+            try
+            {
+                string fallbackPath = Path.Combine(baseDir, "Web");
+                if (!Directory.Exists(fallbackPath))
+                {
+                    Directory.CreateDirectory(fallbackPath);
+                    File.WriteAllText(Path.Combine(fallbackPath, "Login.html"), 
+                        "<html><body><h1>Временная страница входа</h1><p>Web файлы не найдены.</p></body></html>");
+                }
+                return fallbackPath;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Ошибка создания запасной Web директории: {ex.Message}");
+            }
+            
+            // Возвращаем базовый путь как последний вариант
+            return Path.Combine(baseDir, "Web");
         }
 
         /// <summary>
@@ -255,8 +371,24 @@ namespace WebDubRosh
 
             if (!nodeInstalled)
             {
-                string installerPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Required packages", "node-v22.14.0-x64.msi");
-                if (File.Exists(installerPath))
+                // Список возможных путей для установщика Node.js
+                List<string> possibleInstallerPaths = new List<string>
+                {
+                    Path.Combine(_appRoot, "Required packages", "node-v22.14.0-x64.msi"),
+                    Path.Combine(_appRoot, "node-v22.14.0-x64.msi")
+                };
+                
+                string installerPath = null;
+                foreach (var path in possibleInstallerPaths)
+                {
+                    if (File.Exists(path))
+                    {
+                        installerPath = path;
+                        break;
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(installerPath))
                 {
                     LogMessage("Node.js не найден. Установка из: " + installerPath);
                     try
@@ -276,11 +408,15 @@ namespace WebDubRosh
                     catch (Exception ex)
                     {
                         LogMessage("Ошибка при установке Node.js: " + ex.Message);
+                        MessageBox.Show("Для работы внешнего туннеля требуется Node.js. Установите его вручную, пожалуйста.", 
+                            "Требуется Node.js", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 else
                 {
-                    LogMessage("Установщик Node.js не найден по пути: " + installerPath);
+                    LogMessage("Установщик Node.js не найден. Проверены пути: " + string.Join(", ", possibleInstallerPaths));
+                    MessageBox.Show("Для работы внешнего туннеля требуется Node.js. Установите его вручную, пожалуйста.", 
+                        "Требуется Node.js", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
 
@@ -312,6 +448,7 @@ namespace WebDubRosh
             catch (Exception ex)
             {
                 LogMessage("Ошибка при установке localtunnel: " + ex.Message);
+                // Продолжаем работу даже при ошибке установки localtunnel
             }
         }
 
@@ -416,24 +553,31 @@ namespace WebDubRosh
 
         protected override void OnExit(ExitEventArgs e)
         {
-            LogMessage("Завершение работы приложения...");
-            
-            if (_ltProcess != null && !_ltProcess.HasExited)
+            try
             {
-                try { 
-                    _ltProcess.Kill();
-                    LogMessage("Процесс localtunnel остановлен.");
-                } 
-                catch (Exception ex) { 
-                    LogMessage($"Ошибка при остановке localtunnel: {ex.Message}");
+                LogMessage("Завершение работы приложения...");
+                
+                if (_ltProcess != null && !_ltProcess.HasExited)
+                {
+                    try { 
+                        _ltProcess.Kill();
+                        LogMessage("Процесс localtunnel остановлен.");
+                    } 
+                    catch (Exception ex) { 
+                        LogMessage($"Ошибка при остановке localtunnel: {ex.Message}");
+                    }
                 }
+                
+                _webHost?.StopAsync().Wait();
+                _webHost?.Dispose();
+                LogMessage("Веб-сервер остановлен.");
+                
+                RaiseServerStatusChanged(false, "Сервер остановлен");
             }
-            
-            _webHost?.StopAsync().Wait();
-            _webHost?.Dispose();
-            LogMessage("Веб-сервер остановлен.");
-            
-            RaiseServerStatusChanged(false, "Сервер остановлен");
+            catch (Exception ex)
+            {
+                LogMessage($"Ошибка при завершении приложения: {ex.Message}");
+            }
             
             base.OnExit(e);
         }
