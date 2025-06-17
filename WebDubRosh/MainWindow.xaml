@@ -5,8 +5,47 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WebDubRosh"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
+        Title="Врач ДубРощ - Веб-сервер" Height="450" Width="800" 
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" Text="Статус веб-сервера" 
+                   FontSize="22" FontWeight="Bold" Margin="0,0,0,20"/>
+        
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Статус: " FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ServerStatusText" Text="Запускается..." VerticalAlignment="Center"/>
+            <Ellipse x:Name="StatusIndicator" Width="15" Height="15" Margin="10,0,0,0" 
+                     Fill="Orange" VerticalAlignment="Center"/>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Локальный адрес: " FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock Text="http://localhost:8080" VerticalAlignment="Center"/>
+            <Button Content="Открыть" Margin="10,0,0,0" Padding="5,2" Click="OpenLocalUrl_Click"/>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Внешний адрес: " FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ExternalUrlText" Text="Загрузка..." VerticalAlignment="Center"/>
+            <Button x:Name="OpenExternalUrlButton" Content="Открыть" Margin="10,0,0,0" 
+                   Padding="5,2" Click="OpenExternalUrl_Click" IsEnabled="False"/>
+            <Button x:Name="CopyExternalUrlButton" Content="Копировать" Margin="5,0,0,0" 
+                   Padding="5,2" Click="CopyExternalUrl_Click" IsEnabled="False"/>
+        </StackPanel>
+        
+        <Border Grid.Row="4" BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,10,0,0">
+            <ScrollViewer>
+                <TextBox x:Name="LogTextBox" IsReadOnly="True" TextWrapping="Wrap"
+                         Background="#F5F5F5" FontFamily="Consolas"/>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Window>

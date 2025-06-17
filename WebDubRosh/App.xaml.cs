@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -11,6 +12,16 @@ using Microsoft.Extensions.Hosting;
 
 namespace WebDubRosh
 {
+    /// <summary>
+    /// Аргументы события для обновления статуса сервера
+    /// </summary>
+    public class ServerStatusEventArgs : EventArgs
+    {
+        public bool IsRunning { get; set; }
+        public string Message { get; set; }
+        public string ExternalUrl { get; set; }
+    }
+    
     /// <summary>
     /// Для создания единого exe:
     /// dotnet publish -c Release -r win-x64 --self-contained true
@@ -32,22 +43,84 @@ namespace WebDubRosh
 
         private IHost _webHost;
         private Process _ltProcess; // Процесс для localtunnel
+        private List<string> _logMessages = new List<string>();
+        private object _logLock = new object();
+        private string _externalUrl;
+        private bool _serverRunning;
+        
+        /// <summary>
+        /// Событие изменения статуса сервера
+        /// </summary>
+        public event EventHandler<ServerStatusEventArgs> ServerStatusChanged;
+        
+        /// <summary>
+        /// Возвращает последние логи и очищает коллекцию
+        /// </summary>
+        public List<string> GetLatestLogs()
+        {
+            lock (_logLock)
+            {
+                var logs = new List<string>(_logMessages);
+                _logMessages.Clear();
+                return logs;
+            }
+        }
+
+        /// <summary>
+        /// Добавляет сообщение в лог
+        /// </summary>
+        private void LogMessage(string message)
+        {
+            lock (_logLock)
+            {
+                _logMessages.Add(message);
+            }
+        }
+        
+        /// <summary>
+        /// Отправляет событие об изменении статуса сервера
+        /// </summary>
+        private void RaiseServerStatusChanged(bool isRunning, string message, string externalUrl = null)
+        {
+            _serverRunning = isRunning;
+            
+            if (!string.IsNullOrEmpty(externalUrl))
+            {
+                _externalUrl = externalUrl;
+            }
+            
+            ServerStatusChanged?.Invoke(this, new ServerStatusEventArgs 
+            { 
+                IsRunning = isRunning,
+                Message = message,
+                ExternalUrl = externalUrl ?? _externalUrl
+            });
+            
+            LogMessage(message);
+        }
 
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            
+            // Создаем и показываем окно
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
+            mainWindow.Show();
 
             // 1) Запускаем локальный сервер
-            StartKestrelServer(e.Args);
+            await Task.Run(() => StartKestrelServer(e.Args));
+            RaiseServerStatusChanged(true, "Локальный сервер запущен на http://localhost:8080");
 
             // 2) Проверяем/устанавливаем Node.js + localtunnel
             await CheckAndSetupNodeAndLocalTunnel();
-
+            
             // 3) Запускаем localtunnel с повторными попытками (до 3 раз)
             var tunnelUrl = await StartLocalTunnelWithRetryAsync(3);
             if (!string.IsNullOrEmpty(tunnelUrl))
             {
-                Console.WriteLine($"LocalTunnel is ready: {tunnelUrl}");
+                RaiseServerStatusChanged(true, $"Внешний туннель доступен: {tunnelUrl}", tunnelUrl);
+                
                 // Открываем браузер
                 Process.Start(new ProcessStartInfo(tunnelUrl)
                 {
@@ -56,7 +129,7 @@ namespace WebDubRosh
             }
             else
             {
-                Console.WriteLine("LocalTunnel URL not detected or not matching expected subdomain. Opening localhost:8080 as fallback.");
+                RaiseServerStatusChanged(true, "Не удалось создать внешний туннель. Используем локальный URL.");
                 Process.Start(new ProcessStartInfo("http://localhost:8080")
                 {
                     UseShellExecute = true
@@ -69,6 +142,8 @@ namespace WebDubRosh
         /// </summary>
         private void StartKestrelServer(string[] args)
         {
+            LogMessage("Запуск Kestrel сервера...");
+            
             _webHost = Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
@@ -94,7 +169,8 @@ namespace WebDubRosh
                         // Логирование входящих запросов
                         app.Use(async (context, next) =>
                         {
-                            Console.WriteLine($"[{DateTime.Now}] {context.Connection.RemoteIpAddress} => {context.Request.Method} {context.Request.Path}");
+                            var logMessage = $"[{DateTime.Now}] {context.Connection.RemoteIpAddress} => {context.Request.Method} {context.Request.Path}";
+                            LogMessage(logMessage);
                             await next.Invoke();
                         });
 
@@ -110,7 +186,7 @@ namespace WebDubRosh
                         // Verify that the directory exists
                         if (!Directory.Exists(siteFolder))
                         {
-                            Console.WriteLine($"Web directory not found at: {siteFolder}");
+                            LogMessage($"Web directory not found at: {siteFolder}");
                             // Fall back to the app's directory if needed
                             siteFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Web");
                         }
@@ -138,7 +214,7 @@ namespace WebDubRosh
                 .Build();
 
             _webHost.Start();
-            Console.WriteLine("Kestrel server started on http://*:8080");
+            LogMessage("Kestrel server started on http://*:8080");
         }
 
         /// <summary>
@@ -147,6 +223,7 @@ namespace WebDubRosh
         /// </summary>
         private async Task CheckAndSetupNodeAndLocalTunnel()
         {
+            LogMessage("Проверка установки Node.js...");
             bool nodeInstalled = false;
             try
             {
@@ -165,14 +242,14 @@ namespace WebDubRosh
                         if (!string.IsNullOrWhiteSpace(output))
                         {
                             nodeInstalled = true;
-                            Console.WriteLine("Node.js is installed: " + output.Trim());
+                            LogMessage("Node.js установлен: " + output.Trim());
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Node.js check failed (likely not installed): " + ex.Message);
+                LogMessage("Проверка установки Node.js не удалась (вероятно не установлен): " + ex.Message);
                 nodeInstalled = false;
             }
 
@@ -181,7 +258,7 @@ namespace WebDubRosh
                 string installerPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Required packages", "node-v22.14.0-x64.msi");
                 if (File.Exists(installerPath))
                 {
-                    Console.WriteLine("Node.js not found. Installing from: " + installerPath);
+                    LogMessage("Node.js не найден. Установка из: " + installerPath);
                     try
                     {
                         var installerPsi = new ProcessStartInfo("msiexec", $"/i \"{installerPath}\" /qn")
@@ -193,23 +270,23 @@ namespace WebDubRosh
                         if (installerProcess != null)
                         {
                             installerProcess.WaitForExit();
-                            Console.WriteLine("Node.js installation completed.");
+                            LogMessage("Установка Node.js завершена.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("Error during Node.js installation: " + ex.Message);
+                        LogMessage("Ошибка при установке Node.js: " + ex.Message);
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Node.js installer not found at: " + installerPath);
+                    LogMessage("Установщик Node.js не найден по пути: " + installerPath);
                 }
             }
 
             try
             {
-                Console.WriteLine("Installing localtunnel globally via npm...");
+                LogMessage("Установка localtunnel глобально через npm...");
                 var npmInstallPsi = new ProcessStartInfo("npm", "install -g localtunnel")
                 {
                     RedirectStandardOutput = true,
@@ -224,17 +301,17 @@ namespace WebDubRosh
                         await npmProcess.WaitForExitAsync();
                         string npmOutput = await npmProcess.StandardOutput.ReadToEndAsync();
                         string npmError = await npmProcess.StandardError.ReadToEndAsync();
-                        Console.WriteLine(npmOutput);
+                        LogMessage(npmOutput);
                         if (!string.IsNullOrEmpty(npmError))
                         {
-                            Console.WriteLine("npm error: " + npmError);
+                            LogMessage("npm error: " + npmError);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error installing localtunnel: " + ex.Message);
+                LogMessage("Ошибка при установке localtunnel: " + ex.Message);
             }
         }
 
@@ -243,11 +320,13 @@ namespace WebDubRosh
         /// </summary>
         private async Task<string> StartLocalTunnelWithRetryAsync(int maxAttempts)
         {
+            LogMessage("Запуск localtunnel для создания внешнего туннеля...");
+            
             // Ожидаемый полный адрес: Subdomain + ".loca.lt"
             string expectedUrlPart = Subdomain + ".loca.lt";
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                Console.WriteLine($"Starting localtunnel attempt {attempt}...");
+                LogMessage($"Попытка {attempt} из {maxAttempts}...");
                 string tunnelUrl = await StartLocalTunnelAsync();
                 if (!string.IsNullOrEmpty(tunnelUrl) && tunnelUrl.Contains(expectedUrlPart))
                 {
@@ -256,7 +335,7 @@ namespace WebDubRosh
                 }
                 else
                 {
-                    Console.WriteLine($"Attempt {attempt}: Tunnel URL did not match '{expectedUrlPart}'.");
+                    LogMessage($"Попытка {attempt}: URL туннеля не соответствует '{expectedUrlPart}'.");
                     if (_ltProcess != null && !_ltProcess.HasExited)
                     {
                         try { _ltProcess.Kill(); } catch { }
@@ -276,7 +355,7 @@ namespace WebDubRosh
         {
             try
             {
-                Console.WriteLine($"Running localtunnel with subdomain '{Subdomain}'...");
+                LogMessage($"Запуск localtunnel с поддоменом '{Subdomain}'...");
                 var ltPsi = new ProcessStartInfo("cmd.exe", $"/c lt --port 8080 --subdomain {Subdomain}")
                 {
                     UseShellExecute = false,
@@ -287,7 +366,7 @@ namespace WebDubRosh
                 _ltProcess = Process.Start(ltPsi);
                 if (_ltProcess == null)
                 {
-                    Console.WriteLine("Failed to start localtunnel process.");
+                    LogMessage("Не удалось запустить процесс localtunnel.");
                     return null;
                 }
 
@@ -299,7 +378,7 @@ namespace WebDubRosh
                     var err = await _ltProcess.StandardError.ReadToEndAsync();
                     if (!string.IsNullOrWhiteSpace(err))
                     {
-                        Console.WriteLine("localtunnel stderr: " + err);
+                        LogMessage("localtunnel stderr: " + err);
                     }
                 });
 
@@ -311,14 +390,14 @@ namespace WebDubRosh
                 {
                     if (DateTime.UtcNow - startTime > timeout)
                     {
-                        Console.WriteLine("Timeout waiting for localtunnel URL.");
+                        LogMessage("Тайм-аут ожидания URL от localtunnel.");
                         break;
                     }
 
                     var line = await _ltProcess.StandardOutput.ReadLineAsync();
                     if (line == null) break;
 
-                    Console.WriteLine("localtunnel: " + line);
+                    LogMessage("localtunnel: " + line);
                     if (line.Contains("your url is: "))
                     {
                         tunnelUrl = line.Replace("your url is: ", "").Trim();
@@ -330,19 +409,32 @@ namespace WebDubRosh
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error starting localtunnel: " + ex.Message);
+                LogMessage("Ошибка запуска localtunnel: " + ex.Message);
                 return null;
             }
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
+            LogMessage("Завершение работы приложения...");
+            
             if (_ltProcess != null && !_ltProcess.HasExited)
             {
-                try { _ltProcess.Kill(); } catch { }
+                try { 
+                    _ltProcess.Kill();
+                    LogMessage("Процесс localtunnel остановлен.");
+                } 
+                catch (Exception ex) { 
+                    LogMessage($"Ошибка при остановке localtunnel: {ex.Message}");
+                }
             }
+            
             _webHost?.StopAsync().Wait();
             _webHost?.Dispose();
+            LogMessage("Веб-сервер остановлен.");
+            
+            RaiseServerStatusChanged(false, "Сервер остановлен");
+            
             base.OnExit(e);
         }
     }
